@@ -5,7 +5,7 @@ import sys, pathlib
 OUT = pathlib.Path(sys.argv[1])
 YEAR = "2026"
 UPDATED = "October 9, 2026"
-EMAIL = "fbmore+freeview@gmail.com"
+EMAIL = "hello@freeview.app"
 
 CSS = """
 :root{--ink:#141414;--muted:#5f5f5b;--canvas:#f5f5f2;--surface:#ffffff;--accent:#141414;--line:oklch(0 0 0 / .1);
@@ -332,6 +332,8 @@ support_body = f"""
 <p>Force-quit FreeView (swipe up from the app switcher) and reopen it; you'll land on the home screen. Then go to Settings, turn kiosk mode off and on again to set a new PIN.</p>
 <h3>Can people leave the app?</h3>
 <p>Kiosk mode controls what happens inside FreeView. To keep a device locked to FreeView, also turn on Guided Access: Settings → Accessibility → Guided Access.</p>
+<h3>Using a keyboard, or FreeView on a Mac?</h3>
+<p>Press ⌘. (Command-period) to leave a page; in kiosk mode it asks for your PIN. On an iPad keyboard ⌘W closes the page too. On a Mac, FreeView runs as an iPad app in a window: kiosk mode hides the controls, but macOS always lets people close or quit the window, so use it for presenting rather than unattended kiosks.</p>
 
 <h2>Privacy and night mode</h2>
 <h3>What's the difference between private browsing and "Don't remember my browsing"?</h3>
