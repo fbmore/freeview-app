@@ -16,6 +16,8 @@ YEAR = "2026"
 UPDATED = "9 October 2026"
 EMAIL = "hello@freeview.app"
 STORE = "https://apps.apple.com/app/id1526222244"
+# Public TestFlight link for the 2.0 beta (external group "FreeView"). Drop it once 2.0 is live.
+TESTFLIGHT = "https://testflight.apple.com/join/4T1Lixbc"
 
 # ── shared bits ──────────────────────────────────────────────────────────────
 
@@ -355,9 +357,10 @@ INDEX_BODY = f"""{ICONS}
   <a class="appstore heroBadge" href="{STORE}" target="_blank" rel="noopener" aria-label="Download FreeView on the App Store">
     <img src="appstore-badge.svg" alt="Download on the App Store">
   </a>
-  <p class="storenote">For iPhone, iPad and Mac · Free to start</p>
+  <p class="storenote">For iPhone, iPad and Mac · Free to start · The new 2.0 is in beta on TestFlight</p>
   <div class="ctarow">
-    <a class="cta" href="#tour">See the tour</a>
+    <a class="cta" href="{TESTFLIGHT}" target="_blank" rel="noopener">Join the 2.0 beta</a>
+    <a class="cta ghost" href="#tour">See the tour</a>
     <a class="cta ghost" href="support.html">Support</a>
   </div>
   <div class="dots" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div>
@@ -395,6 +398,7 @@ INDEX_BODY = f"""{ICONS}
     <a class="appstore" style="margin-top:26px" href="{STORE}" target="_blank" rel="noopener" aria-label="Download FreeView on the App Store">
       <img src="appstore-badge.svg" alt="Download on the App Store">
     </a>
+    <p style="font-size:13px;margin-top:14px">Want the new version today? <a href="{TESTFLIGHT}" target="_blank" rel="noopener" style="text-decoration:underline;text-underline-offset:3px">Join the FreeView 2.0 beta on TestFlight</a>.</p>
   </div>
 </section>
 
