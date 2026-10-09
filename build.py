@@ -331,8 +331,8 @@ MOCK_PRIVATE = phone(
 
 FEATURES = "\n".join([
     feature("Open anything", "Type an address, paste a link, or pick a file. Web pages, PDFs, videos, photos and HTML prototypes open edge to edge, with no browser bars and no app chrome in the way.",
-            [("globe", "Any web address, or a search"), ("doc", "PDFs, videos, photos, Office and Keynote files"),
-             ("code", "HTML prototypes with their CSS and JavaScript"), ("folder", "From Files, Photos, AirDrop or Mail, or drag them in")], MOCK_OPEN),
+            [("globe", "Any web address, or a search, saved for offline if you like"), ("doc", "PDFs, videos, photos, Office and Keynote files"),
+             ("code", "HTML prototypes with their CSS and JavaScript"), ("folder", "Single files or whole folders, from Files, Photos, AirDrop or Mail")], MOCK_OPEN),
     feature("PDFs become slides", "Open a PDF and swipe through it a page at a time, on black, scaled to fit. Pinch to zoom in, and a quiet page counter fades away after each turn.",
             [("stack", "One page at a time, edge to edge"), ("keys", "Presentation clickers and arrow keys"), ("airplay", "AirPlay to a bigger screen")], MOCK_SLIDES, flip=True),
     feature("Instant presentations", "Pick several files or photos and FreeView turns them into a deck, one item per slide. A multi-page PDF becomes one slide per page, and a video plays when its slide comes up.",
@@ -434,6 +434,7 @@ hr{border:none;border-top:1px solid rgba(255,255,255,.09);margin:40px 0}
 .contact{background:var(--surface);border-radius:20px;padding:22px 24px;margin:26px 0;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
 .contact a{font-size:20px;font-weight:600;text-decoration:none}
 .contact p{margin:6px 0 0;color:var(--muted);font-size:15px}
+code{background:var(--surface);padding:2px 6px;border-radius:6px;font-size:15px}
 footer{margin-top:56px;font-size:13px;color:var(--muted)}
 footer a{color:var(--muted)}
 """
@@ -563,6 +564,10 @@ SUPPORT = f"""  <div class="contact">
   <p>Web addresses, PDFs, videos, audio, photos and images, HTML files or folders (with their CSS and JavaScript), and anything WebKit can render, such as Office and Keynote files, text, GIF and SVG.</p>
   <h3>How do I open a file from another app?</h3>
   <p>Tap <strong>File</strong> on the home screen to pick from Files or Photos, use <strong>Share → FreeView</strong> (or <strong>Open in…</strong>) from Files, Mail or AirDrop, or on iPad and Mac drag files onto the home screen.</p>
+  <h3>Can I open a whole folder?</h3>
+  <p>Yes. Choose <strong>File or Folder</strong> and pick a folder. If it has an HTML page (an <code>index.html</code>, or the first one FreeView finds), it opens as that page with its CSS, JavaScript and images. Otherwise everything FreeView can show inside it (photos, PDFs, videos, documents) becomes a presentation, in name order.</p>
+  <h3>Can I save a web page to read offline?</h3>
+  <p>Open the page, tap the round button in the corner and choose <strong>Save for Offline</strong>. FreeView keeps the page with its images and styles; it appears in Recent and opens without a connection. Pages that load their content later through JavaScript (feeds, maps) may be incomplete offline.</p>
   <h3>How do I make a presentation?</h3>
   <p>Tap <strong>File</strong>, then choose <strong>Files</strong> or <strong>Photos and Videos</strong> under "Present several". Items appear in the order you picked them, one per slide; a multi-page PDF becomes one slide per page. Swipe, or use a presentation clicker or the arrow keys.</p>
   <h3>How do I leave a page?</h3>
