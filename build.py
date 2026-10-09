@@ -106,24 +106,16 @@ header.hero{text-align:center;padding:96px 24px 72px;background:radial-gradient(
 @keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(.86)}}
 h1{font-size:clamp(38px,7vw,64px);font-weight:300;letter-spacing:-.02em;margin:0 0 14px}
 .tag{font-size:clamp(16px,2.3vw,20px);color:var(--muted2);font-weight:300;max-width:560px;margin:0 auto 30px}
-.duo{position:relative;width:min(760px,92vw);margin:16px auto 0;padding-right:min(120px,14vw)}
-.duo .tab{width:100%;border-radius:30px;border:1px solid var(--line);background:#000;padding:10px;box-shadow:0 30px 80px rgba(0,0,0,.7)}
-.duo .tab img{width:100%;height:auto;display:block;border-radius:20px}
-.duo .ph{position:absolute;right:0;bottom:-28px;width:min(220px,30vw);border-radius:34px;border:1px solid var(--line);background:#000;padding:7px;
-  box-shadow:0 30px 80px rgba(0,0,0,.85)}
-.duo .ph img{width:100%;height:auto;display:block;border-radius:27px}
+.herovid{display:block;width:min(1040px,100%);aspect-ratio:16/9;height:auto;margin:8px auto 0;background:#000}
 .appstore{display:inline-block;margin:0 auto}
 .appstore img{height:56px;width:auto;display:block}
-.heroBadge{margin:66px auto 12px}
+.heroBadge{margin:36px auto 12px}
 .storenote{margin:0 auto 24px;font-size:13px;font-weight:300;color:var(--muted)}
 .ctarow{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
 .cta{display:inline-flex;gap:8px;align-items:center;background:#fff;color:#000;font-weight:600;padding:13px 24px;border-radius:16px;font-size:16px;
   transition-property:scale;transition-duration:120ms;transition-timing-function:ease-out}
 .cta:active{scale:.96}
 .cta.ghost{background:var(--surface);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
-.dots{display:flex;gap:7px;justify-content:center;margin-top:38px}
-.dots i{width:7px;height:7px;border-radius:99px;background:rgba(255,255,255,.22)}
-.dots i.on{width:22px;background:#fff}
 
 /* feature rows */
 section.feat{padding:60px 0;border-top:1px solid var(--line)}
@@ -350,10 +342,8 @@ INDEX_BODY = f"""{ICONS}
   <div class="logo" role="img" aria-label="FreeView"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="{MARK_PATH}"/></svg></div>
   <h1>FreeView</h1>
   <p class="tag">View and present anything, full screen. Web pages, PDFs, videos, photos and prototypes, with nothing in the way.</p>
-  <div class="duo">
-    <div class="tab"><img src="shot-ipad-pdf.webp" width="880" height="1260" alt="A PDF slide shown full screen on iPad"></div>
-    <div class="ph"><img src="shot-home.webp" width="612" height="1330" alt="The FreeView home screen on iPhone, with an address field and recent items"></div>
-  </div>
+  <video class="herovid" src="hero.mp4" poster="hero-poster.webp" width="1280" height="720" autoplay muted loop playsinline preload="auto"
+    aria-label="A 29-second tour: web pages, PDFs, videos and photos full screen on iPhone; a PDF as slides on iPad; night mode in deep red on black; kiosk mode; and private by design"></video>
   <a class="appstore heroBadge" href="{STORE}" target="_blank" rel="noopener" aria-label="Download FreeView on the App Store">
     <img src="appstore-badge.svg" alt="Download on the App Store">
   </a>
@@ -363,9 +353,9 @@ INDEX_BODY = f"""{ICONS}
     <a class="cta ghost" href="#tour">See the tour</a>
     <a class="cta ghost" href="support.html">Support</a>
   </div>
-  <div class="dots" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div>
 </header>
 
+<script>if(matchMedia('(prefers-reduced-motion: reduce)').matches){{var v=document.querySelector('.herovid');v.removeAttribute('autoplay');v.pause();}}</script>
 <div id="tour"></div>
 {FEATURES}
 
@@ -564,12 +554,20 @@ SUPPORT = f"""  <div class="contact">
   <p>Web addresses, PDFs, videos, audio, photos and images, HTML files or folders (with their CSS and JavaScript), and anything WebKit can render, such as Office and Keynote files, text, GIF and SVG.</p>
   <h3>How do I open a file from another app?</h3>
   <p>Tap <strong>File</strong> on the home screen to pick from Files or Photos, use <strong>Share → FreeView</strong> (or <strong>Open in…</strong>) from Files, Mail or AirDrop, or on iPad and Mac drag files onto the home screen.</p>
+  <h3>What does Paste do?</h3>
+  <p>It opens what you copied: a link or text opens like the address field, and copied files, photos or PDFs are added (several become a presentation).</p>
+  <h3>Can I send things to FreeView from other apps?</h3>
+  <p>Yes. In Safari, Photos, Files or Mail, tap Share and choose <strong>FreeView</strong>. It's added right away and opens the next time you switch to FreeView; several items open as a presentation.</p>
   <h3>Can I open a whole folder?</h3>
   <p>Yes. Choose <strong>File or Folder</strong> and pick a folder. If it has an HTML page (an <code>index.html</code>, or the first one FreeView finds), it opens as that page with its CSS, JavaScript and images. Otherwise everything FreeView can show inside it (photos, PDFs, videos, documents) becomes a presentation, in name order.</p>
   <h3>Can I save a web page to read offline?</h3>
   <p>Open the page, tap the round button in the corner and choose <strong>Save for Offline</strong>. FreeView keeps the page with its images and styles; it appears in Recent and opens without a connection. Pages that load their content later through JavaScript (feeds, maps) may be incomplete offline.</p>
   <h3>How do I make a presentation?</h3>
   <p>Tap <strong>File</strong>, then choose <strong>Files</strong> or <strong>Photos and Videos</strong> under "Present several". Items appear in the order you picked them, one per slide; a multi-page PDF becomes one slide per page. Swipe, or use a presentation clicker or the arrow keys.</p>
+  <h3>How do I change a presentation?</h3>
+  <p>Touch and hold it in Recent and choose <strong>Edit Presentation</strong>, or choose <strong>Edit Slides</strong> from the round button while it's open. Drag to reorder, tap the minus to delete, add files or photos, or touch and hold a slide to replace it.</p>
+  <h3>Can I search inside my files?</h3>
+  <p>Tap the magnifying glass next to Recent. FreeView searches names and addresses, and also the text inside PDFs, documents, web pages you've opened, saved pages and even photos. A match inside a presentation opens on its slide.</p>
   <h3>How do I leave a page?</h3>
   <p>Tap the round button in the corner and choose <strong>Close</strong>. It fades after a few seconds but stays tappable. With a keyboard, press Esc (or ⌘.).</p>
 
