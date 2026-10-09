@@ -1,0 +1,7 @@
+# freeview-app
+
+Marketing site for [FreeView](https://apps.apple.com/app/id1526222244): `index`, `privacy`, `terms`, `support`.
+Plain HTML, no build step, served by GitHub Pages from `main`.
+
+Custom domain: add a `CNAME` file containing `freeview.app` and point the domain's DNS at GitHub Pages; all links
+are relative, so nothing else changes. Then update `Links.swift` in the app and the URLs in App Store Connect.

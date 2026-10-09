@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+<title>Support · FreeView</title>
+<meta name="description" content="Help with FreeView: opening files, presentations, kiosk mode, night mode and FreeView Pro.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%23000'/%3E%3Cpath d='M6 10V8a2 2 0 0 1 2-2h2M14 6h2a2 2 0 0 1 2 2v2M18 14v2a2 2 0 0 1-2 2h-2M10 18H8a2 2 0 0 1-2-2v-2' stroke='%23fff' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root{--ink:#141414;--muted:#5f5f5b;--canvas:#f5f5f2;--surface:#ffffff;--accent:#141414;--line:oklch(0 0 0 / .1);
+  --shadow:0 1px 1px oklch(0 0 0 / .04),0 4px 12px oklch(0 0 0 / .05),0 18px 40px oklch(0 0 0 / .06)}
+@media (prefers-color-scheme:dark){:root{--ink:#f2f2ef;--muted:#a3a39e;--canvas:#0d0d0d;--surface:#181818;--accent:#f2f2ef;--line:oklch(1 0 0 / .1);
+  --shadow:0 1px 1px oklch(0 0 0 / .3),0 6px 18px oklch(0 0 0 / .35)}}
+*{box-sizing:border-box}
+html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body{margin:0;background:var(--canvas);color:var(--ink);font-family:ui-serif,Georgia,"Times New Roman",serif;line-height:1.6}
+a{color:var(--ink);text-decoration-thickness:1px;text-underline-offset:3px}
+a:hover{text-decoration-thickness:2px}
+h1,h2,h3{text-wrap:balance;font-weight:300}
+p,li{text-wrap:pretty}
+.wrap{max-width:760px;margin:0 auto;padding:44px 20px 72px}
+nav{display:flex;justify-content:space-between;align-items:center;font-size:14px;gap:12px}
+nav .brand{display:flex;align-items:center;gap:8px;font-style:italic;letter-spacing:2px;text-transform:uppercase;color:var(--ink);text-decoration:none}
+nav .brand svg{width:18px;height:18px}
+nav .links a{margin-left:16px;color:var(--muted);text-decoration:none;display:inline-block;padding:10px 0}
+nav .links a:hover{color:var(--ink)}
+.hero{text-align:center;padding:56px 0 8px}
+.kicker{font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);font-style:italic}
+h1{font-size:clamp(38px,7vw,54px);font-style:italic;margin:12px 0 14px;line-height:1.08}
+.lead{font-size:19px;color:var(--muted);max-width:540px;margin:0 auto;font-style:italic}
+.cta-row{text-align:center;margin:28px 0 4px}
+.cta{display:inline-block;background:var(--ink);color:var(--canvas);font:italic 500 16px/1 ui-serif,Georgia,serif;padding:16px 30px;border-radius:999px;
+  box-shadow:var(--shadow);text-decoration:none;transition-property:scale,box-shadow;transition-duration:150ms;transition-timing-function:ease-out}
+a.cta:active{scale:.96}
+.cta-note{font-size:13px;color:var(--muted);font-style:italic;margin:12px 0 0}
+.pager{margin:44px auto 8px;max-width:460px}
+.stage{position:relative;background:var(--surface);border-radius:32px;min-height:440px;overflow:hidden;box-shadow:var(--shadow);touch-action:pan-y}
+.slide{position:absolute;inset:0;padding:40px 28px 36px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  opacity:0;translate:0 6px;pointer-events:none;transition-property:opacity,translate;transition-duration:320ms;transition-timing-function:ease-out}
+.slide.active{opacity:1;translate:0 0;pointer-events:auto}
+.art{width:200px;height:170px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;color:var(--ink)}
+.art svg{width:100%;height:100%}
+.num{font-size:11px;letter-spacing:3px;text-transform:uppercase;font-style:italic;color:var(--muted)}
+.title{font-size:30px;font-style:italic;margin:8px 0 0;line-height:1.15}
+.rule{width:48px;height:1px;background:var(--line);margin:16px auto}
+.body{font-size:15px;font-style:italic;color:var(--muted);margin:0;max-width:330px}
+.dots{display:flex;gap:4px;justify-content:center;margin-top:16px}
+.dot{width:28px;height:28px;border:0;background:none;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.dot::before{content:"";width:6px;height:6px;border-radius:99px;background:var(--line);transition-property:width,background-color;transition-duration:150ms;transition-timing-function:ease-out}
+.dot[aria-current="true"]::before{width:22px;background:var(--ink)}
+.features{display:grid;grid-template-columns:1fr;gap:16px;margin:56px 0}
+@media (min-width:620px){.features{grid-template-columns:1fr 1fr}}
+.card{background:var(--surface);border-radius:24px;padding:24px;box-shadow:var(--shadow)}
+.card h3{margin:0 0 6px;font-size:19px;font-style:italic}
+.card p{margin:0;font-size:15px;color:var(--muted)}
+.price{text-align:center;margin:56px 0}
+.price h2{font-size:28px;font-style:italic;margin:0 0 10px}
+.plans{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin:22px 0 10px}
+.plan{background:var(--surface);border-radius:24px;padding:20px 26px;min-width:200px;box-shadow:var(--shadow)}
+.plan .name{font-size:13px;letter-spacing:2px;text-transform:uppercase;font-style:italic;color:var(--muted)}
+.plan .amt{font-size:26px;font-variant-numeric:tabular-nums;margin-top:4px}
+.plan .per{font-size:14px;color:var(--muted);font-style:italic}
+.fine{font-size:13px;color:var(--muted);font-style:italic;max-width:560px;margin:10px auto 0}
+hr{border:0;border-top:1px solid var(--line);margin:48px 0}
+footer{text-align:center;font-size:13px;color:var(--muted)}
+footer a{color:var(--muted)}
+.doc h1{font-size:40px;text-align:left;margin:40px 0 6px}
+.doc .date{color:var(--muted);font-style:italic;font-size:14px;margin:0 0 24px}
+.doc h2{font-size:24px;font-style:italic;margin:36px 0 8px}
+.doc h3{font-size:18px;font-style:italic;margin:22px 0 4px}
+.doc p,.doc li{font-size:17px}
+.doc ul{padding-left:22px}
+.pill{background:var(--surface);border-radius:20px;padding:18px 22px;box-shadow:var(--shadow);margin:20px 0}
+.pill p{margin:0;font-size:16px}
+.contact{background:var(--surface);border-radius:24px;padding:24px;box-shadow:var(--shadow);margin:28px 0}
+.contact p{margin:6px 0 0;color:var(--muted)}
+.contact a.mail{font-size:20px;font-style:italic}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav>
+  <a class="brand" href="./"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 9V6.5A2.5 2.5 0 0 1 6.5 4H9M15 4h2.5A2.5 2.5 0 0 1 20 6.5V9M20 15v2.5a2.5 2.5 0 0 1-2.5 2.5H15M9 20H6.5A2.5 2.5 0 0 1 4 17.5V15"/></svg>FreeView</a>
+  <span class="links"><a href="support.html">Support</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a></span>
+</nav>
+
+<article class="doc">
+<h1>Support</h1>
+<div class="contact">
+  <a class="mail" href="mailto:fbmore+freeview@gmail.com?subject=FreeView%20support">fbmore+freeview@gmail.com</a>
+  <p>Please include your device, iOS version and FreeView version (Settings, at the bottom). Replies usually within two working days.</p>
+</div>
+
+<h2>Opening things</h2>
+<h3>What can FreeView open?</h3>
+<p>Web addresses, PDFs, videos, audio, photos and images, HTML files or folders (with their CSS and JavaScript), and anything WebKit can render, such as Office and Keynote files, text, GIF and SVG.</p>
+<h3>How do I open a file from another app?</h3>
+<p>Tap <em>File</em> on the home screen to pick from Files or Photos, or use <em>Share → FreeView</em> (or <em>Open in…</em>) from Files, Mail or AirDrop.</p>
+<h3>How do I make a presentation?</h3>
+<p>Tap <em>File</em>, then choose <em>Files</em> or <em>Photos and Videos</em> under "Present several". Items appear in the order you picked them, one per slide; a multi-page PDF becomes one slide per page. Swipe, or use a presentation clicker or the arrow keys.</p>
+<h3>How do I leave a page?</h3>
+<p>Tap the round button in the corner and choose <em>Close</em>. It fades after a few seconds but stays tappable.</p>
+
+<h2>Kiosk mode</h2>
+<h3>How do I exit kiosk mode?</h3>
+<p>Touch and hold anywhere with three fingers, or shake the device, then enter your PIN. If you use iOS Zoom, its three-finger gestures can get in the way; shaking always works.</p>
+<h3>I forgot my PIN.</h3>
+<p>Force-quit FreeView (swipe up from the app switcher) and reopen it; you'll land on the home screen. Then go to Settings, turn kiosk mode off and on again to set a new PIN.</p>
+<h3>Can people leave the app?</h3>
+<p>Kiosk mode controls what happens inside FreeView. To keep a device locked to FreeView, also turn on Guided Access: Settings → Accessibility → Guided Access.</p>
+
+<h2>Privacy and night mode</h2>
+<h3>What's the difference between private browsing and "Don't remember my browsing"?</h3>
+<p>Private browsing keeps no cookies, logins or history once a page closes. "Don't remember my browsing" keeps you signed in to sites but adds nothing to history.</p>
+<h3>Face ID isn't asking when I come back.</h3>
+<p>Turn on <em>Lock with Face ID</em> in FreeView's Settings, and make sure FreeView is allowed in iOS Settings → Face ID &amp; Passcode → Other Apps.</p>
+<h3>Night mode looks too bright on a white web page.</h3>
+<p>Turn on <em>Darken web pages</em> under Night mode in Settings.</p>
+
+<h2>FreeView Pro</h2>
+<h3>What does Pro add?</h3>
+<p>Your whole history. Free keeps the three most recent items; everything else in FreeView is free.</p>
+<h3>How do I restore my purchase?</h3>
+<p>Settings → <em>Restore Purchases</em>, on a device signed in to the same Apple Account.</p>
+<h3>How do I cancel or get a refund?</h3>
+<p>Cancel in iOS Settings → Apple Account → Subscriptions (or <em>Manage Subscription</em> in FreeView's Settings). Refunds are handled by Apple at <a href="https://reportaproblem.apple.com">reportaproblem.apple.com</a>.</p>
+
+<h2>Your data</h2>
+<p>Everything stays on your device. Swipe an item to remove it, or use <em>Clear History</em> in Settings to remove everything, including imported files. See the <a href="privacy.html">privacy policy</a>.</p>
+</article>
+
+<hr>
+<footer>
+  <p>© 2026 FRANCESCO BERTOCCI, LLC · <a href="support.html">Support</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a> · <a href="mailto:fbmore+freeview@gmail.com">fbmore+freeview@gmail.com</a></p>
+</footer>
+</div>
+
+</body>
+</html>
