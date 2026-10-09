@@ -342,7 +342,7 @@ INDEX_BODY = f"""{ICONS}
   <div class="logo" role="img" aria-label="FreeView"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="{MARK_PATH}"/></svg></div>
   <h1>FreeView</h1>
   <p class="tag">View and present anything, full screen. Web pages, PDFs, videos, photos and prototypes, with nothing in the way.</p>
-  <video class="herovid" src="hero.mp4" poster="hero-poster.webp" width="1280" height="720" autoplay muted loop playsinline preload="auto"
+  <video class="herovid" src="hero.mp4?v=2" poster="hero-poster.webp?v=2" width="1280" height="720" autoplay muted loop playsinline preload="auto"
     aria-label="A 29-second tour: web pages, PDFs, videos and photos full screen on iPhone; a PDF as slides on iPad; night mode in deep red on black; kiosk mode; and private by design"></video>
   <a class="appstore heroBadge" href="{STORE}" target="_blank" rel="noopener" aria-label="Download FreeView on the App Store">
     <img src="appstore-badge.svg" alt="Download on the App Store">
