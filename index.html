@@ -74,9 +74,9 @@ section.feat{padding:60px 0;border-top:1px solid var(--line)}
 /* 1 · open anything: an address being typed, then the kinds of things FreeView opens */
 .field{width:100%;margin-top:22px;height:40px;border-radius:12px;background:var(--surface2);display:flex;align-items:center;padding:0 12px;
   font-size:13px;color:#fff;text-align:left;overflow:hidden;white-space:nowrap}
-.field .typed{display:inline-block;overflow:hidden;width:0;animation:type 6s steps(12,end) infinite;vertical-align:bottom}
+.field .typed{display:inline-block;overflow:hidden;max-width:0;animation:type 6s steps(12,end) infinite;vertical-align:bottom}
 .field .caret{display:inline-block;width:1.5px;height:15px;background:#fff;margin-left:1px;animation:caret 1s step-end infinite}
-@keyframes type{0%,8%{width:0}40%,100%{width:12ch}}
+@keyframes type{0%,8%{max-width:0}40%,100%{max-width:8em}}   /* past the text width: the caret lands right after the last letter */
 @keyframes caret{50%{opacity:0}}
 .kinds{display:flex;flex-direction:column;gap:9px;margin-top:20px;width:100%}
 .kinds .row{display:flex;align-items:center;gap:12px;text-align:left;font-size:14px;color:#fff;background:var(--surface);
@@ -190,7 +190,7 @@ footer a{color:var(--muted2);display:inline-block;padding:12px 10px}
 
 @media (prefers-reduced-motion: reduce){*{animation:none!important}
   .kinds .row{opacity:1!important;transform:none!important}.deckdots{opacity:1}.fingers,.pin{display:none}
-  .field .typed{width:12ch}.counter .n b:first-child{opacity:1}}
+  .field .typed{max-width:none}.counter .n b:first-child{opacity:1}}
 </style>
 </head>
 <body>
