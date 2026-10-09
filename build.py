@@ -29,6 +29,20 @@ HEAD = """<!DOCTYPE html>
 <title>{title}</title>
 <meta name="description" content="{desc}">
 <meta name="color-scheme" content="dark">
+<link rel="canonical" href="https://freeview.app/{path}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FreeView">
+<meta property="og:title" content="{title}">
+<meta property="og:description" content="{desc}">
+<meta property="og:url" content="https://freeview.app/{path}">
+<meta property="og:image" content="https://freeview.app/og.jpg">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="720">
+<meta property="og:image:alt" content="FreeView on iPhone: web pages, PDFs, videos and photos, edge to edge.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{title}">
+<meta name="twitter:description" content="{desc}">
+<meta name="twitter:image" content="https://freeview.app/og.jpg">
 <link rel="icon" type="image/png" href="/logo.png">
 <link rel="apple-touch-icon" href="/logo.png">
 <style>{css}</style>
@@ -430,8 +444,8 @@ footer a{color:var(--muted)}
 """
 
 
-def legal(title, desc, heading, body):
-    return HEAD.format(title=f"FreeView — {title}", desc=desc, css=LEGAL_CSS) + f"""<div class="wrap">
+def legal(title, desc, heading, body, path):
+    return HEAD.format(title=f"FreeView — {title}", desc=desc, css=LEGAL_CSS, path=path) + f"""<div class="wrap">
   <nav><a href="./">← FreeView</a></nav>
   <img src="logo.png" alt="FreeView" width="52" height="52" style="border-radius:12px;display:block;margin:12px 0 4px;outline:1px solid rgba(255,255,255,.1);outline-offset:-1px">
   <div class="kicker">FreeView</div>
@@ -623,12 +637,12 @@ NOT_FOUND = """<!DOCTYPE html>
 """
 
 PAGES = {
-    "index.html": HEAD.format(title="FreeView — View and present anything, full screen",
+    "index.html": HEAD.format(title="FreeView — View and present anything, full screen", path="",
                               desc="FreeView shows web pages, PDFs, videos, photos and prototypes full screen on iPhone, iPad and Mac, with instant presentations, kiosk mode and a red night mode.",
                               css=INDEX_CSS) + INDEX_BODY,
-    "privacy.html": legal("Privacy Policy", "How FreeView handles your data: it stays on your device.", "Privacy Policy", PRIVACY),
-    "terms.html": legal("Terms of Use", "Terms of use for FreeView and FreeView Pro.", "Terms of Use", TERMS),
-    "support.html": legal("Support", "Help with FreeView: opening files, presentations, kiosk mode, night mode and FreeView Pro.", "Support", SUPPORT),
+    "privacy.html": legal("Privacy Policy", "How FreeView handles your data: it stays on your device.", "Privacy Policy", PRIVACY, "privacy.html"),
+    "terms.html": legal("Terms of Use", "Terms of use for FreeView and FreeView Pro.", "Terms of Use", TERMS, "terms.html"),
+    "support.html": legal("Support", "Help with FreeView: opening files, presentations, kiosk mode, night mode and FreeView Pro.", "Support", SUPPORT, "support.html"),
     "404.html": NOT_FOUND,
 }
 
