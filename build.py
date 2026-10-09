@@ -337,8 +337,8 @@ FEATURES = "\n".join([
             [("stack", "One page at a time, edge to edge"), ("keys", "Presentation clickers and arrow keys"), ("airplay", "AirPlay to a bigger screen")], MOCK_SLIDES, flip=True),
     feature("Instant presentations", "Pick several files or photos and FreeView turns them into a deck, one item per slide. A multi-page PDF becomes one slide per page, and a video plays when its slide comes up.",
             [("photo", "Photos, PDFs, videos and pages together"), ("play", "Videos play only on their slide, looping if you like"), ("check", "In the order you picked them")], MOCK_DECK),
-    feature("Kiosk mode", "Hand someone your iPad with something on screen and nothing else. No buttons, no menus. Leaving takes your PIN: touch and hold with three fingers, shake the device, or press ⌘. on a keyboard.",
-            [("lock", "Nothing drawn over what you show"), ("hand", "Three fingers, a shake or ⌘., then your PIN"), ("check", "Pairs with Guided Access to stay in the app")], MOCK_KIOSK, flip=True),
+    feature("Kiosk mode", "Hand someone your iPad with something on screen and nothing else. No buttons, no menus. Leaving takes your PIN: touch and hold with three fingers, shake the device, or press Esc on a keyboard.",
+            [("lock", "Nothing drawn over what you show"), ("hand", "Three fingers, a shake or Esc, then your PIN"), ("check", "Pairs with Guided Access to stay in the app")], MOCK_KIOSK, flip=True),
     feature("Night mode", "Everything turns deep red on black, web pages and videos included, so the screen is easy on dark-adapted eyes. Keep it on, or let it come on after 9 pm.",
             [("moon", "Deep red on black, pages and videos too"), ("clock", "Always, or from 9 pm to 6 am"), ("check", "White pages darkened, not glowing red")], MOCK_NIGHT),
     feature("Private by design", "No account, no ads, no tracking. Your history and files stay on your device, and you decide how much of it FreeView remembers.",
@@ -571,11 +571,11 @@ SUPPORT = f"""  <div class="contact">
   <h3>How do I make a presentation?</h3>
   <p>Tap <strong>File</strong>, then choose <strong>Files</strong> or <strong>Photos and Videos</strong> under "Present several". Items appear in the order you picked them, one per slide; a multi-page PDF becomes one slide per page. Swipe, or use a presentation clicker or the arrow keys.</p>
   <h3>How do I leave a page?</h3>
-  <p>Tap the round button in the corner and choose <strong>Close</strong>. It fades after a few seconds but stays tappable. With a keyboard, press ⌘. (or ⌘W on iPad).</p>
+  <p>Tap the round button in the corner and choose <strong>Close</strong>. It fades after a few seconds but stays tappable. With a keyboard, press Esc (or ⌘.).</p>
 
   <h2>Kiosk mode</h2>
   <h3>How do I exit kiosk mode?</h3>
-  <p>Touch and hold anywhere with three fingers, shake the device, or press ⌘. on a keyboard, then enter your PIN. If you use iOS Zoom, its three-finger gestures can get in the way; shaking always works.</p>
+  <p>Touch and hold anywhere with three fingers, shake the device, or press Esc on a keyboard, then enter your PIN. If you use iOS Zoom, its three-finger gestures can get in the way; shaking always works.</p>
   <h3>I forgot my PIN.</h3>
   <p>Force-quit FreeView (swipe it up in the app switcher) and reopen it; you'll land on the home screen. Then go to Settings, turn kiosk mode off and on again to set a new PIN.</p>
   <h3>Can people leave the app?</h3>
