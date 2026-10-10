@@ -241,9 +241,17 @@
         const src = s.slice(2);
         if (/^https?:\/\//i.test(src)) slides.push({ kind: 'web', src, name: new URL(src).hostname.replace(/^www\./, '') });
       } else if (s.startsWith('a:')) {
-        const i = parseInt(s.slice(2), 10);
+        // "a:<item>" or, for audio, "a:<item>:p:<waveform picture item>"
+        const parts = s.split(':');
+        const i = parseInt(parts[1], 10);
         const src = assetURL(items[i], names[i]);
-        if (src) slides.push({ kind: types[i] === 'video' ? 'video' : 'image', src, name: names[i] || '' });
+        if (!src) continue;
+        if (types[i] === 'audio') {
+          const p = parts[2] === 'p' ? parseInt(parts[3], 10) : -1;
+          slides.push({ kind: 'audio', src, poster: p >= 0 ? assetURL(items[p], names[p]) : '', name: names[i] || '' });
+        } else {
+          slides.push({ kind: types[i] === 'video' ? 'video' : 'image', src, name: names[i] || '' });
+        }
       }
     }
     if (!slides.length) return ended();
@@ -261,7 +269,7 @@
     const exp = val(f.expiresAt);
     const n = (k) => slides.filter((s) => s.kind === k).length;
     const plural = (c, one, many) => (c ? `${c} ${c === 1 ? one : many}` : null);
-    const parts = [plural(n('image'), 'image', 'images'), plural(n('video'), 'video', 'videos'), plural(n('web'), 'web page', 'web pages')].filter(Boolean);
+    const parts = [plural(n('image'), 'image', 'images'), plural(n('video'), 'video', 'videos'), plural(n('audio'), 'audio clip', 'audio clips'), plural(n('web'), 'web page', 'web pages')].filter(Boolean);
     let meta = `${slides.length} slide${slides.length === 1 ? '' : 's'}`;
     if (parts.length > 1) meta += ' · ' + parts.join(' · ');
     if (exp) meta += ` · available until ${new Date(exp).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`;
@@ -277,7 +285,7 @@
       return el;
     });
     if (document.fullscreenEnabled || document.webkitFullscreenEnabled) $('#fs').hidden = false;
-    if (slides.some((s) => s.kind === 'video')) $('#sound').hidden = false;
+    if (slides.some((s) => s.kind === 'video' || s.kind === 'audio')) $('#sound').hidden = false;
     updateSound();
 
     go(0, true);
@@ -311,6 +319,18 @@
       m.setAttribute('playsinline', ''); m.setAttribute('disablepictureinpicture', ''); m.setAttribute('controlslist', 'nodownload noplaybackrate noremoteplayback');
       m.oncanplay = () => el.classList.add('ready');
       m.src = s.src;
+    } else if (s.kind === 'audio') {
+      // The waveform fills the slide; the sound plays while it's on screen.
+      m = new Image();
+      m.decoding = 'async';
+      m.alt = s.name;
+      m.draggable = false;
+      m.onload = () => el.classList.add('ready');
+      m.src = s.poster || '/og.jpg';
+      const a = document.createElement('audio');
+      a.preload = 'auto'; a.muted = !soundOn; a.src = s.src;
+      a.setAttribute('controlslist', 'nodownload');
+      el.appendChild(a);
     } else {
       m = document.createElement('iframe');
       m.src = s.src;
@@ -336,7 +356,7 @@
           el.classList.toggle('before', i < n);
         }
         el.classList.toggle('on', i === n);
-        const v = el.querySelector('video');
+        const v = el.querySelector('video, audio');
         if (v) { if (i === n && started) { v.currentTime = 0; v.play().catch(() => {}); } else v.pause(); }
       });
       document.body.classList.toggle('web', slides[n].kind === 'web');
@@ -378,7 +398,7 @@
     $('#cover').classList.add('gone');
     setTimeout(() => { $('#cover').hidden = true; }, 420);
     fullscreen(true);
-    const v = nodes[index].querySelector('video');
+    const v = nodes[index].querySelector('video, audio');
     if (v) v.play().catch(() => {});
     wake();
   }
@@ -397,7 +417,7 @@
     b.querySelector('.wave').style.display = soundOn ? '' : 'none';
     b.querySelector('.mute').style.display = soundOn ? 'none' : '';
     b.setAttribute('aria-label', soundOn ? 'Turn sound off' : 'Turn sound on');
-    nodes.forEach((el) => { const v = el.querySelector('video'); if (v) v.muted = !soundOn; });
+    nodes.forEach((el) => { el.querySelectorAll('video, audio').forEach((v) => { v.muted = !soundOn; }); });
   }
   $('#sound').addEventListener('click', () => { soundOn = !soundOn; updateSound(); });
   $('#prev').addEventListener('click', prev);
