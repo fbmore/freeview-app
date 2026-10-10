@@ -264,6 +264,7 @@
     const items = val(f.items) || [];
     const types = val(f.itemTypes) || [];
     const names = val(f.itemNames) || [];
+    window.__fvItems = items; window.__fvNames = names;
     const order = val(f.slides) || items.map((_, i) => 'a:' + i);
     for (const s of order) {
       if (s.startsWith('u:')) {
@@ -281,7 +282,7 @@
         } else if (types[i] === 'model') {
           const p = parts[2] === 'p' ? parseInt(parts[3], 10) : -1;
           slides.push({ kind: 'model', src, poster: p >= 0 ? assetURL(items[p], names[p]) : '', name: names[i] || '' });
-        } else if (types[i] === 'markdown' || types[i] === 'lottie' || types[i] === 'table') {
+        } else if (types[i] === 'markdown' || types[i] === 'lottie' || types[i] === 'table' || types[i] === 'custom') {
           slides.push({ kind: types[i], src, name: names[i] || '' });
         } else {
           slides.push({ kind: types[i] === 'video' ? 'video' : 'image', src, name: names[i] || '' });
@@ -303,7 +304,7 @@
     const exp = val(f.expiresAt);
     const n = (k) => slides.filter((s) => s.kind === k).length;
     const plural = (c, one, many) => (c ? `${c} ${c === 1 ? one : many}` : null);
-    const parts = [plural(n('image'), 'image', 'images'), plural(n('video'), 'video', 'videos'), plural(n('model'), '3D model', '3D models'), plural(n('lottie'), 'animation', 'animations'), plural(n('markdown'), 'page of text', 'pages of text'), plural(n('table'), 'table', 'tables'), plural(n('audio'), 'audio clip', 'audio clips'), plural(n('web'), 'web page', 'web pages')].filter(Boolean);
+    const parts = [plural(n('image'), 'image', 'images'), plural(n('video'), 'video', 'videos'), plural(n('model'), '3D model', '3D models'), plural(n('lottie'), 'animation', 'animations'), plural(n('markdown'), 'page of text', 'pages of text'), plural(n('table'), 'table', 'tables'), plural(n('custom'), 'slide', 'slides'), plural(n('audio'), 'audio clip', 'audio clips'), plural(n('web'), 'web page', 'web pages')].filter(Boolean);
     let meta = `${slides.length} slide${slides.length === 1 ? '' : 's'}`;
     if (parts.length > 1) meta += ' · ' + parts.join(' · ');
     if (exp) meta += ` · available until ${new Date(exp).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`;
@@ -381,6 +382,8 @@
     lottie: 'https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js',
     fflate: 'https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js',
     modelViewer: 'https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js',
+    qrcode: 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js',
+    fvslide: '/fvslide.js?v=1',   // the app's custom-slide renderer (FreeView/Support/Web/fvslide.js)
   };
   // <model-viewer> is an ES module.
   function loadModule(url) {
@@ -415,6 +418,20 @@
     if (field !== '' || row.length) { row.push(field); rows.push(row); }
     return rows;
   }
+  // A cover or text slide made in FreeView: its description, with "asset:N" naming uploaded pictures.
+  async function renderCustom(el, s) {
+    const [spec] = await Promise.all([fetch(s.src).then((r) => r.json()), loadScript(LIBS.marked), loadScript(LIBS.purify), loadScript(LIBS.qrcode), loadScript(LIBS.fvslide)]);
+    const resolve = (v) => {
+      if (typeof v === 'string' && /^asset:\d+$/.test(v)) { const i = parseInt(v.slice(6), 10); return assetURL(window.__fvItems[i], window.__fvNames[i]); }
+      if (Array.isArray(v)) return v.map(resolve);
+      if (v && typeof v === 'object') { const o = {}; for (const k in v) o[k] = resolve(v[k]); return o; }
+      return v;
+    };
+    FV.render(el, resolve(spec));
+    el.classList.add('ready');
+    el.querySelectorAll('a').forEach((a) => a.addEventListener('click', (e) => e.stopPropagation()));
+  }
+
   async function renderTable(el, s) {
     const rows = parseCSV(await (await fetch(s.src)).text());
     const isNum = (v) => { const t = v.replace(/[,%\s$€£¥]/g, ''); return t !== '' && !isNaN(Number(t)); };
@@ -500,6 +517,9 @@
         el.appendChild(mv);
         if (s.poster) el.classList.add('ready');
       }).catch(() => el.classList.add('ready'));
+      return;
+    } else if (s.kind === 'custom') {
+      renderCustom(el, s).catch(() => el.classList.add('ready'));
       return;
     } else if (s.kind === 'table') {
       renderTable(el, s).catch(() => el.classList.add('ready'));
