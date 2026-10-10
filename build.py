@@ -13,7 +13,7 @@ import pathlib
 
 OUT = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else ".")
 YEAR = "2026"
-UPDATED = "9 October 2026"
+UPDATED = "10 October 2026"
 EMAIL = "hello@freeview.app"
 STORE = "https://apps.apple.com/app/id1526222244"
 # Public TestFlight link for the 2.0 beta (external group "FreeView"). Drop it once 2.0 is live.
@@ -460,48 +460,66 @@ def legal(title, desc, heading, body, path):
 
 PRIVACY = f"""  <p class="muted">Last updated: {UPDATED}</p>
 
-  <p class="lead">FreeView shows web pages and files full screen, and it keeps what you open on your device. It has no accounts, no analytics, no advertising and no developer server.</p>
+  <p class="lead">FreeView shows web pages and files full screen, and it keeps what you open on your device. It has no accounts, no analytics and no advertising. The only things that leave your device are presentations you choose to share as a link, and the anonymous record of a FreeView Pro purchase.</p>
 
-  <p><span class="pill">In short</span>&nbsp; Your history, files and settings stay on your device. The only thing that ever leaves it is the record of a FreeView Pro purchase, handled anonymously by RevenueCat so your purchase can be unlocked and restored.</p>
+  <p><span class="pill">In short</span>&nbsp; Your history, files, profile and settings stay on your device. When you share a presentation, a copy of it goes to iCloud for as long as the link works, and anyone with the link can watch it. Nothing else is collected.</p>
 
   <hr>
 
-  <h2>What FreeView stores, and where</h2>
+  <h2>What FreeView stores on your device</h2>
   <ul>
-    <li><strong>History</strong>: the addresses, titles and dates of what you open, and any names you give them, in a file inside FreeView on your device.</li>
-    <li><strong>Files you open</strong>: PDFs, videos, photos, HTML prototypes and presentations are copied into FreeView's own storage on your device, so they keep working after the original moves.</li>
-    <li><strong>Settings</strong>: choices such as private browsing, night mode, kiosk mode and looping videos, on your device.</li>
-    <li><strong>Kiosk PIN</strong>: stored in your device's Keychain as a salted hash, on this device only. We never see it.</li>
-    <li><strong>Web data</strong>: cookies, site storage and cache are kept by Apple's WebKit on your device, as in Safari. With <strong>Private browsing</strong> on, they last only while a page is open and nothing is added to history. With <strong>Don't remember my browsing</strong> on, nothing is added to history.</li>
+    <li><strong>History</strong>: the addresses, titles and dates of what you open, and any names you give them.</li>
+    <li><strong>Files and presentations</strong>: PDFs, videos, photos, audio, documents and the slides you make are copied into FreeView's own storage, with pictures FreeView makes from them (pages of Keynote, PowerPoint or Word files, previews and edits).</li>
+    <li><strong>Profile</strong>: the name, role, photo, logo and contact details you add in Settings, for your covers and slides. They appear only on slides where you turn them on.</li>
+    <li><strong>Styles, settings and the kiosk PIN</strong>: your choices, saved styles, and the PIN as a salted hash in the Keychain.</li>
+    <li><strong>Web data</strong>: cookies, site storage and cache, kept by Apple's WebKit as in Safari. Private browsing keeps none of it once a page closes.</li>
   </ul>
-  <p>None of this is sent to us, and we have no way to read it. It may be included in your device's own iCloud or computer backup, under Apple's terms.</p>
+  <p>None of this is sent to us unless you share a presentation. It may be included in your device's own iCloud or computer backup, under Apple's terms.</p>
+
+  <h2>Shared presentations</h2>
+  <p>When you use <strong>Share Presentation</strong>, FreeView uploads a copy of that presentation so it can be watched in a browser at freeview.app:</p>
+  <ul>
+    <li><strong>What's uploaded</strong>: the presentation's title, your optional message, its slides as web-ready files (photos, PDF and document pages as pictures, videos, audio, 3D models, animations, tables), the text of your covers and text slides, and only the profile details you chose to show on them (for example your name, photo, logo, email or website).</li>
+    <li><strong>Where</strong>: the public database of FreeView's iCloud container (iCloud.com.fbmore.freeview), run by Apple. Each link has a long random address; there is no list or search of shared presentations, so it can only be found by someone you give the link to.</li>
+    <li><strong>Who can see it</strong>: anyone who has the link, without signing in. Link previews in apps like Messages show its title, message and cover picture.</li>
+    <li><strong>How long</strong>: until the link ends (after the time you choose) or you stop sharing it in Settings → Shared Links. Ended links stop working right away, and their copies are deleted from iCloud within a day.</li>
+    <li><strong>Views</strong>: each opening of a link adds one to a count for that link, so you can see how often it was watched. The count is just a number per link, kept on Cloudflare; no IP address, cookie or device detail is stored.</li>
+    <li><strong>Viewer libraries</strong>: the web viewer loads open-source code (for Markdown, tables, Lottie animations, 3D models and QR codes) from cdnjs and jsDelivr, which, like any website, see the viewer's IP address when serving it.</li>
+  </ul>
+  <p>Share only what you have the right to share: anyone with the link can view and save what they see.</p>
+
+  <h2>Camera, microphone, photos and files</h2>
+  <p>The camera is used only when you take a photo or video, or scan a document, for a presentation; the microphone only when you record audio or a video's sound. FreeView uses the system pickers for Photos and Files, so it only sees the items you choose. What you capture or pick stays on your device unless you share it.</p>
+
+  <h2>Reimagine</h2>
+  <p>On devices with Apple Intelligence, <strong>Reimagine</strong> uses Apple's Image Playground to make a new picture from a photo. Apple processes it on your device or with Private Cloud Compute, under Apple's privacy terms; FreeView sends nothing to us.</p>
 
   <h2>Face ID and Touch ID</h2>
-  <p>Used only if you turn on <strong>Lock with Face ID</strong>, to unlock FreeView when you come back to it. Face ID and Touch ID are handled entirely by your device; FreeView never receives your face or fingerprint data.</p>
-
-  <h2>Photos and files</h2>
-  <p>FreeView uses the system pickers, so it can only see the items you choose. It never gets access to your whole photo library.</p>
+  <p>Used only if you turn on <strong>Lock with Face ID</strong>, to unlock FreeView. Your device handles it entirely; FreeView never receives face or fingerprint data.</p>
 
   <h2>Purchases</h2>
-  <p>FreeView Pro is sold through the App Store. To unlock and restore it, FreeView uses <a href="https://www.revenuecat.com/privacy/">RevenueCat</a>, which receives an anonymous app user identifier and your App Store receipt (what you bought and when). It does not receive your name, email or Apple Account details. Payments themselves are handled by Apple.</p>
+  <p>FreeView Pro is sold through the App Store. To unlock and restore it, FreeView uses <a href="https://www.revenuecat.com/privacy/">RevenueCat</a>, which receives an anonymous app user identifier and your App Store receipt (what you bought and when). It does not receive your name, email or Apple Account details. Payments are handled by Apple.</p>
 
   <h2>What we don't collect</h2>
   <ul>
-    <li>No accounts, names, email addresses or phone numbers</li>
-    <li>No browsing history, file contents or search terms</li>
-    <li>No location, contacts, camera or microphone</li>
+    <li>No accounts, and no names, emails or phone numbers, except profile details you put on a slide you share</li>
+    <li>No browsing history, search terms, or files you don't share</li>
+    <li>No location or contacts</li>
     <li>No advertising identifiers, tracking or analytics</li>
     <li>No crash reports sent to us</li>
   </ul>
 
   <h2>Websites you visit</h2>
-  <p>Pages you open in FreeView load directly from their own servers, and those sites have their own privacy policies. FreeView adds nothing to those requests.</p>
+  <p>Pages you open in FreeView, including web-page slides, load directly from their own servers and follow their own privacy policies.</p>
 
   <h2>Children</h2>
   <p>FreeView is not directed at children and does not knowingly collect information from anyone.</p>
 
   <h2>Deleting your data</h2>
-  <p>Swipe an item in Recent to remove it, use <strong>Clear History</strong> in Settings to remove everything including imported files, or delete the app.</p>
+  <ul>
+    <li><strong>On your device</strong>: swipe an item in Recent to remove it, use <strong>Clear History</strong> in Settings, clear your profile in Settings → Profile and Contacts, or delete the app.</li>
+    <li><strong>Shared links</strong>: Settings → Shared Links → <strong>Stop Sharing</strong> deletes a link's copies from iCloud. Links you don't stop are deleted automatically after they end. Deleting the app doesn't stop links that are still running, so stop them first; or <a href="mailto:{EMAIL}">write to us</a> with the link and we'll remove it.</li>
+  </ul>
 
   <h2>Changes</h2>
   <p>If this policy changes, the date above changes with it, and the new version appears here.</p>
@@ -517,7 +535,7 @@ TERMS = f"""  <p class="muted">Last updated: {UPDATED}</p>
   <hr>
 
   <h2>The service</h2>
-  <p>FreeView shows web pages and files full screen: PDFs, videos, images, HTML prototypes and presentations, with private browsing, night mode, kiosk mode and Face ID lock. It is free to use and keeps your three most recent items. FreeView Pro keeps your whole history.</p>
+  <p>FreeView shows web pages and files full screen (PDFs, videos, images, documents, HTML prototypes and presentations) and lets you make presentations with your own cover and text slides, edit their photos, videos and audio, and share them as a link that plays in any browser. It is free to use and keeps your three most recent items; FreeView Pro keeps your whole history and shares more links for longer.</p>
 
   <h2>FreeView Pro and subscriptions</h2>
   <ul>
@@ -536,8 +554,11 @@ TERMS = f"""  <p class="muted">Last updated: {UPDATED}</p>
   <h2>Your content</h2>
   <p>The files and pages you open remain yours. You are responsible for having the right to view and show them, especially when presenting to others or leaving FreeView in kiosk mode in a public place.</p>
 
+  <h2>Shared links</h2>
+  <p>When you share a presentation, you're responsible for what it contains and who you send the link to. Anyone with the link can watch it, and can save or screenshot what they see; ending a link stops it from opening, but it can't take back copies others already made. Free shares one link at a time for up to a week; Pro shares any number, for up to 90 days. We may remove a shared presentation that breaks these terms or the law, or when asked by its owner.</p>
+
   <h2>Acceptable use</h2>
-  <p>Don't use FreeView to display content that is illegal, or that you don't have the right to show. Kiosk mode limits what a viewer can do inside FreeView; it is not a security boundary for the device. Use Guided Access if an iPhone or iPad must stay locked to the app.</p>
+  <p>Don't use FreeView to display or share content that is illegal, harmful, or that you don't have the right to show, and don't use shared links to harass anyone or to impersonate someone else. Kiosk mode limits what a viewer can do inside FreeView; it is not a security boundary for the device. Use Guided Access if an iPhone or iPad must stay locked to the app.</p>
 
   <h2>Third-party websites</h2>
   <p>Web pages you open belong to their owners and follow their own terms. We are not responsible for their content.</p>
@@ -565,7 +586,7 @@ SUPPORT = f"""  <div class="contact">
 
   <h2>Opening things</h2>
   <h3>What can FreeView open?</h3>
-  <p>Web addresses, PDFs, videos, audio, photos and images, HTML files or folders (with their CSS and JavaScript), and anything WebKit can render, such as Office and Keynote files, text, GIF and SVG.</p>
+  <p>Web addresses, PDFs, videos, audio, photos (including animated GIFs and SVGs), Keynote, PowerPoint, Pages, Word and Numbers files, spreadsheets and CSV, Markdown, Lottie animations, 3D models (USDZ, OBJ, STL, GLB and more), HTML files or folders with their CSS and JavaScript, and anything else WebKit can render.</p>
   <h3>How do I open a file from another app?</h3>
   <p>Tap <strong>File</strong> on the home screen to pick from Files or Photos, use <strong>Share → FreeView</strong> (or <strong>Open in…</strong>) from Files, Mail or AirDrop, or on iPad and Mac drag files onto the home screen.</p>
   <h3>What does Paste do?</h3>
@@ -584,6 +605,24 @@ SUPPORT = f"""  <div class="contact">
   <p>Tap the magnifying glass next to Recent. FreeView searches names and addresses, and also the text inside PDFs, documents, web pages you've opened, saved pages and even photos. A match inside a presentation opens on its slide.</p>
   <h3>How do I leave a page?</h3>
   <p>Tap the round button in the corner and choose <strong>Close</strong>. It fades after a few seconds but stays tappable. With a keyboard, press Esc (or ⌘.).</p>
+
+  <h2>Presentations and sharing</h2>
+  <h3>Can FreeView open Keynote, PowerPoint and Word files?</h3>
+  <p>Yes. Each slide or page becomes a still picture, so the presentation looks right on any screen and in shared links. Animations, builds, transitions and embedded video aren't kept, and fonts your device doesn't have are replaced with similar ones. Spreadsheets and CSV files show as a table.</p>
+  <h3>How do I add a cover or a text slide?</h3>
+  <p>In <strong>Edit Presentation</strong>, choose <strong>Add Cover Slide</strong> or <strong>Add Text Slide</strong>. A cover can use any picture from the presentation, Photos or the camera as its background, and show your logo, name, photo and the contacts you pick. Any web address in a slide's text shows as a QR code.</p>
+  <h3>How do styles work?</h3>
+  <p>Tap <strong>Style…</strong> in Edit Presentation to pick a preset, colours, font and logo, or make a style from your logo's colours. Styles affect covers and text slides only. Save a style by name to use it again, or copy one from another presentation.</p>
+  <h3>Where do my name, logo and contacts come from?</h3>
+  <p>Settings → <strong>Profile and Contacts</strong>. Each slide chooses which of them to show, if any.</p>
+  <h3>Can I edit photos and videos in a presentation?</h3>
+  <p>Tap a photo, video, audio clip or PDF in Edit Presentation (or a cover's background or a text slide's picture). Photos can be cropped, rotated, made black and white, or reimagined with Image Playground where available; videos trimmed, muted, rotated or given a cover frame; audio trimmed or re-recorded; PDF pages rotated, cropped or made black and white. <strong>Revert</strong> always brings back the original.</p>
+  <h3>How do I share a presentation?</h3>
+  <p>Touch and hold it in Recent and choose <strong>Share Presentation…</strong>. Pick how long the link works and add a message if you like; the link opens in any browser, ready to present. If you edit the presentation later, choose <strong>Update Shared Link…</strong>: the link stays the same.</p>
+  <h3>How do I stop sharing?</h3>
+  <p>Settings → <strong>Shared Links</strong>: swipe a link or touch and hold it and choose <strong>Stop Sharing</strong>. Its copies are deleted from iCloud. Links also end on their own, after the time you chose.</p>
+  <h3>Do I need iCloud to share?</h3>
+  <p>Yes: sharing uses iCloud, so sign in to iCloud in the Settings app. People watching the link don't need anything but a browser.</p>
 
   <h2>Kiosk mode</h2>
   <h3>How do I exit kiosk mode?</h3>
@@ -640,7 +679,7 @@ PAGES = {
     "index.html": HEAD.format(title="FreeView — View and present anything, full screen", path="",
                               desc="FreeView shows web pages, PDFs, videos, photos and prototypes full screen on iPhone, iPad and Mac, with instant presentations, kiosk mode and a red night mode.",
                               css=INDEX_CSS) + INDEX_BODY,
-    "privacy.html": legal("Privacy Policy", "How FreeView handles your data: it stays on your device.", "Privacy Policy", PRIVACY, "privacy.html"),
+    "privacy.html": legal("Privacy Policy", "How FreeView handles your data: on your device, except presentations you share.", "Privacy Policy", PRIVACY, "privacy.html"),
     "terms.html": legal("Terms of Use", "Terms of use for FreeView and FreeView Pro.", "Terms of Use", TERMS, "terms.html"),
     "support.html": legal("Support", "Help with FreeView: opening files, presentations, kiosk mode, night mode and FreeView Pro.", "Support", SUPPORT, "support.html"),
     "404.html": NOT_FOUND,

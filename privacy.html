@@ -4,13 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FreeView — Privacy Policy</title>
-<meta name="description" content="How FreeView handles your data: it stays on your device.">
+<meta name="description" content="How FreeView handles your data: on your device, except presentations you share.">
 <meta name="color-scheme" content="dark">
 <link rel="canonical" href="https://freeview.app/privacy.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FreeView">
 <meta property="og:title" content="FreeView — Privacy Policy">
-<meta property="og:description" content="How FreeView handles your data: it stays on your device.">
+<meta property="og:description" content="How FreeView handles your data: on your device, except presentations you share.">
 <meta property="og:url" content="https://freeview.app/privacy.html">
 <meta property="og:image" content="https://freeview.app/og.jpg">
 <meta property="og:image:width" content="1280">
@@ -18,7 +18,7 @@
 <meta property="og:image:alt" content="FreeView on iPhone: web pages, PDFs, videos and photos, edge to edge.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="FreeView — Privacy Policy">
-<meta name="twitter:description" content="How FreeView handles your data: it stays on your device.">
+<meta name="twitter:description" content="How FreeView handles your data: on your device, except presentations you share.">
 <meta name="twitter:image" content="https://freeview.app/og.jpg">
 <link rel="icon" type="image/png" href="/logo.png">
 <link rel="apple-touch-icon" href="/logo.png">
@@ -55,50 +55,68 @@ footer a{color:var(--muted)}
   <img src="logo.png" alt="FreeView" width="52" height="52" style="border-radius:12px;display:block;margin:12px 0 4px;outline:1px solid rgba(255,255,255,.1);outline-offset:-1px">
   <div class="kicker">FreeView</div>
   <h1>Privacy Policy</h1>
-  <p class="muted">Last updated: 9 October 2026</p>
+  <p class="muted">Last updated: 10 October 2026</p>
 
-  <p class="lead">FreeView shows web pages and files full screen, and it keeps what you open on your device. It has no accounts, no analytics, no advertising and no developer server.</p>
+  <p class="lead">FreeView shows web pages and files full screen, and it keeps what you open on your device. It has no accounts, no analytics and no advertising. The only things that leave your device are presentations you choose to share as a link, and the anonymous record of a FreeView Pro purchase.</p>
 
-  <p><span class="pill">In short</span>&nbsp; Your history, files and settings stay on your device. The only thing that ever leaves it is the record of a FreeView Pro purchase, handled anonymously by RevenueCat so your purchase can be unlocked and restored.</p>
+  <p><span class="pill">In short</span>&nbsp; Your history, files, profile and settings stay on your device. When you share a presentation, a copy of it goes to iCloud for as long as the link works, and anyone with the link can watch it. Nothing else is collected.</p>
 
   <hr>
 
-  <h2>What FreeView stores, and where</h2>
+  <h2>What FreeView stores on your device</h2>
   <ul>
-    <li><strong>History</strong>: the addresses, titles and dates of what you open, and any names you give them, in a file inside FreeView on your device.</li>
-    <li><strong>Files you open</strong>: PDFs, videos, photos, HTML prototypes and presentations are copied into FreeView's own storage on your device, so they keep working after the original moves.</li>
-    <li><strong>Settings</strong>: choices such as private browsing, night mode, kiosk mode and looping videos, on your device.</li>
-    <li><strong>Kiosk PIN</strong>: stored in your device's Keychain as a salted hash, on this device only. We never see it.</li>
-    <li><strong>Web data</strong>: cookies, site storage and cache are kept by Apple's WebKit on your device, as in Safari. With <strong>Private browsing</strong> on, they last only while a page is open and nothing is added to history. With <strong>Don't remember my browsing</strong> on, nothing is added to history.</li>
+    <li><strong>History</strong>: the addresses, titles and dates of what you open, and any names you give them.</li>
+    <li><strong>Files and presentations</strong>: PDFs, videos, photos, audio, documents and the slides you make are copied into FreeView's own storage, with pictures FreeView makes from them (pages of Keynote, PowerPoint or Word files, previews and edits).</li>
+    <li><strong>Profile</strong>: the name, role, photo, logo and contact details you add in Settings, for your covers and slides. They appear only on slides where you turn them on.</li>
+    <li><strong>Styles, settings and the kiosk PIN</strong>: your choices, saved styles, and the PIN as a salted hash in the Keychain.</li>
+    <li><strong>Web data</strong>: cookies, site storage and cache, kept by Apple's WebKit as in Safari. Private browsing keeps none of it once a page closes.</li>
   </ul>
-  <p>None of this is sent to us, and we have no way to read it. It may be included in your device's own iCloud or computer backup, under Apple's terms.</p>
+  <p>None of this is sent to us unless you share a presentation. It may be included in your device's own iCloud or computer backup, under Apple's terms.</p>
+
+  <h2>Shared presentations</h2>
+  <p>When you use <strong>Share Presentation</strong>, FreeView uploads a copy of that presentation so it can be watched in a browser at freeview.app:</p>
+  <ul>
+    <li><strong>What's uploaded</strong>: the presentation's title, your optional message, its slides as web-ready files (photos, PDF and document pages as pictures, videos, audio, 3D models, animations, tables), the text of your covers and text slides, and only the profile details you chose to show on them (for example your name, photo, logo, email or website).</li>
+    <li><strong>Where</strong>: the public database of FreeView's iCloud container (iCloud.com.fbmore.freeview), run by Apple. Each link has a long random address; there is no list or search of shared presentations, so it can only be found by someone you give the link to.</li>
+    <li><strong>Who can see it</strong>: anyone who has the link, without signing in. Link previews in apps like Messages show its title, message and cover picture.</li>
+    <li><strong>How long</strong>: until the link ends (after the time you choose) or you stop sharing it in Settings → Shared Links. Ended links stop working right away, and their copies are deleted from iCloud within a day.</li>
+    <li><strong>Views</strong>: each opening of a link adds one to a count for that link, so you can see how often it was watched. The count is just a number per link, kept on Cloudflare; no IP address, cookie or device detail is stored.</li>
+    <li><strong>Viewer libraries</strong>: the web viewer loads open-source code (for Markdown, tables, Lottie animations, 3D models and QR codes) from cdnjs and jsDelivr, which, like any website, see the viewer's IP address when serving it.</li>
+  </ul>
+  <p>Share only what you have the right to share: anyone with the link can view and save what they see.</p>
+
+  <h2>Camera, microphone, photos and files</h2>
+  <p>The camera is used only when you take a photo or video, or scan a document, for a presentation; the microphone only when you record audio or a video's sound. FreeView uses the system pickers for Photos and Files, so it only sees the items you choose. What you capture or pick stays on your device unless you share it.</p>
+
+  <h2>Reimagine</h2>
+  <p>On devices with Apple Intelligence, <strong>Reimagine</strong> uses Apple's Image Playground to make a new picture from a photo. Apple processes it on your device or with Private Cloud Compute, under Apple's privacy terms; FreeView sends nothing to us.</p>
 
   <h2>Face ID and Touch ID</h2>
-  <p>Used only if you turn on <strong>Lock with Face ID</strong>, to unlock FreeView when you come back to it. Face ID and Touch ID are handled entirely by your device; FreeView never receives your face or fingerprint data.</p>
-
-  <h2>Photos and files</h2>
-  <p>FreeView uses the system pickers, so it can only see the items you choose. It never gets access to your whole photo library.</p>
+  <p>Used only if you turn on <strong>Lock with Face ID</strong>, to unlock FreeView. Your device handles it entirely; FreeView never receives face or fingerprint data.</p>
 
   <h2>Purchases</h2>
-  <p>FreeView Pro is sold through the App Store. To unlock and restore it, FreeView uses <a href="https://www.revenuecat.com/privacy/">RevenueCat</a>, which receives an anonymous app user identifier and your App Store receipt (what you bought and when). It does not receive your name, email or Apple Account details. Payments themselves are handled by Apple.</p>
+  <p>FreeView Pro is sold through the App Store. To unlock and restore it, FreeView uses <a href="https://www.revenuecat.com/privacy/">RevenueCat</a>, which receives an anonymous app user identifier and your App Store receipt (what you bought and when). It does not receive your name, email or Apple Account details. Payments are handled by Apple.</p>
 
   <h2>What we don't collect</h2>
   <ul>
-    <li>No accounts, names, email addresses or phone numbers</li>
-    <li>No browsing history, file contents or search terms</li>
-    <li>No location, contacts, camera or microphone</li>
+    <li>No accounts, and no names, emails or phone numbers, except profile details you put on a slide you share</li>
+    <li>No browsing history, search terms, or files you don't share</li>
+    <li>No location or contacts</li>
     <li>No advertising identifiers, tracking or analytics</li>
     <li>No crash reports sent to us</li>
   </ul>
 
   <h2>Websites you visit</h2>
-  <p>Pages you open in FreeView load directly from their own servers, and those sites have their own privacy policies. FreeView adds nothing to those requests.</p>
+  <p>Pages you open in FreeView, including web-page slides, load directly from their own servers and follow their own privacy policies.</p>
 
   <h2>Children</h2>
   <p>FreeView is not directed at children and does not knowingly collect information from anyone.</p>
 
   <h2>Deleting your data</h2>
-  <p>Swipe an item in Recent to remove it, use <strong>Clear History</strong> in Settings to remove everything including imported files, or delete the app.</p>
+  <ul>
+    <li><strong>On your device</strong>: swipe an item in Recent to remove it, use <strong>Clear History</strong> in Settings, clear your profile in Settings → Profile and Contacts, or delete the app.</li>
+    <li><strong>Shared links</strong>: Settings → Shared Links → <strong>Stop Sharing</strong> deletes a link's copies from iCloud. Links you don't stop are deleted automatically after they end. Deleting the app doesn't stop links that are still running, so stop them first; or <a href="mailto:hello@freeview.app">write to us</a> with the link and we'll remove it.</li>
+  </ul>
 
   <h2>Changes</h2>
   <p>If this policy changes, the date above changes with it, and the new version appears here.</p>
