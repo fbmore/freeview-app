@@ -70,6 +70,15 @@
   .doc blockquote { margin: 1em 0; padding-left: 1em; border-left: 3px solid var(--mrule); color: var(--mmuted); }
   .doc hr { border: 0; border-top: 1px solid var(--mrule); margin: 2em 0; }
   .doc table { border-collapse: collapse; } .doc td, .doc th { border: 1px solid var(--mrule); padding: 6px 10px; }
+  /* Tables (CSV, Excel): first row is the header, numbers line up on the right. */
+  .slide.md .grid { margin: auto; max-width: 100%; overflow: auto; padding: max(48px, env(safe-area-inset-top)) 20px 96px; color: var(--mfg);
+    font: 16px/1.4 -apple-system, system-ui, sans-serif; }
+  .grid table { border-collapse: separate; border-spacing: 0; font-variant-numeric: tabular-nums; }
+  .grid caption { text-align: left; font-weight: 600; font-size: 1.25em; padding: 0 0 14px; text-wrap: balance; }
+  .grid th { position: sticky; top: 0; background: var(--mcode); font-weight: 600; text-align: left; }
+  .grid th, .grid td { padding: 9px 14px; border-bottom: 1px solid var(--mrule); white-space: nowrap; }
+  .grid th:first-child { border-top-left-radius: 8px; } .grid th:last-child { border-top-right-radius: 8px; }
+  .grid td.n { text-align: right; } .grid tbody tr:last-child td { border-bottom: 0; }
   .slide .loading { position: absolute; width: 22px; height: 22px; border-radius: 50%;
     border: 2px solid var(--hairline); border-top-color: var(--muted); animation: spin .9s linear infinite; }
   .slide.ready .loading { display: none; }
@@ -272,7 +281,7 @@
         } else if (types[i] === 'model') {
           const p = parts[2] === 'p' ? parseInt(parts[3], 10) : -1;
           slides.push({ kind: 'model', src, poster: p >= 0 ? assetURL(items[p], names[p]) : '', name: names[i] || '' });
-        } else if (types[i] === 'markdown' || types[i] === 'lottie') {
+        } else if (types[i] === 'markdown' || types[i] === 'lottie' || types[i] === 'table') {
           slides.push({ kind: types[i], src, name: names[i] || '' });
         } else {
           slides.push({ kind: types[i] === 'video' ? 'video' : 'image', src, name: names[i] || '' });
@@ -294,7 +303,7 @@
     const exp = val(f.expiresAt);
     const n = (k) => slides.filter((s) => s.kind === k).length;
     const plural = (c, one, many) => (c ? `${c} ${c === 1 ? one : many}` : null);
-    const parts = [plural(n('image'), 'image', 'images'), plural(n('video'), 'video', 'videos'), plural(n('model'), '3D model', '3D models'), plural(n('lottie'), 'animation', 'animations'), plural(n('markdown'), 'page of text', 'pages of text'), plural(n('audio'), 'audio clip', 'audio clips'), plural(n('web'), 'web page', 'web pages')].filter(Boolean);
+    const parts = [plural(n('image'), 'image', 'images'), plural(n('video'), 'video', 'videos'), plural(n('model'), '3D model', '3D models'), plural(n('lottie'), 'animation', 'animations'), plural(n('markdown'), 'page of text', 'pages of text'), plural(n('table'), 'table', 'tables'), plural(n('audio'), 'audio clip', 'audio clips'), plural(n('web'), 'web page', 'web pages')].filter(Boolean);
     let meta = `${slides.length} slide${slides.length === 1 ? '' : 's'}`;
     if (parts.length > 1) meta += ' · ' + parts.join(' · ');
     if (exp) meta += ` · available until ${new Date(exp).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`;
@@ -392,6 +401,36 @@
     el.classList.add('ready');
   }
 
+  // CSV, with quoted fields that may hold commas, quotes ("") and line breaks.
+  function parseCSV(text) {
+    const rows = []; let row = [], field = '', q = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (q) { if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else q = false; } else field += c; }
+      else if (c === '"' && field === '') q = true;
+      else if (c === ',') { row.push(field); field = ''; }
+      else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(field); field = ''; if (row.length > 1 || row[0] !== '') rows.push(row); row = []; }
+      else field += c;
+    }
+    if (field !== '' || row.length) { row.push(field); rows.push(row); }
+    return rows;
+  }
+  async function renderTable(el, s) {
+    const rows = parseCSV(await (await fetch(s.src)).text());
+    const isNum = (v) => { const t = v.replace(/[,%\s$€£¥]/g, ''); return t !== '' && !isNaN(Number(t)); };
+    const grid = document.createElement('div'); grid.className = 'grid';
+    const table = document.createElement('table');
+    const cap = document.createElement('caption'); cap.textContent = s.name.replace(/\.csv$/i, ''); table.appendChild(cap);
+    const thead = table.createTHead().insertRow();
+    for (const h of rows[0] || []) { const th = document.createElement('th'); th.textContent = h; thead.appendChild(th); }
+    const body = table.createTBody();
+    for (const r of rows.slice(1)) { const tr = body.insertRow(); for (const v of r) { const td = tr.insertCell(); td.textContent = v; if (isNum(v)) td.className = 'n'; } }
+    grid.appendChild(table);
+    el.classList.add('md');
+    el.appendChild(grid);
+    el.classList.add('ready');
+  }
+
   // Lottie plays on a canvas, so its first frame can set the edge colour. A .lottie file is a zip:
   // manifest.json, animations/<id>.json and images/, which are inlined.
   function lottieFromBundle(bytes) {
@@ -461,6 +500,9 @@
         el.appendChild(mv);
         if (s.poster) el.classList.add('ready');
       }).catch(() => el.classList.add('ready'));
+      return;
+    } else if (s.kind === 'table') {
+      renderTable(el, s).catch(() => el.classList.add('ready'));
       return;
     } else if (s.kind === 'markdown') {
       renderMarkdown(el, s.src).catch(() => el.classList.add('ready'));
