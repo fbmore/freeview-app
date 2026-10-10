@@ -53,6 +53,7 @@
   }
   .slide iframe { width: 100%; height: 100%; border: 0; background: #fff; }
   .slide .anim { position: absolute; inset: 0; }
+  .slide model-viewer { position: absolute; inset: 0; width: 100%; height: 100%; --poster-color: transparent; background-color: #121212; }
   .slide .anim canvas { width: 100% !important; height: 100% !important; display: block; }
   /* Markdown: a reading page. Short ones sit centred like a slide; long ones scroll. */
   .slide.md { --mbg: #fff; --mfg: #1c1c1e; --mmuted: #6e6e73; --mrule: rgba(0,0,0,.12); --mcode: #f2f2f7;
@@ -267,6 +268,9 @@
         if (types[i] === 'audio') {
           const p = parts[2] === 'p' ? parseInt(parts[3], 10) : -1;
           slides.push({ kind: 'audio', src, poster: p >= 0 ? assetURL(items[p], names[p]) : '', name: names[i] || '' });
+        } else if (types[i] === 'model') {
+          const p = parts[2] === 'p' ? parseInt(parts[3], 10) : -1;
+          slides.push({ kind: 'model', src, poster: p >= 0 ? assetURL(items[p], names[p]) : '', name: names[i] || '' });
         } else if (types[i] === 'markdown' || types[i] === 'lottie') {
           slides.push({ kind: types[i], src, name: names[i] || '' });
         } else {
@@ -289,7 +293,7 @@
     const exp = val(f.expiresAt);
     const n = (k) => slides.filter((s) => s.kind === k).length;
     const plural = (c, one, many) => (c ? `${c} ${c === 1 ? one : many}` : null);
-    const parts = [plural(n('image'), 'image', 'images'), plural(n('video'), 'video', 'videos'), plural(n('lottie'), 'animation', 'animations'), plural(n('markdown'), 'page of text', 'pages of text'), plural(n('audio'), 'audio clip', 'audio clips'), plural(n('web'), 'web page', 'web pages')].filter(Boolean);
+    const parts = [plural(n('image'), 'image', 'images'), plural(n('video'), 'video', 'videos'), plural(n('model'), '3D model', '3D models'), plural(n('lottie'), 'animation', 'animations'), plural(n('markdown'), 'page of text', 'pages of text'), plural(n('audio'), 'audio clip', 'audio clips'), plural(n('web'), 'web page', 'web pages')].filter(Boolean);
     let meta = `${slides.length} slide${slides.length === 1 ? '' : 's'}`;
     if (parts.length > 1) meta += ' · ' + parts.join(' · ');
     if (exp) meta += ` · available until ${new Date(exp).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`;
@@ -366,7 +370,14 @@
     purify: 'https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js',
     lottie: 'https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js',
     fflate: 'https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js',
+    modelViewer: 'https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js',
   };
+  // <model-viewer> is an ES module.
+  function loadModule(url) {
+    return scripts[url] || (scripts[url] = new Promise((ok, fail) => {
+      const t = document.createElement('script'); t.type = 'module'; t.src = url; t.onload = ok; t.onerror = fail; document.head.appendChild(t);
+    }));
+  }
 
   // Markdown from the sender is sanitised (no scripts, no handlers) before it's shown.
   async function renderMarkdown(el, url) {
@@ -435,6 +446,21 @@
       m.addEventListener('loadeddata', () => { const c = edgeColor(m); if (c) el.style.backgroundColor = c; }, { once: true });
       m.oncanplay = () => el.classList.add('ready');
       m.src = s.src;
+    } else if (s.kind === 'model') {
+      // Drag to orbit, pinch or scroll to zoom; the poster (a still made in the app) shows while it loads.
+      loadModule(LIBS.modelViewer).then(() => {
+        const mv = document.createElement('model-viewer');
+        for (const [k, v] of Object.entries({ 'camera-controls': '', 'auto-rotate': '', 'auto-rotate-delay': '1500', 'rotation-per-second': '15deg',
+          'shadow-intensity': '0.8', exposure: '1.05', 'environment-image': 'neutral', 'interaction-prompt': 'none', 'touch-action': 'pan-y' })) mv.setAttribute(k, v);
+        if (s.poster) mv.setAttribute('poster', s.poster);
+        mv.setAttribute('alt', s.name);
+        mv.addEventListener('load', () => el.classList.add('ready'));
+        mv.addEventListener('click', (e) => e.stopPropagation());   // dragging the model shouldn't change slides
+        mv.src = s.src;
+        el.appendChild(mv);
+        if (s.poster) el.classList.add('ready');
+      }).catch(() => el.classList.add('ready'));
+      return;
     } else if (s.kind === 'markdown') {
       renderMarkdown(el, s.src).catch(() => el.classList.add('ready'));
       return;
@@ -482,7 +508,7 @@
         if (v) { if (i === n && started) { v.currentTime = 0; v.play().catch(() => {}); } else v.pause(); }
         if (el.lottie) { if (i === n) el.lottie.goToAndPlay(0, true); else el.lottie.pause(); }
       });
-      document.body.classList.toggle('web', slides[n].kind === 'web');
+      document.body.classList.toggle('web', slides[n].kind === 'web' || slides[n].kind === 'model');
       const open = $('#open');
       open.hidden = slides[n].kind !== 'web';
       if (!open.hidden) { open.href = slides[n].src; open.querySelector('span').textContent = slides[n].name; }
