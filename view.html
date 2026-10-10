@@ -215,6 +215,7 @@
   #mark:hover { color: var(--fg); }
   #mark svg { width: 13px; height: 13px; }
   #mark[hidden] { display: none; }
+  body:not(.started) #mark { opacity: 1; pointer-events: auto; z-index: 30; }   /* visible on the welcome screen too */
 
   @media (prefers-reduced-motion: reduce) {
     :root { --dur: 1ms; }
