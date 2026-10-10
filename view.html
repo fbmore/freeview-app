@@ -176,6 +176,20 @@
   #message h1 { margin: 0; font-size: 22px; font-weight: 700; text-wrap: balance; }
   #message p { margin: 0; max-width: 340px; color: var(--muted); font-size: 15px; line-height: 1.45; text-wrap: pretty; }
   #message a { color: var(--fg); }
+  #message form { display: flex; gap: 8px; width: min(340px, 100%); margin-top: 6px; }
+  #message input { flex: 1; min-width: 0; height: 48px; padding: 0 16px; border-radius: 999px; border: 0; font: inherit; font-size: 16px;
+    background: rgba(255,255,255,.1); color: var(--fg); box-shadow: inset 0 0 0 1px var(--hairline); }
+  #message input:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+  #message form .pill { height: 48px; padding: 0 20px; font-size: 16px; }
+  #message .err { color: #ff8a80; min-height: 1.2em; font-size: 14px; }
+  /* Free links carry a small mark; Pro links don't. */
+  #mark { position: fixed; z-index: 10; left: max(16px, env(safe-area-inset-left)); bottom: max(18px, env(safe-area-inset-bottom));
+    display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 999px; text-decoration: none;
+    background: var(--chip); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); color: var(--muted);
+    font-size: 12px; font-weight: 600; letter-spacing: .01em; transition: color 150ms var(--ease), opacity 300ms var(--ease); }
+  #mark:hover { color: var(--fg); }
+  #mark svg { width: 13px; height: 13px; }
+  #mark[hidden] { display: none; }
 
   @media (prefers-reduced-motion: reduce) {
     :root { --dur: 1ms; }
@@ -204,6 +218,10 @@
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V5h4M20 9V5h-4M4 15v4h4M20 15v4h-4"/></svg>
 </button>
 <div id="counter" class="chrome" aria-hidden="true"></div>
+<a id="mark" class="chrome" href="https://freeview.app/?ref=link" target="_blank" rel="noopener" hidden>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4 9V6.5A2.5 2.5 0 0 1 6.5 4H9M15 4h2.5A2.5 2.5 0 0 1 20 6.5V9M20 15v2.5a2.5 2.5 0 0 1-2.5 2.5H15M9 20H6.5A2.5 2.5 0 0 1 4 17.5V15"/></svg>
+  Made with FreeView
+</a>
 
 <div id="cover" hidden>
   <p id="note" hidden></p>
@@ -245,10 +263,33 @@
     return;
   }
 
-  fetch(`${API}/set/${encodeURIComponent(id)}`, { cache: 'no-store' })
-    .then((r) => (r.ok ? r.json() : null))
-    .then((data) => (data ? build(data.fields || {}) : ended()))
-    .catch(() => show('Couldn’t load the presentation', 'Check your connection and reload the page.'));
+  // Password-protected links (Pro) answer 401 until the right password comes with the request.
+  let password = '';
+  try { password = sessionStorage.getItem('fv-pw-' + id) || ''; } catch {}
+  function load() {
+    fetch(`${API}/set/${encodeURIComponent(id)}`, { cache: 'no-store', headers: password ? { 'X-FV-Password': password } : {} })
+      .then(async (r) => {
+        if (r.status === 401) return askPassword((await r.json()).title, !!password);
+        const data = r.ok ? await r.json() : null;
+        if (!data) return ended();
+        try { if (password) sessionStorage.setItem('fv-pw-' + id, password); } catch {}
+        build(data.fields || {});
+      })
+      .catch(() => show('Couldn’t load the presentation', 'Check your connection and reload the page.'));
+  }
+  load();
+
+  function askPassword(title, wrong) {
+    show(title || 'Password required', '');
+    const p = msg.querySelector('p');
+    p.textContent = 'This presentation is protected. Enter the password you were given.';
+    const err = document.createElement('div'); err.className = 'err'; err.textContent = wrong ? 'That password isn’t right.' : '';
+    const form = document.createElement('form');
+    form.innerHTML = '<input type="password" autocomplete="current-password" placeholder="Password" aria-label="Password" required><button class="pill" type="submit">Open</button>';
+    form.addEventListener('submit', (e) => { e.preventDefault(); password = form.querySelector('input').value; form.remove(); err.remove(); load(); });
+    msg.appendChild(form); msg.appendChild(err);
+    form.querySelector('input').focus();
+  }
 
   function ended() {
     show('This presentation has ended', 'Shared links expire after a while, or the person who shared it stopped sharing. Ask them for a new link.<br><br><a href="/">What is FreeView?</a>');
@@ -265,6 +306,8 @@
     const types = val(f.itemTypes) || [];
     const names = val(f.itemNames) || [];
     window.__fvItems = items; window.__fvNames = names;
+    let opts = {}; try { opts = JSON.parse(val(f.options) || '{}'); } catch {}
+    $('#mark').hidden = !opts.mark;
     const order = val(f.slides) || items.map((_, i) => 'a:' + i);
     for (const s of order) {
       if (s.startsWith('u:')) {
@@ -576,6 +619,7 @@
       open.hidden = slides[n].kind !== 'web';
       if (!open.hidden) { open.href = slides[n].src; open.querySelector('span').textContent = slides[n].name; }
       counter.textContent = `${n + 1} / ${slides.length}`;
+      if (started) slideSeen(n);
       counter.hidden = slides.length < 2;
       $('#prev').disabled = n === 0;
       $('#next').disabled = n === slides.length - 1;
@@ -604,9 +648,20 @@
   const next = () => go(Math.min(target() + 1, slides.length - 1));
   const prev = () => go(Math.max(target() - 1, 0));
 
+  // One view per slide per browser session, for the sender's per-slide counts.
+  function slideSeen(n) {
+    try {
+      const key = `fv-seen-${id}-${n}`;
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, '1');
+    } catch {}
+    fetch(`${API}/hit/${encodeURIComponent(id)}/s/${n}`).catch(() => {});
+  }
+
   function begin() {
     if (started) return;
     started = true;
+    slideSeen(index);
     document.body.classList.add('started');
     soundOn = true;       // the tap on Present lets video play with sound
     updateSound();
