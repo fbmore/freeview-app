@@ -119,6 +119,13 @@
     transition: opacity 400ms var(--ease);
   }
   #cover.gone { opacity: 0; pointer-events: none; }
+  #cover.with-note { background: linear-gradient(to bottom, rgba(0,0,0,.25), rgba(0,0,0,.88) 55%); }
+  #note {
+    margin: 0 0 18px; max-width: 560px; padding: 0 4px;
+    font-size: clamp(16px, 2.6vw, 20px); line-height: 1.45; font-weight: 500; color: var(--fg);
+    white-space: pre-line; text-wrap: pretty;
+  }
+  #note[hidden] { display: none; }
   #cover h1 { margin: 0 0 6px; font-size: clamp(24px, 4.6vw, 40px); line-height: 1.12; font-weight: 700; letter-spacing: -.01em; text-wrap: balance; max-width: 760px; }
   #cover p { margin: 0 0 22px; color: var(--muted); font-size: 15px; font-variant-numeric: tabular-nums; text-wrap: pretty; }
   .pill {
@@ -170,6 +177,7 @@
 <div id="counter" class="chrome" aria-hidden="true"></div>
 
 <div id="cover" hidden>
+  <p id="note" hidden></p>
   <h1 id="title"></h1>
   <p id="meta"></p>
   <button class="pill" id="present">
@@ -248,8 +256,14 @@
     const title = (val(f.title) || 'Presentation').trim();
     document.title = `${title} · FreeView`;
     $('#title').textContent = title;
+    const note = (val(f.message) || '').trim();
+    if (note) { $('#note').textContent = note; $('#note').hidden = false; $('#cover').classList.add('with-note'); }
     const exp = val(f.expiresAt);
+    const n = (k) => slides.filter((s) => s.kind === k).length;
+    const plural = (c, one, many) => (c ? `${c} ${c === 1 ? one : many}` : null);
+    const parts = [plural(n('image'), 'image', 'images'), plural(n('video'), 'video', 'videos'), plural(n('web'), 'web page', 'web pages')].filter(Boolean);
     let meta = `${slides.length} slide${slides.length === 1 ? '' : 's'}`;
+    if (parts.length > 1) meta += ' · ' + parts.join(' · ');
     if (exp) meta += ` · available until ${new Date(exp).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`;
     $('#meta').textContent = meta;
 
