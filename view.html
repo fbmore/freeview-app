@@ -266,7 +266,7 @@
   // Password-protected links (Pro) answer 401 until the right password comes with the request.
   let password = '';
   try { password = sessionStorage.getItem('fv-pw-' + id) || ''; } catch {}
-  function load() {
+  function fetchDeck() {
     fetch(`${API}/set/${encodeURIComponent(id)}`, { cache: 'no-store', headers: password ? { 'X-FV-Password': password } : {} })
       .then(async (r) => {
         if (r.status === 401) return askPassword((await r.json()).title, !!password);
@@ -277,7 +277,7 @@
       })
       .catch(() => show('Couldn’t load the presentation', 'Check your connection and reload the page.'));
   }
-  load();
+  fetchDeck();
 
   function askPassword(title, wrong) {
     show(title || 'Password required', '');
@@ -286,7 +286,7 @@
     const err = document.createElement('div'); err.className = 'err'; err.textContent = wrong ? 'That password isn’t right.' : '';
     const form = document.createElement('form');
     form.innerHTML = '<input type="password" autocomplete="current-password" placeholder="Password" aria-label="Password" required><button class="pill" type="submit">Open</button>';
-    form.addEventListener('submit', (e) => { e.preventDefault(); password = form.querySelector('input').value; form.remove(); err.remove(); load(); });
+    form.addEventListener('submit', (e) => { e.preventDefault(); password = form.querySelector('input').value; form.remove(); err.remove(); fetchDeck(); });
     msg.appendChild(form); msg.appendChild(err);
     form.querySelector('input').focus();
   }
