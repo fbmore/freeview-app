@@ -38,7 +38,7 @@ HEAD = """<!DOCTYPE html>
 <meta property="og:image" content="https://freeview.app/og.jpg">
 <meta property="og:image:width" content="1280">
 <meta property="og:image:height" content="720">
-<meta property="og:image:alt" content="FreeView on iPhone: web pages, PDFs, videos and photos, edge to edge.">
+<meta property="og:image:alt" content="One FreeView presentation opening on a laptop, tablet, phone and TV from a single link.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{title}">
 <meta name="twitter:description" content="{desc}">
@@ -120,6 +120,7 @@ header.hero{text-align:center;padding:96px 24px 72px;background:radial-gradient(
 @keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(.86)}}
 h1{font-size:clamp(38px,7vw,64px);font-weight:300;letter-spacing:-.02em;margin:0 0 14px}
 .tag{font-size:clamp(16px,2.3vw,20px);color:var(--muted2);font-weight:300;max-width:560px;margin:0 auto 30px}
+.tag strong{display:block;font-weight:600;color:var(--ink,#fff);font-size:1.25em;letter-spacing:-.01em;margin-bottom:6px;text-wrap:balance}
 .herovid{display:block;width:min(1040px,100%);aspect-ratio:16/9;height:auto;margin:8px auto 0;background:#000}
 .appstore{display:inline-block;margin:0 auto}
 .appstore img{height:56px;width:auto;display:block}
@@ -144,7 +145,7 @@ section.feat{padding:60px 0;border-top:1px solid var(--line)}
 @media(max-width:760px){
   .feat .wrap,.feat.flip .wrap{grid-template-columns:1fr;gap:30px;justify-items:center}
   .feat.flip .copy{order:0}.feat .copy{text-align:center}
-  .feat .bul{align-items:center}
+  .feat .bul{align-items:flex-start;text-align:left;max-width:360px;margin-left:auto;margin-right:auto}
 }
 
 /* phone */
@@ -263,6 +264,7 @@ section.feat{padding:60px 0;border-top:1px solid var(--line)}
 .gallery h2{font-size:clamp(26px,3.6vw,34px);font-weight:600;margin:0 0 6px}
 .gallery p{color:var(--muted2);font-weight:300;max-width:600px;margin:0 auto 8px}
 .shots{display:flex;gap:22px;justify-content:center;flex-wrap:wrap;margin-top:36px}
+.featshot{width:260px!important;justify-self:center}
 .shotframe{width:min(220px,calc(50% - 11px));border-radius:34px;box-shadow:0 0 0 1px var(--line),0 24px 60px rgba(0,0,0,.6);background:#000;padding:8px}
 .shotframe img{width:100%;height:auto;display:block;border-radius:26px;outline:1px solid rgba(255,255,255,.1);outline-offset:-1px}
 .shots.ipad{margin-top:22px}
@@ -335,29 +337,43 @@ MOCK_PRIVATE = phone(
     '</div></div>',
     "The recent list with three items and a private-browsing indicator")
 
+def shot(img, alt):
+    """A real app screen in a phone outline, for feature rows."""
+    return f'<div class="shotframe featshot"><img src="{img}" width="612" height="1330" alt="{alt}" loading="lazy"></div>'
+
 FEATURES = "\n".join([
-    feature("Open anything", "Type an address, paste a link, or pick a file. Web pages, PDFs, videos, photos and HTML prototypes open edge to edge, with no browser bars and no app chrome in the way.",
-            [("globe", "Any web address, or a search, saved for offline if you like"), ("doc", "PDFs, videos, photos, Office and Keynote files"),
-             ("code", "HTML prototypes with their CSS and JavaScript"), ("folder", "Single files or whole folders, from Files, Photos, AirDrop or Mail")], MOCK_OPEN),
-    feature("PDFs become slides", "Open a PDF and swipe through it a page at a time, on black, scaled to fit. Pinch to zoom in, and a quiet page counter fades away after each turn.",
-            [("stack", "One page at a time, edge to edge"), ("keys", "Presentation clickers and arrow keys"), ("airplay", "AirPlay to a bigger screen")], MOCK_SLIDES, flip=True),
-    feature("Instant presentations", "Pick several files or photos and FreeView turns them into a deck, one item per slide. A multi-page PDF becomes one slide per page, and a video plays when its slide comes up.",
-            [("photo", "Photos, PDFs, videos and pages together"), ("play", "Videos play only on their slide, looping if you like"), ("check", "In the order you picked them")], MOCK_DECK),
-    feature("Kiosk mode", "Hand someone your iPad with something on screen and nothing else. No buttons, no menus. Leaving takes your PIN: touch and hold with three fingers, shake the device, or press Esc on a keyboard.",
-            [("lock", "Nothing drawn over what you show"), ("hand", "Three fingers, a shake or Esc, then your PIN"), ("check", "Pairs with Guided Access to stay in the app")], MOCK_KIOSK, flip=True),
-    feature("Night mode", "Everything turns deep red on black, web pages and videos included, so the screen is easy on dark-adapted eyes. Keep it on, or let it come on after 9 pm.",
-            [("moon", "Deep red on black, pages and videos too"), ("clock", "Always, or from 9 pm to 6 am"), ("check", "White pages darkened, not glowing red")], MOCK_NIGHT),
-    feature("Private by design", "No account, no ads, no tracking. Your history and files stay on your device, and you decide how much of it FreeView remembers.",
-            [("eyeslash", "Private browsing keeps no cookies or history"), ("check", "Or stay signed in and keep no history"), ("face", "Lock with Face ID or Touch ID")], MOCK_PRIVATE, flip=True),
+    feature("Any mix of files, one presentation", "Pick a Keynote deck, a PDF, a film, photos, a 3D model, a voice note and a spreadsheet, and they become one presentation, a slide each, in the order you want. No converting, no copying and pasting, no slide software.",
+            [("stack", "Keynote, PowerPoint, Word, PDFs, videos, photos, audio"), ("check", "3D models, Lottie animations, Markdown, tables and live web pages"),
+             ("folder", "From Files, Photos, AirDrop, Mail or the camera, even a scan")],
+            shot("shot-deck.webp", "Editing a presentation in FreeView: a cover, a brief, photos, a film, a 3D prototype, numbers, a Keynote review and a voice note, in order")),
+    feature("Make it yours in seconds", "Add a cover with your logo, name, photo and contacts, and text slides for the bits in between. Any web address on a slide becomes a QR code. Pick a style or make one from your logo's colours.",
+            [("photo", "Any picture from the presentation as the cover"), ("check", "Saved styles you can copy to other presentations"),
+             ("code", "A QR code for every link, automatically")],
+            shot("shot-cover.webp", "A cover slide over a photo of the sea: title, logo, the presenter's photo, name and contacts"), flip=True),
+    feature("Share one link, whatever the size", "Long films, big decks, dozens of photos: send a link, not attachments. Add a welcome message, choose how long it works, and update it after edits without changing the link.",
+            [("airplay", "One link instead of files people can't open"), ("lock", "A welcome screen, a password if you need one"),
+             ("clock", "Ends when you choose; see how often it was opened")],
+            shot("shot-share.webp", "Sharing a presentation: its cover, what's in it, a title and message, and how long the link works")),
+    feature("Opens on any screen", "Whoever gets the link watches it in their browser, on a laptop, tablet, phone or TV, ready to present. No app, no account, nothing to install, and Keynote, video and 3D all just play.",
+            [("globe", "Any modern browser"), ("keys", "Arrow keys, clickers, swipe or tap"), ("check", "Full screen, filled edge to edge")],
+            shot("shot-web-phone.webp", "The shared presentation playing in a phone's browser"), flip=True),
+    feature("Edit right in the presentation", "Crop, rotate or reimagine a photo, trim a video or a voice note, fix a PDF page, wherever it's used, on a slide or a cover. Revert always brings back the original.",
+            [("photo", "Crop, rotate, black and white, Reimagine"), ("play", "Trim, mute and pick the cover frame of videos"),
+             ("hand", "Take photos, scan documents or record audio straight in")],
+            shot("shot-edit.webp", "Editing a photo in FreeView: crop, rotate and black and white")),
+    feature("Present anything, anywhere", "On your own screen everything opens full screen with nothing in the way. Hand over an iPad in kiosk mode, or switch to deep red night mode in the dark.",
+            [("lock", "Kiosk mode with a PIN"), ("moon", "Red night mode, pages and videos too"), ("airplay", "AirPlay and external displays")], MOCK_KIOSK, flip=True),
+    feature("Private by design", "No account, no ads, no tracking. Your files and history never leave your device unless you share them, and shared links end on their own.",
+            [("eyeslash", "Private browsing keeps no cookies or history"), ("face", "Lock with Face ID or Touch ID"), ("check", "Stop any link whenever you like")], MOCK_PRIVATE),
 ])
 
 INDEX_BODY = f"""{ICONS}
 <header class="hero">
   <div class="logo" role="img" aria-label="FreeView"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="{MARK_PATH}"/></svg></div>
   <h1>FreeView</h1>
-  <p class="tag">View and present anything, full screen. Web pages, PDFs, videos, photos and prototypes, with nothing in the way.</p>
-  <video class="herovid" src="hero.mp4?v=2" poster="hero-poster.webp?v=2" width="1280" height="720" autoplay muted loop playsinline preload="auto"
-    aria-label="A 29-second tour: web pages, PDFs, videos and photos full screen on iPhone; a PDF as slides on iPad; night mode in deep red on black; kiosk mode; and private by design"></video>
+  <p class="tag"><strong>Easy to build. Easier to share.</strong> Drop in any mix of files for a presentation, then send one link that plays on any screen, at any size.</p>
+  <video class="herovid" src="hero.mp4?v=4" poster="hero-poster.webp?v=4" width="1280" height="720" autoplay muted loop playsinline preload="auto"
+    aria-label="A 30-second tour in three steps: drop in a Keynote deck, a PDF, a film, photos, a 3D model and a spreadsheet and they become one presentation; add a branded cover in one tap; send one link with no size limits; it plays on a laptop, tablet, phone and TV. Easy to build, easier to share."></video>
   <a class="appstore heroBadge" href="{STORE}" target="_blank" rel="noopener" aria-label="Download FreeView on the App Store">
     <img src="appstore-badge.svg" alt="Download on the App Store">
   </a>
@@ -381,7 +397,7 @@ INDEX_BODY = f"""{ICONS}
       <div class="shotframe"><img src="shot-home.webp" width="612" height="1330" alt="The home screen with an address field, Paste and File buttons, and three recent items" loading="lazy"></div>
       <div class="shotframe"><img src="shot-pdf.webp" width="612" height="1330" alt="A PDF slide shown full screen on black" loading="lazy"></div>
       <div class="shotframe"><img src="shot-night.webp" width="612" height="1330" alt="A Wikipedia article in night mode, deep red on black" loading="lazy"></div>
-      <div class="shotframe"><img src="shot-paywall.webp" width="612" height="1330" alt="FreeView Pro: yearly with a free week, or lifetime" loading="lazy"></div>
+      <div class="shotframe"><img src="shot-paywall.webp" width="612" height="1330" alt="FreeView Pro: monthly, yearly with a free week, or lifetime" loading="lazy"></div>
     </div>
     <div class="shots ipad">
       <div class="tabframe"><img src="shot-ipad-home.webp" width="880" height="1260" alt="The FreeView home screen on iPad with recent pages, files and presentations" loading="lazy"></div>
@@ -677,8 +693,8 @@ NOT_FOUND = """<!DOCTYPE html>
 """
 
 PAGES = {
-    "index.html": HEAD.format(title="FreeView — View and present anything, full screen", path="",
-                              desc="FreeView shows web pages, PDFs, videos, photos and prototypes full screen on iPhone, iPad and Mac, with instant presentations, kiosk mode and a red night mode.",
+    "index.html": HEAD.format(title="FreeView — Any mix of files, one presentation, one link", path="",
+                              desc="Easy to build, easier to share: turn Keynote, PDFs, videos, photos, 3D and more into one presentation on iPhone, iPad and Mac, and send one link that plays on any screen, whatever the size.",
                               css=INDEX_CSS) + INDEX_BODY,
     "privacy.html": legal("Privacy Policy", "How FreeView handles your data: on your device, except presentations you share.", "Privacy Policy", PRIVACY, "privacy.html"),
     "terms.html": legal("Terms of Use", "Terms of use for FreeView and FreeView Pro.", "Terms of Use", TERMS, "terms.html"),
