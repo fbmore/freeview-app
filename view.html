@@ -52,6 +52,21 @@
     -webkit-user-drag: none; pointer-events: none;
   }
   .slide iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+  .slide .anim { width: 100%; height: 100%; }
+  /* Markdown: a reading page. Short ones sit centred like a slide; long ones scroll. */
+  .slide.md { --mbg: #fff; --mfg: #1c1c1e; --mmuted: #6e6e73; --mrule: rgba(0,0,0,.12); --mcode: #f2f2f7;
+    background-color: var(--mbg); overflow-y: auto; align-items: flex-start; -webkit-user-select: text; user-select: text; }
+  @media (prefers-color-scheme: dark) { .slide.md { --mbg: #000; --mfg: #f2f2f7; --mmuted: #98989d; --mrule: rgba(255,255,255,.16); --mcode: #1c1c1e; } }
+  .doc { margin: auto; width: 100%; max-width: 720px; padding: max(56px, env(safe-area-inset-top)) 24px 96px;
+    color: var(--mfg); font: 18px/1.6 -apple-system, system-ui, sans-serif; }
+  .doc h1, .doc h2, .doc h3 { line-height: 1.2; text-wrap: balance; } .doc h1 { font-size: 2.2em; margin: .2em 0 .6em; }
+  .doc p, .doc li { text-wrap: pretty; } .doc a { color: inherit; } .doc img { max-width: 100%; border-radius: 8px; }
+  .doc pre { background: var(--mcode); padding: 14px 16px; border-radius: 10px; overflow: auto; font-size: .85em; }
+  .doc code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em; }
+  .doc :not(pre) > code { background: var(--mcode); padding: .1em .35em; border-radius: 5px; }
+  .doc blockquote { margin: 1em 0; padding-left: 1em; border-left: 3px solid var(--mrule); color: var(--mmuted); }
+  .doc hr { border: 0; border-top: 1px solid var(--mrule); margin: 2em 0; }
+  .doc table { border-collapse: collapse; } .doc td, .doc th { border: 1px solid var(--mrule); padding: 6px 10px; }
   .slide .loading { position: absolute; width: 22px; height: 22px; border-radius: 50%;
     border: 2px solid var(--hairline); border-top-color: var(--muted); animation: spin .9s linear infinite; }
   .slide.ready .loading { display: none; }
@@ -251,6 +266,8 @@
         if (types[i] === 'audio') {
           const p = parts[2] === 'p' ? parseInt(parts[3], 10) : -1;
           slides.push({ kind: 'audio', src, poster: p >= 0 ? assetURL(items[p], names[p]) : '', name: names[i] || '' });
+        } else if (types[i] === 'markdown' || types[i] === 'lottie') {
+          slides.push({ kind: types[i], src, name: names[i] || '' });
         } else {
           slides.push({ kind: types[i] === 'video' ? 'video' : 'image', src, name: names[i] || '' });
         }
@@ -271,7 +288,7 @@
     const exp = val(f.expiresAt);
     const n = (k) => slides.filter((s) => s.kind === k).length;
     const plural = (c, one, many) => (c ? `${c} ${c === 1 ? one : many}` : null);
-    const parts = [plural(n('image'), 'image', 'images'), plural(n('video'), 'video', 'videos'), plural(n('audio'), 'audio clip', 'audio clips'), plural(n('web'), 'web page', 'web pages')].filter(Boolean);
+    const parts = [plural(n('image'), 'image', 'images'), plural(n('video'), 'video', 'videos'), plural(n('lottie'), 'animation', 'animations'), plural(n('markdown'), 'page of text', 'pages of text'), plural(n('audio'), 'audio clip', 'audio clips'), plural(n('web'), 'web page', 'web pages')].filter(Boolean);
     let meta = `${slides.length} slide${slides.length === 1 ? '' : 's'}`;
     if (parts.length > 1) meta += ' · ' + parts.join(' · ');
     if (exp) meta += ` · available until ${new Date(exp).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`;
@@ -336,6 +353,66 @@
     img.src = url;
   }
 
+  // Renderers for Markdown and Lottie, loaded only when a deck has them (pinned versions).
+  const scripts = {};
+  function loadScript(url) {
+    return scripts[url] || (scripts[url] = new Promise((ok, fail) => {
+      const t = document.createElement('script'); t.src = url; t.crossOrigin = 'anonymous'; t.onload = ok; t.onerror = fail; document.head.appendChild(t);
+    }));
+  }
+  const LIBS = {
+    marked: 'https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js',
+    purify: 'https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js',
+    lottie: 'https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js',
+    fflate: 'https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js',
+  };
+
+  // Markdown from the sender is sanitised (no scripts, no handlers) before it's shown.
+  async function renderMarkdown(el, url) {
+    const [text] = await Promise.all([fetch(url).then((r) => r.text()), loadScript(LIBS.marked), loadScript(LIBS.purify)]);
+    const doc = document.createElement('article');
+    doc.className = 'doc';
+    doc.innerHTML = DOMPurify.sanitize(marked.parse(text));
+    doc.querySelectorAll('a[href]').forEach((a) => { a.target = '_blank'; a.rel = 'noopener'; a.addEventListener('click', (e) => e.stopPropagation()); });
+    el.classList.add('md');
+    el.appendChild(doc);
+    el.classList.add('ready');
+  }
+
+  // Lottie plays on a canvas, so its first frame can set the edge colour. A .lottie file is a zip:
+  // manifest.json, animations/<id>.json and images/, which are inlined.
+  function lottieFromBundle(bytes) {
+    const z = fflate.unzipSync(bytes), t = (p) => (z[p] ? fflate.strFromU8(z[p]) : null);
+    let id = null; try { const m = JSON.parse(t('manifest.json')); id = m.animations && m.animations[0] && m.animations[0].id; } catch {}
+    const key = Object.keys(z).find((k) => (id ? k === 'animations/' + id + '.json' : /^animations\/[^/]+\.json$/.test(k)));
+    const a = JSON.parse(t(key));
+    for (const s of a.assets || []) {
+      if (!s.p || s.e === 1 || String(s.p).startsWith('data:')) continue;
+      const f = Object.keys(z).find((k) => k.endsWith('/' + s.p) || k === s.p);
+      if (!f) continue;
+      const ext = f.split('.').pop().toLowerCase();
+      const mime = ext === 'svg' ? 'image/svg+xml' : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'image/' + ext;
+      let b = ''; const u = z[f]; for (let i = 0; i < u.length; i += 32768) b += String.fromCharCode.apply(null, u.subarray(i, i + 32768));
+      s.u = ''; s.p = 'data:' + mime + ';base64,' + btoa(b); s.e = 1;
+    }
+    return a;
+  }
+  async function renderLottie(el, s) {
+    const bundle = /\.lottie$/i.test(s.name);
+    const [res] = await Promise.all([fetch(s.src), loadScript(LIBS.lottie), bundle ? loadScript(LIBS.fflate) : null]);
+    const data = bundle ? lottieFromBundle(new Uint8Array(await res.arrayBuffer())) : await res.json();
+    const box = document.createElement('div'); box.className = 'anim'; el.appendChild(box);
+    const anim = lottie.loadAnimation({ container: box, renderer: 'canvas', loop: true, autoplay: false, animationData: data,
+      rendererSettings: { preserveAspectRatio: 'xMidYMid meet', clearCanvas: true } });
+    el.lottie = anim;
+    anim.addEventListener('DOMLoaded', () => {
+      el.classList.add('ready');
+      anim.goToAndStop(0, true);
+      const c = edgeColor(box.querySelector('canvas')); if (c) el.style.backgroundColor = c;
+      if (el.classList.contains('on')) anim.play();
+    });
+  }
+
   // Media is created on demand and kept for the slides around the current one.
   function load(i) {
     const s = slides[i], el = nodes[i];
@@ -357,6 +434,12 @@
       m.addEventListener('loadeddata', () => { const c = edgeColor(m); if (c) el.style.backgroundColor = c; }, { once: true });
       m.oncanplay = () => el.classList.add('ready');
       m.src = s.src;
+    } else if (s.kind === 'markdown') {
+      renderMarkdown(el, s.src).catch(() => el.classList.add('ready'));
+      return;
+    } else if (s.kind === 'lottie') {
+      renderLottie(el, s).catch(() => el.classList.add('ready'));
+      return;
     } else if (s.kind === 'audio') {
       // The waveform fills the slide; the sound plays while it's on screen.
       m = new Image();
@@ -396,6 +479,7 @@
         el.classList.toggle('on', i === n);
         const v = el.querySelector('video, audio');
         if (v) { if (i === n && started) { v.currentTime = 0; v.play().catch(() => {}); } else v.pause(); }
+        if (el.lottie) { if (i === n) el.lottie.goToAndPlay(0, true); else el.lottie.pause(); }
       });
       document.body.classList.toggle('web', slides[n].kind === 'web');
       const open = $('#open');
@@ -407,7 +491,10 @@
       $('#next').disabled = n === slides.length - 1;
       // Drop media far from here so long decks stay light.
       nodes.forEach((el, i) => {
-        if (Math.abs(i - n) > 3 && el.dataset.loaded) { el.innerHTML = '<div class="loading"></div>'; el.classList.remove('ready'); delete el.dataset.loaded; }
+        if (Math.abs(i - n) > 3 && el.dataset.loaded) {
+          if (el.lottie) { el.lottie.destroy(); el.lottie = null; }
+          el.innerHTML = '<div class="loading"></div>'; el.classList.remove('ready', 'md'); el.style.backgroundColor = ''; delete el.dataset.loaded;
+        }
       });
     };
 
