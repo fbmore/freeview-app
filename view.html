@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Presentation · FreeView</title>
+<meta name="robots" content="noindex">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" type="image/png" href="/logo.png">
+<!--
+  The shared-presentation viewer. https://freeview.app/v/<id> (the Worker in freeview-views) renders the
+  link preview and forwards here with the id in the hash. The deck comes from the Worker's /set/<id>
+  (a CloudKit SharedSet record): items are assets, slides say which item or web address each slide shows,
+  transition matches the app's setting. Made for presenting: no download, no print.
+-->
+<style>
+  :root {
+    --bg: #000;
+    --fg: #fff;
+    --muted: rgba(255,255,255,.62);
+    --chip: rgba(28,28,30,.72);
+    --chip-hover: rgba(58,58,60,.86);
+    --hairline: rgba(255,255,255,.12);
+    --ease: cubic-bezier(.2,0,0,1);
+    --dur: 450ms;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; background: var(--bg); }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: ui-rounded, "SF Pro Rounded", -apple-system, system-ui, sans-serif;
+    -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none;
+    touch-action: pan-y pinch-zoom;
+  }
+  button { font: inherit; color: inherit; }
+  @media print { body * { display: none !important; } }
+
+  /* ── stage ── */
+  #stage { position: fixed; inset: 0; overflow: hidden; }
+  .slide {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    opacity: 0; visibility: hidden;
+  }
+  .slide.on { opacity: 1; visibility: visible; z-index: 1; }
+  .slide img, .slide video {
+    max-width: 100%; max-height: 100%; width: 100%; height: 100%; object-fit: contain; display: block;
+    -webkit-user-drag: none; pointer-events: none;
+  }
+  .slide iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+  .slide .loading { position: absolute; width: 22px; height: 22px; border-radius: 50%;
+    border: 2px solid var(--hairline); border-top-color: var(--muted); animation: spin .9s linear infinite; }
+  .slide.ready .loading { display: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* transitions: classes set on #stage from the deck's setting */
+  #stage.t-crossfade .slide, #stage.t-fade .slide { transition: opacity var(--dur) var(--ease), visibility 0s linear var(--dur); }
+  #stage.t-crossfade .slide.on, #stage.t-fade .slide.on { transition: opacity var(--dur) var(--ease), visibility 0s; }
+  #stage.t-slide .slide { transition: transform var(--dur) var(--ease), visibility 0s linear var(--dur); opacity: 1; transform: translateX(100%); }
+  #stage.t-slide .slide.before { transform: translateX(-100%); }
+  #stage.t-slide .slide.on { transform: none; transition: transform var(--dur) var(--ease), visibility 0s; }
+  #stage.t-slide .slide.jump { transition: none; }
+  #curtain { position: fixed; inset: 0; z-index: 5; opacity: 0; pointer-events: none; background: #000;
+    transition: opacity 240ms var(--ease); }
+  #curtain.white { background: #fff; }
+  #curtain.down { opacity: 1; }
+
+  /* ── chrome: fades out while presenting, back on movement ── */
+  .chrome { transition: opacity 300ms var(--ease); }
+  body.idle .chrome { opacity: 0; pointer-events: none; }
+  body.idle { cursor: none; }
+  body:not(.started) .chrome { opacity: 0; pointer-events: none; }
+
+  #counter {
+    position: fixed; z-index: 10; left: 50%; bottom: max(18px, env(safe-area-inset-bottom));
+    transform: translateX(-50%); padding: 6px 12px; border-radius: 999px;
+    background: var(--chip); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+    font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: .02em; color: var(--muted);
+  }
+  .round {
+    position: fixed; z-index: 10; width: 44px; height: 44px; border-radius: 50%; border: 0; padding: 0;
+    display: grid; place-items: center; cursor: pointer;
+    background: var(--chip); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+    box-shadow: 0 0 0 1px var(--hairline), 0 4px 16px rgba(0,0,0,.28);
+    transition-property: opacity, background-color, scale; transition-duration: 150ms; transition-timing-function: var(--ease);
+  }
+  .round:hover { background: var(--chip-hover); }
+  .round:active { scale: .96; }
+  .round:focus-visible, .pill:focus-visible, .chip:focus-visible { outline: 2px solid var(--fg); outline-offset: 3px; }
+  .round svg { width: 18px; height: 18px; }
+  .round[disabled] { opacity: .3; cursor: default; }
+  #prev { left: max(16px, env(safe-area-inset-left)); top: 50%; margin-top: -22px; }
+  #next { right: max(16px, env(safe-area-inset-right)); top: 50%; margin-top: -22px; }
+  #prev svg { margin-left: -2px; } #next svg { margin-right: -2px; }   /* optical centring of chevrons */
+  #fs { right: max(16px, env(safe-area-inset-right)); top: max(16px, env(safe-area-inset-top)); }
+  #sound { right: calc(max(16px, env(safe-area-inset-right)) + 54px); top: max(16px, env(safe-area-inset-top)); }
+  #sound[hidden], #fs[hidden], .chip[hidden] { display: none; }
+  .chip {
+    position: fixed; z-index: 10; left: max(16px, env(safe-area-inset-left)); top: max(16px, env(safe-area-inset-top));
+    display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 999px;
+    background: var(--chip); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+    box-shadow: 0 0 0 1px var(--hairline); color: var(--fg); text-decoration: none; font-size: 14px; font-weight: 600;
+    max-width: calc(100vw - 160px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    transition: background-color 150ms var(--ease);
+  }
+  .chip:hover { background: var(--chip-hover); }
+  .chip svg { width: 14px; height: 14px; flex: none; }
+  /* Touch: no hover, so the arrows only show where taps can't reach the page (web-page slides). */
+  @media (hover: none) { #prev, #next { display: none; } body.web #prev, body.web #next { display: grid; } }
+
+  /* ── cover: title + Present, over the first slide ── */
+  #cover {
+    position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+    padding: 24px 16px max(40px, calc(env(safe-area-inset-bottom) + 24px)); text-align: center;
+    background: linear-gradient(to bottom, rgba(0,0,0,0) 35%, rgba(0,0,0,.82));
+    transition: opacity 400ms var(--ease);
+  }
+  #cover.gone { opacity: 0; pointer-events: none; }
+  #cover h1 { margin: 0 0 6px; font-size: clamp(24px, 4.6vw, 40px); line-height: 1.12; font-weight: 700; letter-spacing: -.01em; text-wrap: balance; max-width: 760px; }
+  #cover p { margin: 0 0 22px; color: var(--muted); font-size: 15px; font-variant-numeric: tabular-nums; text-wrap: pretty; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 10px; height: 52px; padding: 0 26px; border: 0; border-radius: 999px; cursor: pointer;
+    background: var(--fg); color: #000; font-size: 17px; font-weight: 700;
+    box-shadow: 0 1px 2px rgba(0,0,0,.2), 0 8px 24px rgba(0,0,0,.35);
+    transition-property: scale, opacity; transition-duration: 150ms; transition-timing-function: var(--ease);
+  }
+  .pill:active { scale: .96; }
+  .pill svg { width: 16px; height: 16px; margin-left: -2px; }
+  #cover small { display: block; margin-top: 16px; color: var(--muted); font-size: 12px; }
+  #cover small a { color: inherit; }
+
+  /* ── messages (loading, ended, wrong link) ── */
+  #message { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; padding: 24px 16px; text-align: center; background: var(--bg); }
+  #message[hidden] { display: none; }
+  #message svg.mark { width: 44px; height: 44px; color: var(--fg); }
+  #message h1 { margin: 0; font-size: 22px; font-weight: 700; text-wrap: balance; }
+  #message p { margin: 0; max-width: 340px; color: var(--muted); font-size: 15px; line-height: 1.45; text-wrap: pretty; }
+  #message a { color: var(--fg); }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root { --dur: 1ms; }
+    #stage.t-slide .slide { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div id="stage" class="t-crossfade" aria-live="polite"></div>
+<div id="curtain"></div>
+
+<a id="open" class="chip chrome" target="_blank" rel="noopener" hidden>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></svg>
+  <span></span>
+</a>
+<button id="prev" class="round chrome" aria-label="Previous slide">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+</button>
+<button id="next" class="round chrome" aria-label="Next slide">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+</button>
+<button id="sound" class="round chrome" aria-label="Turn sound on" hidden>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="wave" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/><path class="mute" d="M16 9.5l5 5M21 9.5l-5 5"/></svg>
+</button>
+<button id="fs" class="round chrome" aria-label="Full screen" hidden>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V5h4M20 9V5h-4M4 15v4h4M20 15v4h-4"/></svg>
+</button>
+<div id="counter" class="chrome" aria-hidden="true"></div>
+
+<div id="cover" hidden>
+  <h1 id="title"></h1>
+  <p id="meta"></p>
+  <button class="pill" id="present">
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>
+    Present
+  </button>
+  <small>Shared with <a href="/" target="_blank" rel="noopener">FreeView</a></small>
+</div>
+
+<div id="message" role="status">
+  <svg class="mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 9V6.5A2.5 2.5 0 0 1 6.5 4H9M15 4h2.5A2.5 2.5 0 0 1 20 6.5V9M20 15v2.5a2.5 2.5 0 0 1-2.5 2.5H15M9 20H6.5A2.5 2.5 0 0 1 4 17.5V15"/></svg>
+  <h1>Opening…</h1>
+  <p></p>
+</div>
+
+<script>
+(() => {
+  const API = 'https://freeview-views.fbmore.workers.dev';
+  const id = decodeURIComponent(location.hash.slice(1)).trim();
+  const $ = (s) => document.querySelector(s);
+  const stage = $('#stage'), curtain = $('#curtain'), counter = $('#counter');
+  const msg = $('#message');
+
+  let slides = [];      // { kind: 'image'|'video'|'web', src, name }
+  let index = 0, busy = false, queued = null, started = false, soundOn = false;
+  let nodes = [];
+
+  function show(title, text) {
+    msg.hidden = false;
+    msg.querySelector('h1').textContent = title;
+    msg.querySelector('p').innerHTML = text || '';
+  }
+
+  if (!/^[A-Za-z0-9-]{10,100}$/.test(id)) {
+    show('This link isn’t complete', 'Ask whoever shared it to send the whole link again.');
+    return;
+  }
+
+  fetch(`${API}/set/${encodeURIComponent(id)}`, { cache: 'no-store' })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((data) => (data ? build(data.fields || {}) : ended()))
+    .catch(() => show('Couldn’t load the presentation', 'Check your connection and reload the page.'));
+
+  function ended() {
+    show('This presentation has ended', 'Shared links expire after a while, or the person who shared it stopped sharing. Ask them for a new link.<br><br><a href="/">What is FreeView?</a>');
+  }
+
+  const val = (f) => (f && f.value) || null;
+  function assetURL(a, name) {
+    const u = a && (a.downloadURL || (a.value && a.value.downloadURL));
+    return u ? u.replace('${f}', encodeURIComponent(name || 'file')) : '';
+  }
+
+  function build(f) {
+    const items = val(f.items) || [];
+    const types = val(f.itemTypes) || [];
+    const names = val(f.itemNames) || [];
+    const order = val(f.slides) || items.map((_, i) => 'a:' + i);
+    for (const s of order) {
+      if (s.startsWith('u:')) {
+        const src = s.slice(2);
+        if (/^https?:\/\//i.test(src)) slides.push({ kind: 'web', src, name: new URL(src).hostname.replace(/^www\./, '') });
+      } else if (s.startsWith('a:')) {
+        const i = parseInt(s.slice(2), 10);
+        const src = assetURL(items[i], names[i]);
+        if (src) slides.push({ kind: types[i] === 'video' ? 'video' : 'image', src, name: names[i] || '' });
+      }
+    }
+    if (!slides.length) return ended();
+
+    const t = val(f.transition) || 'crossfade';
+    stage.className = 't-' + ({ slide: 'slide', instant: 'instant', crossfade: 'crossfade', fadeBlack: 'fade', fadeWhite: 'fade' }[t] || 'crossfade');
+    if (t === 'fadeWhite') curtain.classList.add('white');
+    stage.dataset.curtain = t === 'fadeBlack' || t === 'fadeWhite' ? '1' : '';
+
+    const title = (val(f.title) || 'Presentation').trim();
+    document.title = `${title} · FreeView`;
+    $('#title').textContent = title;
+    const exp = val(f.expiresAt);
+    let meta = `${slides.length} slide${slides.length === 1 ? '' : 's'}`;
+    if (exp) meta += ` · available until ${new Date(exp).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`;
+    $('#meta').textContent = meta;
+
+    nodes = slides.map((s, i) => {
+      const el = document.createElement('div');
+      el.className = 'slide';
+      el.dataset.n = i;
+      el.setAttribute('aria-label', `Slide ${i + 1} of ${slides.length}`);
+      el.innerHTML = '<div class="loading"></div>';
+      stage.appendChild(el);
+      return el;
+    });
+    if (document.fullscreenEnabled || document.webkitFullscreenEnabled) $('#fs').hidden = false;
+    if (slides.some((s) => s.kind === 'video')) $('#sound').hidden = false;
+    updateSound();
+
+    go(0, true);
+    msg.hidden = true;
+    $('#cover').hidden = false;
+    $('#present').focus({ preventScroll: true });
+
+    // One view per browser session, however often it's reloaded.
+    try {
+      const key = 'fv-hit-' + id;
+      if (!sessionStorage.getItem(key)) { sessionStorage.setItem(key, '1'); fetch(`${API}/hit/${encodeURIComponent(id)}`); }
+    } catch { fetch(`${API}/hit/${encodeURIComponent(id)}`); }
+  }
+
+  // Media is created on demand and kept for the slides around the current one.
+  function load(i) {
+    const s = slides[i], el = nodes[i];
+    if (!s || el.dataset.loaded) return;
+    el.dataset.loaded = '1';
+    let m;
+    if (s.kind === 'image') {
+      m = new Image();
+      m.decoding = 'async';
+      m.alt = s.name;
+      m.draggable = false;
+      m.onload = () => el.classList.add('ready');
+      m.src = s.src;
+    } else if (s.kind === 'video') {
+      m = document.createElement('video');
+      m.playsInline = true; m.loop = true; m.muted = !soundOn; m.preload = 'auto';
+      m.setAttribute('playsinline', ''); m.setAttribute('disablepictureinpicture', ''); m.setAttribute('controlslist', 'nodownload noplaybackrate noremoteplayback');
+      m.oncanplay = () => el.classList.add('ready');
+      m.src = s.src;
+    } else {
+      m = document.createElement('iframe');
+      m.src = s.src;
+      m.title = s.name;
+      m.referrerPolicy = 'no-referrer';
+      m.setAttribute('allow', 'autoplay; fullscreen');
+      m.onload = () => el.classList.add('ready');
+    }
+    el.appendChild(m);
+  }
+
+  function go(n, jump = false) {
+    if (busy) { queued = n; return; }   // mid-fade: go there once the curtain lifts
+    if (n < 0 || n >= slides.length || (n === index && !jump)) return;
+    const from = index;
+    index = n;
+    for (const k of [n, n + 1, n - 1, n + 2]) if (k >= 0 && k < slides.length) load(k);
+
+    const swap = () => {
+      nodes.forEach((el, i) => {
+        if (stage.classList.contains('t-slide')) {
+          el.classList.toggle('jump', jump || (i !== n && i !== from));
+          el.classList.toggle('before', i < n);
+        }
+        el.classList.toggle('on', i === n);
+        const v = el.querySelector('video');
+        if (v) { if (i === n && started) { v.currentTime = 0; v.play().catch(() => {}); } else v.pause(); }
+      });
+      document.body.classList.toggle('web', slides[n].kind === 'web');
+      const open = $('#open');
+      open.hidden = slides[n].kind !== 'web';
+      if (!open.hidden) { open.href = slides[n].src; open.querySelector('span').textContent = slides[n].name; }
+      counter.textContent = `${n + 1} / ${slides.length}`;
+      counter.hidden = slides.length < 2;
+      $('#prev').disabled = n === 0;
+      $('#next').disabled = n === slides.length - 1;
+      // Drop media far from here so long decks stay light.
+      nodes.forEach((el, i) => {
+        if (Math.abs(i - n) > 3 && el.dataset.loaded) { el.innerHTML = '<div class="loading"></div>'; el.classList.remove('ready'); delete el.dataset.loaded; }
+      });
+    };
+
+    if (stage.dataset.curtain && !jump && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      busy = true;
+      curtain.classList.add('down');
+      setTimeout(() => {
+        swap(); curtain.classList.remove('down');
+        setTimeout(() => { busy = false; if (queued !== null) { const q = queued; queued = null; go(q); } }, 240);
+      }, 240);
+    } else {
+      swap();
+    }
+    wake();
+  }
+  const target = () => (queued !== null ? queued : index);
+  const next = () => go(Math.min(target() + 1, slides.length - 1));
+  const prev = () => go(Math.max(target() - 1, 0));
+
+  function begin() {
+    if (started) return;
+    started = true;
+    document.body.classList.add('started');
+    soundOn = true;       // the tap on Present lets video play with sound
+    updateSound();
+    $('#cover').classList.add('gone');
+    setTimeout(() => { $('#cover').hidden = true; }, 420);
+    fullscreen(true);
+    const v = nodes[index].querySelector('video');
+    if (v) v.play().catch(() => {});
+    wake();
+  }
+  $('#present').addEventListener('click', begin);
+
+  function fullscreen(on) {
+    const root = document.documentElement;
+    const isOn = document.fullscreenElement || document.webkitFullscreenElement;
+    if (on && !isOn) (root.requestFullscreen || root.webkitRequestFullscreen || (() => {})).call(root)?.catch?.(() => {});
+    if (!on && isOn) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  }
+  $('#fs').addEventListener('click', () => fullscreen(!(document.fullscreenElement || document.webkitFullscreenElement)));
+
+  function updateSound() {
+    const b = $('#sound');
+    b.querySelector('.wave').style.display = soundOn ? '' : 'none';
+    b.querySelector('.mute').style.display = soundOn ? 'none' : '';
+    b.setAttribute('aria-label', soundOn ? 'Turn sound off' : 'Turn sound on');
+    nodes.forEach((el) => { const v = el.querySelector('video'); if (v) v.muted = !soundOn; });
+  }
+  $('#sound').addEventListener('click', () => { soundOn = !soundOn; updateSound(); });
+  $('#prev').addEventListener('click', prev);
+  $('#next').addEventListener('click', next);
+
+  // Keys: arrows, space, page up/down, home/end; Enter or space starts.
+  addEventListener('keydown', (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (!started && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); begin(); return; }
+    const k = e.key;
+    if (['ArrowRight', 'ArrowDown', 'PageDown', ' '].includes(k)) { e.preventDefault(); begin(); next(); }
+    else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(k)) { e.preventDefault(); prev(); }
+    else if (k === 'Home') go(0);
+    else if (k === 'End') go(slides.length - 1);
+    else if (k === 'f') fullscreen(!(document.fullscreenElement || document.webkitFullscreenElement));
+    else if (k === 'm' && !$('#sound').hidden) $('#sound').click();
+  });
+
+  // Click or tap: right two thirds forward, left third back. Swipe on touch.
+  let touch = null;
+  stage.addEventListener('touchstart', (e) => { if (e.touches.length === 1) touch = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() }; }, { passive: true });
+  stage.addEventListener('touchend', (e) => {
+    if (!touch) return;
+    const dx = e.changedTouches[0].clientX - touch.x, dy = e.changedTouches[0].clientY - touch.y;
+    const swipe = Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5 && Date.now() - touch.t < 600;
+    touch = null;
+    if (swipe) { e.preventDefault(); dx < 0 ? next() : prev(); }
+  });
+  stage.addEventListener('click', (e) => {
+    if (!started) return begin();
+    if (document.body.classList.contains('idle')) { wake(); }
+    e.clientX < innerWidth / 3 ? prev() : next();
+  });
+  stage.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  // Controls hide after a moment of stillness.
+  let idleTimer;
+  function wake() {
+    document.body.classList.remove('idle');
+    clearTimeout(idleTimer);
+    if (started) idleTimer = setTimeout(() => document.body.classList.add('idle'), 2600);
+  }
+  addEventListener('mousemove', wake, { passive: true });
+  addEventListener('touchstart', wake, { passive: true });
+})();
+</script>
+</body>
+</html>
