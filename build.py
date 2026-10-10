@@ -462,7 +462,7 @@ PRIVACY = f"""  <p class="muted">Last updated: {UPDATED}</p>
 
   <p class="lead">FreeView shows web pages and files full screen, and it keeps what you open on your device. It has no accounts, no analytics and no advertising. The only things that leave your device are presentations you choose to share as a link, and the anonymous record of a FreeView Pro purchase.</p>
 
-  <p><span class="pill">In short</span>&nbsp; Your history, files, profile and settings stay on your device. When you share a presentation, a copy of it goes to iCloud for as long as the link works, and anyone with the link can watch it. Nothing else is collected.</p>
+  <p><span class="pill">In short</span>&nbsp; Your files and history never leave your device unless you share them. When you share a presentation, a copy of it goes to iCloud for as long as the link works, and anyone with the link can watch it. The only other thing that leaves your device is the anonymous record of a FreeView Pro purchase.</p>
 
   <hr>
 
