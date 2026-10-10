@@ -168,6 +168,31 @@
   #cover small { display: block; margin-top: 16px; color: var(--muted); font-size: 12px; }
   #cover small a { color: inherit; }
 
+  /* ── welcome: who it's from, their message, then Present (or the password) ── */
+  #welcome { position: fixed; inset: 0; z-index: 25; display: flex; align-items: center; justify-content: center; overflow-y: auto;
+    padding: max(32px, env(safe-area-inset-top)) 20px max(32px, env(safe-area-inset-bottom)); background: var(--bg);
+    transition: opacity 400ms var(--ease); }
+  #welcome[hidden] { display: none; }
+  #welcome.gone { opacity: 0; pointer-events: none; }
+  #welcome .inner { display: flex; flex-direction: column; align-items: center; gap: 28px; width: min(640px, 100%); text-align: center; }
+  #welcome .logo { max-height: 44px; max-width: 180px; object-fit: contain; }
+  #welcome .who { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  #welcome .avatar { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 2px rgba(255,255,255,.2);
+    display: grid; place-items: center; background: rgba(255,255,255,.1); font-size: 34px; font-weight: 600; color: var(--fg); }
+  #welcome .name { font-size: 17px; color: var(--muted); }
+  #welcome .name b { display: block; color: var(--fg); font-weight: 600; margin-bottom: 2px; }
+  #welcome .quote { margin: 0; font-size: clamp(22px, 3.4vw, 30px); line-height: 1.4; color: rgba(255,255,255,.9); white-space: pre-line; text-wrap: pretty; }
+  #welcome .quote.long { font-size: clamp(17px, 2.2vw, 20px); }
+  #welcome .what { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; text-wrap: balance; }
+  #welcome .what b { color: var(--fg); font-weight: 600; }
+  #welcome form { display: flex; gap: 8px; width: min(340px, 100%); }
+  #welcome input { flex: 1; min-width: 0; height: 52px; padding: 0 18px; border-radius: 999px; border: 0; font: inherit; font-size: 16px;
+    background: rgba(255,255,255,.1); color: var(--fg); box-shadow: inset 0 0 0 1px var(--hairline); }
+  #welcome input:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+  #welcome .err { color: #ff8a80; font-size: 14px; min-height: 1.2em; margin-top: -16px; }
+  #welcome .lockline { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); }
+  #welcome .lockline svg { width: 14px; height: 14px; }
+
   /* ── messages (loading, ended, wrong link) ── */
   #message { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 14px; padding: 24px 16px; text-align: center; background: var(--bg); }
@@ -234,6 +259,16 @@
   <small>Shared with <a href="/" target="_blank" rel="noopener">FreeView</a></small>
 </div>
 
+<div id="welcome" hidden>
+  <div class="inner">
+    <img class="logo" alt="" hidden>
+    <div class="who" hidden><div class="avatar"></div><div class="name"></div></div>
+    <p class="quote" hidden></p>
+    <div class="what"></div>
+    <div class="action"></div>
+  </div>
+</div>
+
 <div id="message" role="status">
   <svg class="mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 9V6.5A2.5 2.5 0 0 1 6.5 4H9M15 4h2.5A2.5 2.5 0 0 1 20 6.5V9M20 15v2.5a2.5 2.5 0 0 1-2.5 2.5H15M9 20H6.5A2.5 2.5 0 0 1 4 17.5V15"/></svg>
   <h1>Opening…</h1>
@@ -269,7 +304,12 @@
   function fetchDeck() {
     fetch(`${API}/set/${encodeURIComponent(id)}`, { cache: 'no-store', headers: password ? { 'X-FV-Password': password } : {} })
       .then(async (r) => {
-        if (r.status === 401) return askPassword((await r.json()).title, !!password);
+        if (r.status === 401) {
+          const w = await r.json();
+          const sd = w.sender || {};
+          return showWelcome({ title: w.title, message: w.message, slides: w.slides, expiresAt: w.expiresAt, mark: w.mark,
+                               name: sd.name, role: sd.role, photo: sd.photo, logo: sd.logo }, 'locked', !!password);
+        }
         const data = r.ok ? await r.json() : null;
         if (!data) return ended();
         try { if (password) sessionStorage.setItem('fv-pw-' + id, password); } catch {}
@@ -278,6 +318,51 @@
       .catch(() => show('Couldn’t load the presentation', 'Check your connection and reload the page.'));
   }
   fetchDeck();
+
+  // The welcome screen (from Foliàire): logo, sender's photo and name, their message, what the
+  // presentation is, then Present, or the password for protected links.
+  function showWelcome(w, mode, wrong) {
+    const el = $('#welcome');
+    const logo = el.querySelector('.logo');
+    logo.hidden = !w.logo; if (w.logo) logo.src = w.logo;
+    const who = el.querySelector('.who');
+    who.hidden = !(w.name || w.photo);
+    const av = el.querySelector('.avatar');
+    av.innerHTML = '';
+    if (w.photo) { const img = document.createElement('img'); img.className = 'avatar'; img.src = w.photo; img.alt = ''; av.replaceWith(img); }
+    else { av.textContent = (w.name || '').split(/\s+/).map((p) => p[0]).join('').slice(0, 2).toUpperCase(); }
+    el.querySelector('.name').innerHTML = w.name ? `<b></b>${w.role ? '<span></span>' : ''}` : '';
+    if (w.name) { el.querySelector('.name b').textContent = w.name; if (w.role) el.querySelector('.name span').textContent = w.role; }
+    const q = el.querySelector('.quote');
+    q.hidden = !w.message; q.textContent = w.message ? `“${w.message}”` : ''; q.classList.toggle('long', (w.message || '').length > 200);
+    const parts = [`<b></b>`];
+    if (w.slides) parts.push(`${w.slides} slide${w.slides === 1 ? '' : 's'}`);
+    if (w.expiresAt && w.expiresAt - Date.now() < 3650 * 864e5) parts.push(`until ${new Date(w.expiresAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`);
+    el.querySelector('.what').innerHTML = parts.join(' · ');
+    el.querySelector('.what b').textContent = w.title || 'A presentation';
+    const action = el.querySelector('.action');
+    action.innerHTML = '';
+    if (mode === 'locked') {
+      action.innerHTML = '<div class="lockline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Protected with a password</div>';
+      const form = document.createElement('form');
+      form.innerHTML = '<input type="password" autocomplete="current-password" placeholder="Password" aria-label="Password" required><button class="pill" type="submit">Open</button>';
+      form.addEventListener('submit', (e) => { e.preventDefault(); password = form.querySelector('input').value; fetchDeck(); });
+      const box = document.createElement('div'); box.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:14px;width:100%';
+      box.appendChild(action.firstChild); box.appendChild(form);
+      if (wrong) { const err = document.createElement('div'); err.className = 'err'; err.textContent = 'That password isn’t right.'; box.appendChild(err); }
+      action.appendChild(box);
+      setTimeout(() => form.querySelector('input').focus(), 50);
+    } else {
+      const btn = document.createElement('button'); btn.className = 'pill';
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>Present';
+      btn.addEventListener('click', begin);
+      action.appendChild(btn);
+      setTimeout(() => btn.focus({ preventScroll: true }), 50);
+    }
+    $('#mark').hidden = !w.mark;
+    msg.hidden = true;
+    el.hidden = false;
+  }
 
   function askPassword(title, wrong) {
     show(title || 'Password required', '');
@@ -368,8 +453,16 @@
 
     go(0, true);
     msg.hidden = true;
-    $('#cover').hidden = false;
-    $('#present').focus({ preventScroll: true });
+    const sd = opts.sender || {};
+    const pic = (i) => (Number.isInteger(i) && items[i] ? assetURL(items[i], names[i]) : undefined);
+    if (val(f.message) || sd.name || sd.photo != null || opts.locked) {
+      $('#welcome').classList.remove('gone');
+      showWelcome({ title, message: (val(f.message) || '').trim(), slides: slides.length, expiresAt: val(f.expiresAt), mark: !!opts.mark,
+                    name: sd.name, role: sd.role, photo: pic(sd.photo), logo: pic(sd.logo) }, 'present');
+    } else {
+      $('#cover').hidden = false;
+      $('#present').focus({ preventScroll: true });
+    }
 
     // One view per browser session, however often it's reloaded.
     try {
@@ -666,7 +759,8 @@
     soundOn = true;       // the tap on Present lets video play with sound
     updateSound();
     $('#cover').classList.add('gone');
-    setTimeout(() => { $('#cover').hidden = true; }, 420);
+    $('#welcome').classList.add('gone');
+    setTimeout(() => { $('#cover').hidden = true; $('#welcome').hidden = true; }, 420);
     fullscreen(true);
     const v = nodes[index].querySelector('video, audio');
     if (v) v.play().catch(() => {});
@@ -696,7 +790,8 @@
   // Keys: arrows, space, page up/down, home/end; Enter or space starts.
   addEventListener('keydown', (e) => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
-    if (!started && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); begin(); return; }
+    if (e.target && e.target.tagName === 'INPUT') return;
+    if (!started && slides.length && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); begin(); return; }
     const k = e.key;
     if (['ArrowRight', 'ArrowDown', 'PageDown', ' '].includes(k)) { e.preventDefault(); begin(); next(); }
     else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(k)) { e.preventDefault(); prev(); }
