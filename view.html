@@ -46,6 +46,7 @@
     opacity: 0; visibility: hidden;
   }
   .slide.on { opacity: 1; visibility: visible; z-index: 1; }
+  .slide { background-color: #000; }
   .slide img, .slide video {
     max-width: 100%; max-height: 100%; width: 100%; height: 100%; object-fit: contain; display: block;
     -webkit-user-drag: none; pointer-events: none;
@@ -57,7 +58,8 @@
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* transitions: classes set on #stage from the deck's setting */
-  #stage.t-crossfade .slide, #stage.t-fade .slide { transition: opacity var(--dur) var(--ease), visibility 0s linear var(--dur); }
+  .slide { transition: background-color 300ms var(--ease); }
+  #stage.t-crossfade .slide, #stage.t-fade .slide { transition: opacity var(--dur) var(--ease), visibility 0s linear var(--dur), background-color 300ms var(--ease); }
   #stage.t-crossfade .slide.on, #stage.t-fade .slide.on { transition: opacity var(--dur) var(--ease), visibility 0s; }
   #stage.t-slide .slide { transition: transform var(--dur) var(--ease), visibility 0s linear var(--dur); opacity: 1; transform: translateX(100%); }
   #stage.t-slide .slide.before { transform: translateX(-100%); }
@@ -300,6 +302,36 @@
     } catch { fetch(`${API}/hit/${encodeURIComponent(id)}`); }
   }
 
+  // The colour around a picture that doesn't fill the screen: its own edge colour when the edge is
+  // one colour (slides, scans, screenshots), white or black behind transparent artwork (logos, SVGs),
+  // black for anything busier. Same rule as the app (EdgeColor.swift).
+  function edgeColor(src) {
+    try {
+      const S = 48, c = document.createElement('canvas'); c.width = c.height = S;
+      const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(src, 0, 0, S, S);
+      const d = x.getImageData(0, 0, S, S).data, ring = [];
+      for (let y = 0; y < S; y++) for (let i = 0; i < S; i++) if (i < 2 || y < 2 || i >= S - 2 || y >= S - 2) { const k = (y * S + i) * 4; ring.push([d[k], d[k + 1], d[k + 2], d[k + 3]]); }
+      if (ring.filter((p) => p[3] < 16).length / ring.length > 0.5) {
+        let s = 0, n = 0;
+        for (let k = 0; k < d.length; k += 4) { if (d[k + 3] < 16) continue; s += (0.2126 * d[k] + 0.7152 * d[k + 1] + 0.0722 * d[k + 2]) / 255; n++; }
+        return n ? (s / n < 0.35 ? '#fff' : '#000') : null;
+      }
+      const b = {};
+      for (const p of ring) { if (p[3] < 16) continue; const key = (p[0] >> 4) << 8 | (p[1] >> 4) << 4 | (p[2] >> 4); (b[key] = b[key] || []).push(p); }
+      let top = []; for (const k in b) if (b[k].length > top.length) top = b[k];
+      if (top.length / ring.length < 0.6) return null;
+      const m = (i) => Math.round(top.reduce((a, p) => a + p[i], 0) / top.length);
+      return `rgb(${m(0)},${m(1)},${m(2)})`;
+    } catch { return null; }   // no CORS: keep black
+  }
+  // Reads pixels from a separate CORS copy, so a missing header never stops the picture itself loading.
+  function extendBackground(el, url) {
+    const probe = new Image();
+    probe.crossOrigin = 'anonymous';
+    probe.onload = () => { const c = edgeColor(probe); if (c) el.style.backgroundColor = c; };
+    probe.src = url;
+  }
+
   // Media is created on demand and kept for the slides around the current one.
   function load(i) {
     const s = slides[i], el = nodes[i];
@@ -311,12 +343,14 @@
       m.decoding = 'async';
       m.alt = s.name;
       m.draggable = false;
-      m.onload = () => el.classList.add('ready');
+      m.onload = () => { el.classList.add('ready'); extendBackground(el, s.src); };
       m.src = s.src;
     } else if (s.kind === 'video') {
       m = document.createElement('video');
       m.playsInline = true; m.loop = true; m.muted = !soundOn; m.preload = 'auto';
       m.setAttribute('playsinline', ''); m.setAttribute('disablepictureinpicture', ''); m.setAttribute('controlslist', 'nodownload noplaybackrate noremoteplayback');
+      if (location.origin === 'https://freeview.app') m.crossOrigin = 'anonymous';
+      m.addEventListener('loadeddata', () => { const c = edgeColor(m); if (c) el.style.backgroundColor = c; }, { once: true });
       m.oncanplay = () => el.classList.add('ready');
       m.src = s.src;
     } else if (s.kind === 'audio') {
