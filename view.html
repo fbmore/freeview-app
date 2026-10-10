@@ -52,7 +52,8 @@
     -webkit-user-drag: none; pointer-events: none;
   }
   .slide iframe { width: 100%; height: 100%; border: 0; background: #fff; }
-  .slide .anim { width: 100%; height: 100%; }
+  .slide .anim { position: absolute; inset: 0; }
+  .slide .anim canvas { width: 100% !important; height: 100% !important; display: block; }
   /* Markdown: a reading page. Short ones sit centred like a slide; long ones scroll. */
   .slide.md { --mbg: #fff; --mfg: #1c1c1e; --mmuted: #6e6e73; --mrule: rgba(0,0,0,.12); --mcode: #f2f2f7;
     background-color: var(--mbg); overflow-y: auto; align-items: flex-start; -webkit-user-select: text; user-select: text; }
