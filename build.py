@@ -393,12 +393,13 @@ INDEX_BODY = f"""{ICONS}
 <section class="gallery" style="padding-top:24px">
   <div class="wrap">
     <h2>Free to use. Pro if you want it all.</h2>
-    <p>Viewing, presenting, kiosk mode, night mode and private browsing are free, and FreeView keeps your three most recent items. FreeView Pro keeps your whole history.</p>
+    <p>Viewing, presenting, editing, custom slides and styles are free. Free keeps your three most recent presentations and shares one link at a time, for up to a week. FreeView Pro keeps every presentation and shares as many links as you like, for up to 90 days or with no end date, with passwords, per-slide views and no FreeView mark.</p>
     <div class="price">
-      <div class="cardp best"><div class="amt">$4.99</div><div class="per">Pro · yearly · first week free</div></div>
-      <div class="cardp"><div class="amt">$9.99</div><div class="per">Lifetime · pay once</div></div>
+      <div class="cardp"><div class="amt">$1.99</div><div class="per">Pro · monthly</div></div>
+      <div class="cardp best"><div class="amt">$9.99</div><div class="per">Pro · yearly · first week free</div></div>
+      <div class="cardp"><div class="amt">$19.99</div><div class="per">Lifetime · pay once</div></div>
     </div>
-    <p style="font-size:13px;margin-top:16px">US prices; your App Store shows local pricing. The yearly plan renews automatically unless cancelled at least 24 hours before the period ends; manage it in Settings → Apple Account → Subscriptions.</p>
+    <p style="font-size:13px;margin-top:16px">US prices; your App Store shows local pricing. Monthly and yearly plans renew automatically unless cancelled at least 24 hours before the period ends; manage them in Settings → Apple Account → Subscriptions.</p>
     <a class="appstore" style="margin-top:26px" href="{STORE}" target="_blank" rel="noopener" aria-label="Download FreeView on the App Store">
       <img src="appstore-badge.svg" alt="Download on the App Store">
     </a>
@@ -535,11 +536,11 @@ TERMS = f"""  <p class="muted">Last updated: {UPDATED}</p>
   <hr>
 
   <h2>The service</h2>
-  <p>FreeView shows web pages and files full screen (PDFs, videos, images, documents, HTML prototypes and presentations) and lets you make presentations with your own cover and text slides, edit their photos, videos and audio, and share them as a link that plays in any browser. It is free to use and keeps your three most recent items; FreeView Pro keeps your whole history and shares more links for longer.</p>
+  <p>FreeView shows web pages and files full screen (PDFs, videos, images, documents, HTML prototypes and presentations) and lets you make presentations with your own cover and text slides, edit their photos, videos and audio, and share them as a link that plays in any browser. It is free to use, keeps your three most recent presentations and shares one link at a time; FreeView Pro keeps every presentation and shares more links, for longer, with passwords and per-slide views.</p>
 
   <h2>FreeView Pro and subscriptions</h2>
   <ul>
-    <li><strong>Plans:</strong> Yearly, $4.99 per year, starting with a one-week free trial for eligible Apple Accounts; Lifetime, $9.99, a one-time purchase. Prices are in US dollars; the App Store shows local pricing.</li>
+    <li><strong>Plans:</strong> Monthly, $1.99 per month; Yearly, $9.99 per year, starting with a one-week free trial for eligible Apple Accounts; Lifetime, $19.99, a one-time purchase. Prices are in US dollars; the App Store shows local pricing.</li>
     <li><strong>Payment:</strong> charged to your Apple Account at confirmation of purchase, or when the free week ends.</li>
     <li><strong>Renewal:</strong> the yearly plan renews automatically unless cancelled at least 24 hours before the end of the current period. Your account is charged for renewal within 24 hours before the period ends.</li>
     <li><strong>Managing:</strong> cancel or change in Settings → Apple Account → Subscriptions. Cancelling stops the next renewal; Pro stays on until the period ends.</li>
@@ -555,7 +556,7 @@ TERMS = f"""  <p class="muted">Last updated: {UPDATED}</p>
   <p>The files and pages you open remain yours. You are responsible for having the right to view and show them, especially when presenting to others or leaving FreeView in kiosk mode in a public place.</p>
 
   <h2>Shared links</h2>
-  <p>When you share a presentation, you're responsible for what it contains and who you send the link to. Anyone with the link can watch it, and can save or screenshot what they see; ending a link stops it from opening, but it can't take back copies others already made. Free shares one link at a time for up to a week; Pro shares any number, for up to 90 days. We may remove a shared presentation that breaks these terms or the law, or when asked by its owner.</p>
+  <p>When you share a presentation, you're responsible for what it contains and who you send the link to. Anyone with the link can watch it, and can save or screenshot what they see; ending a link stops it from opening, but it can't take back copies others already made. Free shares one link at a time, for up to a week and 250 MB, with a small "Made with FreeView" mark. Pro shares any number of links, up to 2 GB each, for up to 90 days or with no end date, with optional passwords and no mark. A link with no end date stays up until you stop sharing it, while Pro is active; if Pro ends, it switches to ending 30 days later. Links depend on iCloud and FreeView's service continuing; we'll give notice before any change that would end them. We may remove a shared presentation that breaks these terms or the law, or when asked by its owner.</p>
 
   <h2>Acceptable use</h2>
   <p>Don't use FreeView to display or share content that is illegal, harmful, or that you don't have the right to show, and don't use shared links to harass anyone or to impersonate someone else. Kiosk mode limits what a viewer can do inside FreeView; it is not a security boundary for the device. Use Guided Access if an iPhone or iPad must stay locked to the app.</p>
@@ -644,7 +645,7 @@ SUPPORT = f"""  <div class="contact">
 
   <h2>FreeView Pro</h2>
   <h3>What does Pro add?</h3>
-  <p>Your whole history. Free keeps the three most recent items; everything else in FreeView is free.</p>
+  <p>Free keeps your three most recent presentations (single files and pages are unlimited) and shares one link at a time, for up to a week, up to 250 MB. Pro keeps every presentation and shares as many links as you like, up to 2 GB each, for up to 90 days or with no end date, with passwords, views per slide and no FreeView mark. Viewing, presenting, editing, custom slides and styles are free for everyone.</p>
   <h3>How do I restore my purchase?</h3>
   <p>Settings → <strong>Restore Purchases</strong>, on a device signed in to the same Apple Account.</p>
   <h3>How do I cancel or get a refund?</h3>
