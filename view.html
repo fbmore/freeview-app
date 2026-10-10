@@ -324,12 +324,16 @@
       return `rgb(${m(0)},${m(1)},${m(2)})`;
     } catch { return null; }   // no CORS: keep black
   }
-  // Reads pixels from a separate CORS copy, so a missing header never stops the picture itself loading.
-  function extendBackground(el, url) {
-    const probe = new Image();
-    probe.crossOrigin = 'anonymous';
-    probe.onload = () => { const c = edgeColor(probe); if (c) el.style.backgroundColor = c; };
-    probe.src = url;
+  // Pictures load with CORS so their pixels can be read (iCloud allows freeview.app). If that ever
+  // fails, the picture loads again without it: shown on black rather than not at all.
+  function loadPicture(img, el, url) {
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      el.classList.add('ready');
+      if (img.crossOrigin) { const c = edgeColor(img); if (c) el.style.backgroundColor = c; }
+    };
+    img.onerror = () => { if (img.crossOrigin) { img.removeAttribute('crossorigin'); img.src = url; } };
+    img.src = url;
   }
 
   // Media is created on demand and kept for the slides around the current one.
@@ -343,13 +347,13 @@
       m.decoding = 'async';
       m.alt = s.name;
       m.draggable = false;
-      m.onload = () => { el.classList.add('ready'); extendBackground(el, s.src); };
-      m.src = s.src;
+      loadPicture(m, el, s.src);
     } else if (s.kind === 'video') {
       m = document.createElement('video');
       m.playsInline = true; m.loop = true; m.muted = !soundOn; m.preload = 'auto';
       m.setAttribute('playsinline', ''); m.setAttribute('disablepictureinpicture', ''); m.setAttribute('controlslist', 'nodownload noplaybackrate noremoteplayback');
-      if (location.origin === 'https://freeview.app') m.crossOrigin = 'anonymous';
+      m.crossOrigin = 'anonymous';
+      m.addEventListener('error', () => { if (m.crossOrigin) { m.removeAttribute('crossorigin'); m.src = s.src; } }, { once: true });
       m.addEventListener('loadeddata', () => { const c = edgeColor(m); if (c) el.style.backgroundColor = c; }, { once: true });
       m.oncanplay = () => el.classList.add('ready');
       m.src = s.src;
