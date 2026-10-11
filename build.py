@@ -13,7 +13,7 @@ import pathlib
 
 OUT = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else ".")
 YEAR = "2026"
-UPDATED = "10 October 2026"
+UPDATED = "11 October 2026"
 EMAIL = "hello@freeview.app"
 STORE = "https://apps.apple.com/app/id1526222244"
 # Public TestFlight link for the 2.0 beta (external group "FreeView"). Drop it once 2.0 is live.
@@ -371,9 +371,9 @@ INDEX_BODY = f"""{ICONS}
 <header class="hero">
   <div class="logo" role="img" aria-label="FreeView"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="{MARK_PATH}"/></svg></div>
   <h1>FreeView</h1>
-  <p class="tag"><strong>Easy to build. Easier to share.</strong> Drop in any mix of files for a presentation, then send one link that plays on any screen, at any size.</p>
-  <video class="herovid" src="hero.mp4?v=4" poster="hero-poster.webp?v=4" width="1280" height="720" autoplay muted loop playsinline preload="auto"
-    aria-label="A 30-second tour in three steps: drop in a Keynote deck, a PDF, a film, photos, a 3D model and a spreadsheet and they become one presentation; add a branded cover in one tap; send one link with no size limits; it plays on a laptop, tablet, phone and TV. Easy to build, easier to share."></video>
+  <p class="tag"><strong>Easy to build. Easier to share.</strong> Drop in any mix of files for a presentation, then send one link that plays on any screen.</p>
+  <video class="herovid" src="hero.mp4?v=5" poster="hero-poster.webp?v=5" width="1280" height="720" autoplay muted loop playsinline preload="auto"
+    aria-label="A 30-second tour: a pile of files (a deck, a PDF, a film, photos, a 3D model, a spreadsheet, a voice note) drops into FreeView and becomes a presentation; a branded cover is added in one tap; it is sent as one link, up to 2 GB with Pro; and it plays on a laptop, tablet, phone and TV with no app or account. Easy to build, easier to share."></video>
   <a class="appstore heroBadge" href="{STORE}" target="_blank" rel="noopener" aria-label="Download FreeView on the App Store">
     <img src="appstore-badge.svg" alt="Download on the App Store">
   </a>
@@ -409,7 +409,7 @@ INDEX_BODY = f"""{ICONS}
 <section class="gallery" style="padding-top:24px">
   <div class="wrap">
     <h2>Free to use. Pro if you want it all.</h2>
-    <p>Viewing, presenting, editing, custom slides and styles are free. Free keeps your three most recent presentations and shares one link at a time, for up to a week. FreeView Pro keeps every presentation and shares as many links as you like, for up to 90 days or with no end date, with passwords, per-slide views and no FreeView mark.</p>
+    <p>Viewing, presenting, editing, custom slides and styles are free. Free keeps your three most recent presentations and shares one link at a time, for up to a week. FreeView Pro keeps every presentation and shares as many links as you like, for up to 90 days, with passwords, per-slide views and no FreeView mark.</p>
     <div class="price">
       <div class="cardp"><div class="amt">$1.99</div><div class="per">Pro · monthly</div></div>
       <div class="cardp best"><div class="amt">$9.99</div><div class="per">Pro · yearly · first week free</div></div>
@@ -572,7 +572,7 @@ TERMS = f"""  <p class="muted">Last updated: {UPDATED}</p>
   <p>The files and pages you open remain yours. You are responsible for having the right to view and show them, especially when presenting to others or leaving FreeView in kiosk mode in a public place.</p>
 
   <h2>Shared links</h2>
-  <p>When you share a presentation, you're responsible for what it contains and who you send the link to. Anyone with the link can watch it, and can save or screenshot what they see; ending a link stops it from opening, but it can't take back copies others already made. Free shares one link at a time, for up to a week and 250 MB, with a small "Made with FreeView" mark. Pro shares any number of links, up to 2 GB each, for up to 90 days or with no end date, with optional passwords and no mark. A link with no end date stays up until you stop sharing it, while Pro is active; if Pro ends, it switches to ending 30 days later. Links depend on iCloud and FreeView's service continuing; we'll give notice before any change that would end them. We may remove a shared presentation that breaks these terms or the law, or when asked by its owner.</p>
+  <p>When you share a presentation, you're responsible for what it contains and who you send the link to. Anyone with the link can watch it, and can save or screenshot what they see; ending a link stops it from opening, but it can't take back copies others already made. Free shares one link at a time, for up to a week and 250 MB, with a small "Made with FreeView" mark. Pro shares any number of links, up to 2 GB each, for up to 90 days, with optional passwords and no mark. If Pro ends, links you already shared keep working until their end date. Links depend on iCloud and FreeView's service continuing; we'll give notice before any change that would end them. We may remove a shared presentation that breaks these terms or the law, or when asked by its owner.</p>
 
   <h2>Acceptable use</h2>
   <p>Don't use FreeView to display or share content that is illegal, harmful, or that you don't have the right to show, and don't use shared links to harass anyone or to impersonate someone else. Kiosk mode limits what a viewer can do inside FreeView; it is not a security boundary for the device. Use Guided Access if an iPhone or iPad must stay locked to the app.</p>
@@ -661,7 +661,7 @@ SUPPORT = f"""  <div class="contact">
 
   <h2>FreeView Pro</h2>
   <h3>What does Pro add?</h3>
-  <p>Free keeps your three most recent presentations (single files and pages are unlimited) and shares one link at a time, for up to a week, up to 250 MB. Pro keeps every presentation and shares as many links as you like, up to 2 GB each, for up to 90 days or with no end date, with passwords, views per slide and no FreeView mark. Viewing, presenting, editing, custom slides and styles are free for everyone.</p>
+  <p>Free keeps your three most recent presentations (single files and pages are unlimited) and shares one link at a time, for up to a week, up to 250 MB. Pro keeps every presentation and shares as many links as you like, up to 2 GB each, for up to 90 days, with passwords, views per slide and no FreeView mark. Viewing, presenting, editing, custom slides and styles are free for everyone.</p>
   <h3>How do I restore my purchase?</h3>
   <p>Settings → <strong>Restore Purchases</strong>, on a device signed in to the same Apple Account.</p>
   <h3>How do I cancel or get a refund?</h3>
