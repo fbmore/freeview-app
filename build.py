@@ -372,8 +372,8 @@ INDEX_BODY = f"""{ICONS}
   <div class="logo" role="img" aria-label="FreeView"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="{MARK_PATH}"/></svg></div>
   <h1>FreeView</h1>
   <p class="tag"><strong>Easy to build. Easier to share.</strong> Drop in any mix of files for a presentation, then send one link that plays on any screen.</p>
-  <video class="herovid" src="hero.mp4?v=5" poster="hero-poster.webp?v=5" width="1280" height="720" autoplay muted loop playsinline preload="auto"
-    aria-label="A 30-second tour: a pile of files (a deck, a PDF, a film, photos, a 3D model, a spreadsheet, a voice note) drops into FreeView and becomes a presentation; a branded cover is added in one tap; it is sent as one link, up to 2 GB with Pro; and it plays on a laptop, tablet, phone and TV with no app or account. Easy to build, easier to share."></video>
+  <video class="herovid" src="hero.mp4?v=6" poster="hero-poster.webp?v=6" width="1280" height="720" autoplay muted loop playsinline preload="auto"
+    aria-label="A 30-second tour: a pile of files (a deck, a PDF, a film, photos, a 3D model, a spreadsheet, a voice note) drops into FreeView and becomes a presentation; a branded cover is added in one tap; it is sent as one link, up to 2 GB with Pro; and it plays on a laptop, tablet, phone, or a TV through AirPlay, with no app or account. Easy to build, easier to share."></video>
   <a class="appstore heroBadge" href="{STORE}" target="_blank" rel="noopener" aria-label="Download FreeView on the App Store">
     <img src="appstore-badge.svg" alt="Download on the App Store">
   </a>
