@@ -327,6 +327,9 @@
         if (!data) return ended();
         try { if (password) sessionStorage.setItem('fv-pw-' + id, password); } catch {}
         build(data.fields || {});
+        // ?s=<n>: open at slide n (the app's stats screen links to each slide this way).
+        const at = parseInt(new URLSearchParams(location.search).get('s'), 10);
+        if (at > 1 && at <= slides.length) go(at - 1, true);
       })
       .catch(() => show('Couldn’t load the presentation', 'Check your connection and reload the page.'));
   }
