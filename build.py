@@ -502,7 +502,7 @@ PRIVACY = f"""  <p class="muted">Last updated: {UPDATED}</p>
     <li><strong>What's uploaded</strong>: the presentation's title, your optional message, its slides as web-ready files (photos, PDF and document pages as pictures, videos, audio, 3D models, animations, tables), the text of your covers and text slides, and only the profile details you chose to show on them (for example your name, photo, logo, email or website).</li>
     <li><strong>Where</strong>: the public database of FreeView's iCloud container (iCloud.com.fbmore.freeview), run by Apple. Each link has a long random address; there is no list or search of shared presentations, so it can only be found by someone you give the link to.</li>
     <li><strong>Who can see it</strong>: anyone who has the link, without signing in. Link previews in apps like Messages show its title, message and cover picture.</li>
-    <li><strong>How long</strong>: until the link ends (after the time you choose) or you stop sharing it in Settings → Shared Links. Ended links stop working right away, and their copies are deleted from iCloud within a day.</li>
+    <li><strong>How long</strong>: until the link ends (after the time you choose) or you stop sharing it in the Shared Links tab. Ended links stop working right away, and their copies are deleted from iCloud within a day.</li>
     <li><strong>Views</strong>: each opening of a link adds one to a count for that link, so you can see how often it was watched. The count is just a number per link, kept on Cloudflare; no IP address, cookie or device detail is stored.</li>
     <li><strong>Viewer libraries</strong>: the web viewer loads open-source code (for Markdown, tables, Lottie animations, 3D models and QR codes) from cdnjs and jsDelivr, which, like any website, see the viewer's IP address when serving it.</li>
   </ul>
@@ -539,7 +539,7 @@ PRIVACY = f"""  <p class="muted">Last updated: {UPDATED}</p>
   <ul>
     <li><strong>On your device</strong>: swipe an item in Recent to remove it, use <strong>Clear History</strong> in Settings, clear your profile in Settings → Profile and Contacts, or delete the app.</li>
     <li><strong>In your iCloud</strong>: with sync on, removing an item removes it from iCloud and your other devices too. To delete every iCloud copy, turn off <strong>Sync with iCloud</strong> in Settings and choose <strong>Remove from iCloud</strong>, or manage FreeView's data in iOS Settings → Apple Account → iCloud → Storage.</li>
-    <li><strong>Shared links</strong>: Settings → Shared Links → <strong>Stop Sharing</strong> deletes a link's copies from iCloud. Links you don't stop are deleted automatically after they end. Deleting the app doesn't stop links that are still running, so stop them first; or <a href="mailto:{EMAIL}">write to us</a> with the link and we'll remove it.</li>
+    <li><strong>Shared links</strong>: in the Shared Links tab, a link's <strong>…</strong> menu → <strong>Stop Sharing</strong> deletes a link's copies from iCloud. Links you don't stop are deleted automatically after they end. Deleting the app doesn't stop links that are still running, so stop them first; or <a href="mailto:{EMAIL}">write to us</a> with the link and we'll remove it.</li>
   </ul>
 
   <h2>Changes</h2>
@@ -641,7 +641,7 @@ SUPPORT = f"""  <div class="contact">
   <h3>How do I share a presentation?</h3>
   <p>Touch and hold it in Recent and choose <strong>Share Presentation…</strong>. Pick how long the link works and add a message if you like; the link opens in any browser, ready to present. If you edit the presentation later, choose <strong>Update Shared Link…</strong>: the link stays the same.</p>
   <h3>How do I stop sharing?</h3>
-  <p>Settings → <strong>Shared Links</strong>: swipe a link or touch and hold it and choose <strong>Stop Sharing</strong>. Its copies are deleted from iCloud. Links also end on their own, after the time you chose.</p>
+  <p>In the <strong>Shared Links</strong> tab, open the link's <strong>…</strong> menu and choose <strong>Stop Sharing</strong>. Its copies are deleted from iCloud. Links also end on their own, after the time you chose.</p>
   <h3>Someone sent me a presentation that's abusive or infringing. How do I report it?</h3>
   <p>Tap <strong>Report</strong> at the bottom of the presentation's opening screen, or write to <a href="mailto:{EMAIL}">{EMAIL}</a> with the link. We review reports within 24 hours and remove presentations that break the <a href="terms.html">terms</a>.</p>
   <h3>How do I keep editing on my iPad or Mac?</h3>
