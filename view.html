@@ -447,11 +447,8 @@
     const note = (val(f.message) || '').trim();
     if (note) { $('#note').textContent = note; $('#note').hidden = false; $('#cover').classList.add('with-note'); }
     const exp = val(f.expiresAt);
-    const n = (k) => slides.filter((s) => s.kind === k).length;
-    const plural = (c, one, many) => (c ? `${c} ${c === 1 ? one : many}` : null);
-    const parts = [plural(n('image'), 'image', 'images'), plural(n('video'), 'video', 'videos'), plural(n('model'), '3D model', '3D models'), plural(n('lottie'), 'animation', 'animations'), plural(n('markdown'), 'page of text', 'pages of text'), plural(n('table'), 'table', 'tables'), plural(n('custom'), 'slide', 'slides'), plural(n('audio'), 'audio clip', 'audio clips'), plural(n('web'), 'web page', 'web pages')].filter(Boolean);
+    // What's inside is the creator's business: recipients see only how long it is and until when.
     let meta = `${slides.length} slide${slides.length === 1 ? '' : 's'}`;
-    if (parts.length > 1) meta += ' · ' + parts.join(' · ');
     if (exp) meta += ` · available until ${new Date(exp).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`;
     $('#meta').textContent = meta;
 
