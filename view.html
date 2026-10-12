@@ -216,6 +216,12 @@
   #mark svg { width: 13px; height: 13px; }
   #mark[hidden] { display: none; }
   body:not(.started) #mark { opacity: 1; pointer-events: auto; z-index: 30; }   /* visible on the welcome screen too */
+  /* Report a presentation (App Store 1.2): on the welcome and cover screens, before it starts. */
+  #report { position: fixed; z-index: 30; right: max(16px, env(safe-area-inset-right)); bottom: max(18px, env(safe-area-inset-bottom));
+    display: none; align-items: center; height: 30px; padding: 0 12px; border-radius: 999px; text-decoration: none;
+    color: var(--muted); font-size: 12px; font-weight: 600; transition: color 150ms var(--ease); }
+  #report:hover { color: var(--fg); }
+  body:not(.started) #report { display: inline-flex; }
 
   @media (prefers-reduced-motion: reduce) {
     :root { --dur: 1ms; }
@@ -248,6 +254,9 @@
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4 9V6.5A2.5 2.5 0 0 1 6.5 4H9M15 4h2.5A2.5 2.5 0 0 1 20 6.5V9M20 15v2.5a2.5 2.5 0 0 1-2.5 2.5H15M9 20H6.5A2.5 2.5 0 0 1 4 17.5V15"/></svg>
   Made with FreeView
 </a>
+
+<a id="report" href="mailto:hello@freeview.app?subject=Report%20a%20shared%20presentation">Report</a>
+<script>document.getElementById('report').href='mailto:hello@freeview.app?subject='+encodeURIComponent('Report a shared presentation')+'&body='+encodeURIComponent('Link: '+location.href+'\n\nWhat is wrong with it:\n');</script>
 
 <div id="cover" hidden>
   <p id="note" hidden></p>
