@@ -15,10 +15,11 @@
  * Sizes use container units, so a slide scales with whatever box it's drawn in. Drawn full screen, the
  * background bleeds to the edges but the logo, text, person and QR code keep clear of the notch, Dynamic
  * Island and home indicator (the page needs viewport-fit=cover; a box away from the edges has no insets).
- *   videos: [URL | null] beside images: the video a picture was taken from, played when it's opened
- * A text slide's pictures can be tapped to see them full screen: in the app, the app shows the item
+ * The app sets --safe-top/right/bottom/left from the screen, where env() reads 0 inside its viewer.
+ *   videos: [URL | null] beside images: the video or audio a picture was made from, played when it's opened
+ * A Magic slide's pictures can be tapped to see them full screen: in the app, the app shows the item
  * (the `fvPicture` message handler gets the picture's index); on the web, a viewer drawn here
- * (videos play, ← → between pictures, Esc or × closes).
+ * (videos and audio play, ← → between pictures, Esc or × closes).
  */
 (function () {
   const FONTS = {
@@ -33,8 +34,8 @@
   .fv { position: absolute; inset: 0; container-type: size; overflow: hidden; background: var(--fv-bg); color: var(--fv-fg);
     font-family: var(--fv-font); -webkit-font-smoothing: antialiased; text-align: var(--fv-align); display: flex; flex-direction: column;
     --fv-pad-y: 6cqmin; --fv-pad-x: 7cqmin; box-sizing: border-box;
-    padding: max(var(--fv-pad-y), calc(env(safe-area-inset-top, 0px) + 3cqmin)) max(var(--fv-pad-x), calc(env(safe-area-inset-right, 0px) + 3cqmin))
-      max(var(--fv-pad-y), calc(env(safe-area-inset-bottom, 0px) + 3cqmin)) max(var(--fv-pad-x), calc(env(safe-area-inset-left, 0px) + 3cqmin)); }
+    padding: max(var(--fv-pad-y), calc(var(--safe-top, env(safe-area-inset-top, 0px)) + 3cqmin)) max(var(--fv-pad-x), calc(var(--safe-right, env(safe-area-inset-right, 0px)) + 3cqmin))
+      max(var(--fv-pad-y), calc(var(--safe-bottom, env(safe-area-inset-bottom, 0px)) + 3cqmin)) max(var(--fv-pad-x), calc(var(--safe-left, env(safe-area-inset-left, 0px)) + 3cqmin)); }
   .fv * { box-sizing: border-box; }
   .fv .bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
   .fv .scrim { position: absolute; inset: 0; background: linear-gradient(to top, var(--fv-scrim) 0%, transparent 65%), linear-gradient(to bottom, var(--fv-scrim-top) 0%, transparent 30%); }
@@ -170,7 +171,9 @@
     const hasBg = cover && spec.background;
 
     // A Magic slide's layout, from what it has.
-    const images = cover ? [] : (spec.images || []).filter(Boolean).slice(0, 4);
+    // Each picture keeps the video or audio behind it (a picture that couldn't be made is left out).
+    const shown = cover ? [] : (spec.images || []).map((src, i) => ({ src, video: (spec.videos || [])[i] || null })).filter((p) => p.src).slice(0, 4);
+    const images = shown.map((p) => p.src);
     const body = (spec.body || '').trim(), hasTitle = !!(spec.title || '').trim();
     const layout = cover ? '' : images.length ? (body ? 'split' : hasTitle ? 'gallery' : 'grid') : 'hero';
     const lines = body.split('\n').filter((l) => l.trim()).length;
@@ -225,7 +228,7 @@
     const pictures = root.querySelectorAll('.media img');
     if (pictures.length && spec.zoom !== false) {
       const app = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.fvPicture;
-      const items = [...pictures].map((img, i) => ({ src: img.getAttribute('src'), video: (spec.videos || [])[i] || null }));
+      const items = [...pictures].map((img, i) => ({ src: img.getAttribute('src'), video: shown[i] ? shown[i].video : null }));
       root.classList.add('zoomable');
       pictures.forEach((img, i) => img.addEventListener('click', (e) => {
         e.stopPropagation();   // the web viewer's click-to-advance stays out of it

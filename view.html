@@ -63,7 +63,7 @@
   .slide.md { --mbg: #fff; --mfg: #1c1c1e; --mmuted: #6e6e73; --mrule: rgba(0,0,0,.12); --mcode: #f2f2f7;
     background-color: var(--mbg); overflow-y: auto; align-items: flex-start; -webkit-user-select: text; user-select: text; }
   @media (prefers-color-scheme: dark) { .slide.md { --mbg: #000; --mfg: #f2f2f7; --mmuted: #98989d; --mrule: rgba(255,255,255,.16); --mcode: #1c1c1e; } }
-  .doc { margin: auto; width: 100%; max-width: 720px; padding: max(56px, env(safe-area-inset-top)) 24px 96px;
+  .doc { margin: auto; width: 100%; max-width: 720px; padding: max(56px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(96px, calc(env(safe-area-inset-bottom) + 72px)) max(24px, env(safe-area-inset-left));
     color: var(--mfg); font: 18px/1.6 -apple-system, system-ui, sans-serif; }
   .doc h1, .doc h2, .doc h3 { line-height: 1.2; text-wrap: balance; } .doc h1 { font-size: 2.2em; margin: .2em 0 .6em; }
   .doc p, .doc li { text-wrap: pretty; } .doc a { color: inherit; } .doc img { max-width: 100%; border-radius: 8px; }
@@ -74,7 +74,7 @@
   .doc hr { border: 0; border-top: 1px solid var(--mrule); margin: 2em 0; }
   .doc table { border-collapse: collapse; } .doc td, .doc th { border: 1px solid var(--mrule); padding: 6px 10px; }
   /* Tables (CSV, Excel): first row is the header, numbers line up on the right. */
-  .slide.md .grid { margin: auto; max-width: 100%; overflow: auto; padding: max(48px, env(safe-area-inset-top)) 20px 96px; color: var(--mfg);
+  .slide.md .grid { margin: auto; max-width: 100%; overflow: auto; padding: max(48px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(96px, calc(env(safe-area-inset-bottom) + 72px)) max(20px, env(safe-area-inset-left)); color: var(--mfg);
     font: clamp(16px, 1.9vw, 30px)/1.4 -apple-system, system-ui, sans-serif; }
   .grid table { border-collapse: separate; border-spacing: 0; font-variant-numeric: tabular-nums; }
   .grid caption { text-align: left; font-weight: 600; font-size: 1.25em; padding: 0 0 14px; text-wrap: balance; }
@@ -130,6 +130,7 @@
   #fs { right: max(16px, env(safe-area-inset-right)); top: max(16px, env(safe-area-inset-top)); }
   #sound { right: calc(max(16px, env(safe-area-inset-right)) + 54px); top: max(16px, env(safe-area-inset-top)); }
   #sound[hidden], #fs[hidden], .chip[hidden] { display: none; }
+  body.started.sound-off #sound { opacity: 1; pointer-events: auto; }
   .chip {
     position: fixed; z-index: 10; left: max(16px, env(safe-area-inset-left)); top: max(16px, env(safe-area-inset-top));
     display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 999px;
@@ -536,7 +537,7 @@
     fflate: 'https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js',
     modelViewer: 'https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js',
     qrcode: 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js',
-    fvslide: '/fvslide.js?v=3',   // the app's custom-slide renderer (FreeView/Support/Web/fvslide.js)
+    fvslide: '/fvslide.js?v=4',   // the app's custom-slide renderer (FreeView/Support/Web/fvslide.js)
   };
   // <model-viewer> is an ES module.
   function loadModule(url) {
@@ -636,6 +637,22 @@
   }
 
   // Media is created on demand and kept for the slides around the current one.
+  // The slides around this one load once it's on screen (or after a moment if it's slow), nearest
+  // first and one at a time, so the current slide gets the bandwidth and swiping on doesn't wait.
+  let aheadTimer = null;
+  function ahead(n) {
+    clearTimeout(aheadTimer);
+    const queue = [n + 1, n - 1, n + 2, n + 3, n + 4].filter((k) => k >= 0 && k < slides.length);
+    const since = Date.now();
+    const tick = () => {
+      if (index !== n || !queue.length) return;
+      if (!nodes[n].classList.contains('ready') && Date.now() - since < 1200) { aheadTimer = setTimeout(tick, 100); return; }
+      load(queue.shift());
+      aheadTimer = setTimeout(tick, 150);
+    };
+    tick();
+  }
+
   function load(i) {
     const s = slides[i], el = nodes[i];
     if (!s || el.dataset.loaded) return;
@@ -725,7 +742,8 @@
     if (n < 0 || n >= slides.length || (n === index && !jump)) return;
     const from = index;
     index = n;
-    for (const k of [n, n + 1, n - 1, n + 2]) if (k >= 0 && k < slides.length) load(k);
+    load(n);
+    ahead(n);
 
     const swap = () => {
       nodes.forEach((el, i) => {
@@ -739,6 +757,7 @@
         if (el.lottie) { if (i === n) el.lottie.goToAndPlay(0, true); else el.lottie.pause(); }
       });
       document.body.classList.toggle('web', slides[n].kind === 'model');
+      markSound();
       const open = $('#open');
       open.hidden = slides[n].kind !== 'web';
       if (!open.hidden) { open.href = slides[n].src; open.querySelector('span').textContent = slides[n].name; }
@@ -749,7 +768,7 @@
       $('#next').disabled = n === slides.length - 1;
       // Drop media far from here so long decks stay light.
       nodes.forEach((el, i) => {
-        if (Math.abs(i - n) > 3 && el.dataset.loaded) {
+        if ((i < n - 2 || i > n + 4) && el.dataset.loaded) {
           if (el.lottie) { el.lottie.destroy(); el.lottie = null; }
           el.innerHTML = '<div class="loading"></div>'; el.classList.remove('ready', 'md'); el.style.backgroundColor = ''; delete el.dataset.loaded;
         }
@@ -807,7 +826,15 @@
   }
   $('#fs').addEventListener('click', () => fullscreen(!(document.fullscreenElement || document.webkitFullscreenElement)));
 
+  // With the sound off on a video or audio slide, the sound button stays on screen (it doesn't fade
+  // with the rest), so it's clear there's sound to turn back on.
+  function markSound() {
+    const s = slides[index];
+    document.body.classList.toggle('sound-off', !soundOn && !!s && (s.kind === 'video' || s.kind === 'audio'));
+  }
+
   function updateSound() {
+    markSound();
     const b = $('#sound');
     b.querySelector('.wave').style.display = soundOn ? '' : 'none';
     b.querySelector('.mute').style.display = soundOn ? 'none' : '';
