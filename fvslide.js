@@ -7,7 +7,9 @@
  *   logo: URL, person: { name, role, photo: URL }, contacts: [{ label, value, href }]
  *   qr: false to turn off the QR code made from the first web address in the text
  *   theme: { mode, background, foreground, accent, font, align, titleScale, bodyScale, radius }
- * Sizes use container units, so a slide scales with whatever box it's drawn in.
+ * Sizes use container units, so a slide scales with whatever box it's drawn in. Drawn full screen, the
+ * background bleeds to the edges but the logo, text, person and QR code keep clear of the notch, Dynamic
+ * Island and home indicator (the page needs viewport-fit=cover; a box away from the edges has no insets).
  */
 (function () {
   const FONTS = {
@@ -21,7 +23,9 @@
   const CSS = `
   .fv { position: absolute; inset: 0; container-type: size; overflow: hidden; background: var(--fv-bg); color: var(--fv-fg);
     font-family: var(--fv-font); -webkit-font-smoothing: antialiased; text-align: var(--fv-align); display: flex; flex-direction: column;
-    padding: 6cqmin 7cqmin; box-sizing: border-box; }
+    --fv-pad-y: 6cqmin; --fv-pad-x: 7cqmin; box-sizing: border-box;
+    padding: max(var(--fv-pad-y), calc(env(safe-area-inset-top, 0px) + 3cqmin)) max(var(--fv-pad-x), calc(env(safe-area-inset-right, 0px) + 3cqmin))
+      max(var(--fv-pad-y), calc(env(safe-area-inset-bottom, 0px) + 3cqmin)) max(var(--fv-pad-x), calc(env(safe-area-inset-left, 0px) + 3cqmin)); }
   .fv * { box-sizing: border-box; }
   .fv .bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
   .fv .scrim { position: absolute; inset: 0; background: linear-gradient(to top, var(--fv-scrim) 0%, transparent 65%), linear-gradient(to bottom, var(--fv-scrim-top) 0%, transparent 30%); }
