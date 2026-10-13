@@ -1,4 +1,4 @@
-/* FreeView custom slides: the cover and text slides, drawn the same way in the app and on the web.
+/* FreeView custom slides: the cover and Magic slides, drawn the same way in the app and on the web.
  *
  * FV.render(element, spec) fills `element` with the slide. `spec` is fully resolved (no lookups):
  *   kind: 'cover' | 'text'
@@ -7,9 +7,18 @@
  *   logo: URL, person: { name, role, photo: URL }, contacts: [{ label, value, href }]
  *   qr: false to turn off the QR code made from the first web address in the text
  *   theme: { mode, background, foreground, accent, font, align, titleScale, bodyScale, radius }
+ *   align: 'left' | 'center' to override the theme's alignment for this slide
+ * A Magic slide (kind 'text') lays itself out from what it has:
+ *   text only → the title is the hero (the text sets smaller when there's a lot of it, and text with
+ *   no title reads as a quote); pictures only → the grid takes the whole slide; a title and pictures
+ *   → the title above the grid; text and pictures → text beside the pictures (above on a tall screen).
  * Sizes use container units, so a slide scales with whatever box it's drawn in. Drawn full screen, the
  * background bleeds to the edges but the logo, text, person and QR code keep clear of the notch, Dynamic
  * Island and home indicator (the page needs viewport-fit=cover; a box away from the edges has no insets).
+ *   videos: [URL | null] beside images: the video a picture was taken from, played when it's opened
+ * A text slide's pictures can be tapped to see them full screen: in the app, the app shows the item
+ * (the `fvPicture` message handler gets the picture's index); on the web, a viewer drawn here
+ * (videos play, ← → between pictures, Esc or × closes).
  */
 (function () {
   const FONTS = {
@@ -61,16 +70,58 @@
   .fv .body a { color: var(--fv-accent); } .fv .body code { font-family: ${FONTS.mono}; font-size: .9em; }
   .fv .body strong { font-weight: 650; }
   .fv.center .body ul, .fv.center .body ol { display: inline-block; text-align: left; }
+  .fv.hero h1 { font-size: calc(11cqmin * var(--fv-title)); line-height: 1.02; letter-spacing: -0.03em; max-width: 16ch; }
+  .fv.hero .body { margin-top: 3.4cqmin; font-size: calc(3.8cqmin * var(--fv-body)); line-height: 1.4; max-width: 46ch; }
+  .fv.hero.dense h1 { font-size: calc(7cqmin * var(--fv-title)); max-width: 24ch; }
+  .fv.hero.dense .body { margin-top: 2.6cqmin; font-size: calc(3cqmin * var(--fv-body)); max-width: 60ch; }
+  .fv.hero.quote .body { margin-top: 0; font-size: calc(5.4cqmin * var(--fv-title)); line-height: 1.22; font-weight: 600; letter-spacing: -0.01em; text-wrap: balance; max-width: 30ch; }
+  .fv.hero .body > :last-child { margin-bottom: 0; }
+  .fv.grid, .fv.gallery { --fv-pad-y: 4cqmin; --fv-pad-x: 4cqmin; }
+  .fv.gallery h2 { margin: 0 0 2.6cqmin; font-size: calc(4.8cqmin * var(--fv-title)); }
+  .fv.grid header, .fv.gallery header { margin-bottom: 2.4cqmin; }
+  .fv.grid footer, .fv.gallery footer { margin-top: 2.4cqmin; }
+  .fv .media.fill { position: relative; flex: 1; height: auto; max-height: none; min-height: 0; grid-template-rows: 1fr; }
+  .fv .media.fill.n3, .fv .media.fill.n4 { grid-template-rows: 1fr 1fr; }
+  .fv .media.fill > img { min-width: 0; }
+  .fv .media.fill.n1 { display: flex; align-items: center; justify-content: center; }
+  .fv .media.fill.n1 img { width: auto; height: auto; max-width: 100%; max-height: 100%; }
   .fv .media { display: grid; gap: 2cqmin; height: 100%; max-height: 70cqh; }
   .fv .media.n2 { grid-template-columns: 1fr 1fr; } .fv .media.n3, .fv .media.n4 { grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; }
   .fv .media img { width: 100%; height: 100%; object-fit: cover; border-radius: calc(var(--fv-radius) * 1cqmin); min-height: 0; }
   .fv .media.n1 img { object-fit: contain; }
   .fv .media.n3 img:first-child { grid-row: span 2; }
+  .fv.zoomable .media img { cursor: zoom-in; transition: transform .16s ease-out, filter .16s ease-out; -webkit-tap-highlight-color: transparent; }
+  .fv.zoomable .media img:hover { filter: brightness(1.06); }
+  .fv.zoomable .media img:active { transform: scale(.97); }
+  @media (prefers-reduced-motion: reduce) { .fv.zoomable .media img { transition: none; } .fv.zoomable .media img:active { transform: none; } }
+  .fv-focus { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.94); display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity .2s ease-out; -webkit-user-select: none; user-select: none; }
+  .fv-focus.on { opacity: 1; }
+  .fv-focus .item { max-width: calc(100vw - 32px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
+    max-height: calc(100vh - 96px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); width: auto; height: auto; object-fit: contain;
+    border-radius: 6px; transform: scale(.97); transition: transform .24s cubic-bezier(.2,.8,.2,1); background: #000; }
+  .fv-focus.on .item { transform: none; }
+  .fv-focus button { position: absolute; width: 44px; height: 44px; border-radius: 50%; border: 0; padding: 0; cursor: pointer;
+    background: rgba(255,255,255,.14); color: #fff; display: flex; align-items: center; justify-content: center;
+    -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); transition: background-color .15s ease-out, transform .15s ease-out; }
+  .fv-focus button:hover { background: rgba(255,255,255,.24); }
+  .fv-focus button:active { transform: scale(.94); }
+  .fv-focus button svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 2.2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .fv-focus .close { top: max(16px, env(safe-area-inset-top)); left: max(16px, env(safe-area-inset-left)); }
+  .fv-focus .prev { left: max(16px, env(safe-area-inset-left)); top: 50%; margin-top: -22px; }
+  .fv-focus .next { right: max(16px, env(safe-area-inset-right)); top: 50%; margin-top: -22px; }
+  .fv-focus .count { position: absolute; bottom: max(18px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,.8); font: 600 13px/1 -apple-system, system-ui, sans-serif; font-variant-numeric: tabular-nums;
+    padding: 6px 12px; border-radius: 99px; background: rgba(0,0,0,.5); }
+  @media (prefers-reduced-motion: reduce) { .fv-focus, .fv-focus .item { transition: none; } }
   @container (max-aspect-ratio: 1/1) {
     .fv .cols.media-on { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
     .fv h1 { font-size: calc(10cqmin * var(--fv-title)); }
     .fv footer { flex-direction: column; align-items: stretch; }
     .fv .qr { align-self: flex-end; }
+    .fv .media.fill.n2 { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+    .fv .media.fill.n3 { grid-template-rows: 2fr 1fr; }
+    .fv .media.fill.n3 img:first-child { grid-row: auto; grid-column: span 2; }
   }`;
 
   // The first web address written in the text: a full URL, www., or a bare domain like freeview.app.
@@ -113,13 +164,21 @@
   function render(el, spec) {
     installCSS();
     const t = Object.assign({ mode: 'dark', background: '#0b0b0c', foreground: '#ffffff', accent: '#ffffff', font: 'system', align: 'left', titleScale: 1, bodyScale: 1, radius: 2 }, spec.theme || {});
-    const center = t.align === 'center';
+    const center = (spec.align || t.align) === 'center';
     const light = luminance(t.background) > 0.5;
     const cover = spec.kind === 'cover';
     const hasBg = cover && spec.background;
 
+    // A Magic slide's layout, from what it has.
+    const images = cover ? [] : (spec.images || []).filter(Boolean).slice(0, 4);
+    const body = (spec.body || '').trim(), hasTitle = !!(spec.title || '').trim();
+    const layout = cover ? '' : images.length ? (body ? 'split' : hasTitle ? 'gallery' : 'grid') : 'hero';
+    const lines = body.split('\n').filter((l) => l.trim()).length;
+    const dense = layout === 'hero' && hasTitle && (body.length > 260 || lines > 5);
+    const quote = layout === 'hero' && !hasTitle && body && body.length <= 160 && lines <= 3;
+
     const root = document.createElement('div');
-    root.className = `fv ${cover ? 'cover' : 'text'}${center ? ' center' : ''}`;
+    root.className = ['fv', cover ? 'cover' : 'text', layout, center && 'center', dense && 'dense', quote && 'quote'].filter(Boolean).join(' ');
     const vars = {
       '--fv-bg': t.background, '--fv-fg': hasBg ? '#ffffff' : t.foreground, '--fv-accent': t.accent, '--fv-font': FONTS[t.font] || FONTS.system,
       '--fv-align': center ? 'center' : 'left', '--fv-justify': center ? 'center' : 'flex-start', '--fv-items': center ? 'center' : 'flex-start',
@@ -146,8 +205,15 @@
         <header>${logo}</header>
         <main>${hasBg ? '' : '<div class="accent"></div>'}<h1>${esc(spec.title || '')}</h1>${spec.subtitle ? `<p class="sub">${esc(spec.subtitle)}</p>` : ''}</main>
         <footer>${who}${qr}</footer>`;
+    } else if (layout === 'hero') {
+      root.innerHTML = `<header>${logo}</header>
+        <main>${hasTitle ? `<div class="accent"></div><h1>${esc(spec.title)}</h1>` : ''}${body ? `<div class="body">${markdown(spec.body)}</div>` : ''}</main>
+        ${(who !== '<div></div>' || qr) ? `<footer>${who}${qr}</footer>` : ''}`;
+    } else if (layout !== 'split') {
+      root.innerHTML = `${logo ? `<header>${logo}</header>` : ''}${hasTitle ? `<h2>${esc(spec.title)}</h2>` : ''}
+        <div class="media fill n${images.length}">${images.map((u) => `<img src="${esc(u)}" alt="">`).join('')}</div>
+        ${(who !== '<div></div>' || qr) ? `<footer>${who}${qr}</footer>` : ''}`;
     } else {
-      const images = (spec.images || []).filter(Boolean).slice(0, 4);
       root.innerHTML = `<header>${logo}</header>
         <div class="cols${images.length ? ' media-on' : ''}">
           <div class="copy">${spec.title ? `<h2>${esc(spec.title)}</h2>` : ''}<div class="body">${markdown(spec.body)}</div></div>
@@ -156,9 +222,91 @@
         ${(who !== '<div></div>' || qr) ? `<footer>${who}${qr}</footer>` : ''}`;
     }
     root.querySelectorAll('.body a').forEach((a) => { a.target = '_blank'; a.rel = 'noopener'; });
+    const pictures = root.querySelectorAll('.media img');
+    if (pictures.length && spec.zoom !== false) {
+      const app = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.fvPicture;
+      const items = [...pictures].map((img, i) => ({ src: img.getAttribute('src'), video: (spec.videos || [])[i] || null }));
+      root.classList.add('zoomable');
+      pictures.forEach((img, i) => img.addEventListener('click', (e) => {
+        e.stopPropagation();   // the web viewer's click-to-advance stays out of it
+        if (app) app.postMessage(i); else focus(items, i);
+      }));
+    }
     el.innerHTML = '';
     el.appendChild(root);
     return root;
+  }
+
+  // Full screen on the web: one picture (or its video) at a time over everything, until closed.
+  const ICON = { close: '<path d="M6 6l12 12M18 6L6 18"/>', prev: '<path d="M15 5l-7 7 7 7"/>', next: '<path d="M9 5l7 7-7 7"/>' };
+  function focus(items, start) {
+    installCSS();
+    let index = start, media = null, touch = null;
+    const box = document.createElement('div');
+    box.className = 'fv-focus';
+    box.setAttribute('role', 'dialog');
+    box.setAttribute('aria-modal', 'true');
+    const button = (cls, label) => {
+      const b = document.createElement('button');
+      b.className = cls; b.type = 'button'; b.setAttribute('aria-label', label);
+      b.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${ICON[cls]}</svg>`;
+      box.appendChild(b);
+      return b;
+    };
+    const count = document.createElement('div'); count.className = 'count';
+    const show = () => {
+      if (media) { if (media.pause) media.pause(); media.remove(); }
+      const it = items[index];
+      if (it.video) {
+        media = document.createElement('video');
+        media.controls = true; media.autoplay = true; media.playsInline = true; media.poster = it.src;
+        media.setAttribute('playsinline', ''); media.setAttribute('controlslist', 'nodownload');
+        media.src = it.video;
+      } else {
+        media = new Image(); media.alt = ''; media.draggable = false; media.src = it.src;
+      }
+      media.className = 'item';
+      media.addEventListener('click', (e) => e.stopPropagation());
+      box.insertBefore(media, box.firstChild);
+      count.textContent = `${index + 1} / ${items.length}`;
+      if (it.video) media.play().catch(() => {});
+    };
+    const step = (d) => { const n = Math.min(Math.max(index + d, 0), items.length - 1); if (n !== index) { index = n; show(); } };
+    const close = () => {
+      removeEventListener('keydown', keys, true);
+      if (media && media.pause) media.pause();
+      box.classList.remove('on');
+      setTimeout(() => box.remove(), 200);
+    };
+    // Captured first, so the page's own keys (next slide, Esc) wait until this closes.
+    const keys = (e) => {
+      const k = e.key;
+      if (k === 'Escape') close();
+      else if (k === 'ArrowRight') step(1);
+      else if (k === 'ArrowLeft') step(-1);
+      else if (k !== ' ' && k !== 'ArrowUp' && k !== 'ArrowDown' && k !== 'PageUp' && k !== 'PageDown') return;
+      e.preventDefault(); e.stopImmediatePropagation();
+    };
+    button('close', 'Close').addEventListener('click', (e) => { e.stopPropagation(); close(); });
+    if (items.length > 1) {
+      button('prev', 'Previous picture').addEventListener('click', (e) => { e.stopPropagation(); step(-1); });
+      button('next', 'Next picture').addEventListener('click', (e) => { e.stopPropagation(); step(1); });
+      box.appendChild(count);
+    }
+    box.addEventListener('click', (e) => { e.stopPropagation(); close(); });
+    box.addEventListener('touchstart', (e) => { if (e.touches.length === 1) touch = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }, { passive: true });
+    box.addEventListener('touchend', (e) => {
+      if (!touch) return;
+      const dx = e.changedTouches[0].clientX - touch.x, dy = e.changedTouches[0].clientY - touch.y;
+      touch = null;
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) step(dx < 0 ? 1 : -1);
+    });
+    ['touchstart', 'touchend'].forEach((t) => box.addEventListener(t, (e) => e.stopPropagation(), { passive: true }));
+    addEventListener('keydown', keys, true);
+    show();
+    document.body.appendChild(box);
+    requestAnimationFrame(() => requestAnimationFrame(() => box.classList.add('on')));
+    box.querySelector('.close').focus({ preventScroll: true });
   }
 
   window.FV = { render, firstURL, fonts: FONTS };
