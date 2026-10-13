@@ -13,7 +13,7 @@ import pathlib
 
 OUT = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else ".")
 YEAR = "2026"
-UPDATED = "11 October 2026"
+UPDATED = "12 October 2026"
 PRIVACY_UPDATED = "13 October 2026"
 EMAIL = "hello@freeview.app"
 STORE = "https://apps.apple.com/app/id1526222244"
@@ -347,7 +347,7 @@ FEATURES = "\n".join([
             [("stack", "Keynote, PowerPoint, Word, PDFs, videos, photos, audio"), ("check", "3D models, Lottie animations, Markdown, tables and live web pages"),
              ("folder", "From Files, Photos, AirDrop, Mail or the camera, even a scan")],
             shot("shot-deck.webp", "Editing a presentation in FreeView: a cover, a brief, photos, a film, a 3D prototype, numbers, a Keynote review and a voice note, in order")),
-    feature("Make it yours in seconds", "Add a cover with your logo, name, photo and contacts, and text slides for the bits in between. Any web address on a slide becomes a QR code. Pick a style or make one from your logo's colours.",
+    feature("Make it yours in seconds", "Add a cover with your logo, name, photo and contacts, and Magic slides that lay themselves out around your words and pictures. Any web address on a slide becomes a QR code. Pick a style or make one from your logo's colours.",
             [("photo", "Any picture from the presentation as the cover"), ("check", "Saved styles you can copy to other presentations"),
              ("code", "A QR code for every link, automatically")],
             shot("shot-cover.webp", "A cover slide over a photo of the sea: title, logo, the presenter's photo, name and contacts"), flip=True),
@@ -364,7 +364,7 @@ FEATURES = "\n".join([
             shot("shot-edit.webp", "Editing a photo in FreeView: crop, rotate and black and white")),
     feature("Present anything, anywhere", "On your own screen everything opens full screen with nothing in the way. Hand over an iPad in kiosk mode, or switch to deep red night mode in the dark.",
             [("lock", "Kiosk mode with a PIN"), ("moon", "Red night mode, pages and videos too"), ("airplay", "AirPlay and external displays")], MOCK_KIOSK, flip=True),
-    feature("Private by design", "No account, no ads, no tracking. Your files and history never leave your device unless you share them, and shared links end on their own.",
+    feature("Private by design", "No account, no ads, no tracking. Your files and history stay on your device, or in your own iCloud if you turn on sync, unless you share them; shared links end on their own.",
             [("eyeslash", "Private browsing keeps no cookies or history"), ("face", "Lock with Face ID or Touch ID"), ("check", "Stop any link whenever you like")], MOCK_PRIVATE),
 ])
 
@@ -478,9 +478,9 @@ def legal(title, desc, heading, body, path):
 
 PRIVACY = f"""  <p class="muted">Last updated: {PRIVACY_UPDATED}</p>
 
-  <p class="lead">FreeView shows web pages and files full screen, and it keeps what you open on your device. It has no accounts, no analytics and no advertising. The only things that leave your device are presentations you choose to share as a link, and the anonymous record of a FreeView Pro purchase.</p>
+  <p class="lead">FreeView shows web pages and files full screen, and it keeps what you open on your device. It has no accounts, no analytics and no advertising. Nothing reaches us except presentations you choose to share as a link and the anonymous record of a FreeView Pro purchase. If you turn on iCloud sync, your files and presentations also go to your own private iCloud, which we can't see.</p>
 
-  <p><span class="pill">In short</span>&nbsp; Your files and history never leave your device unless you share them. When you share a presentation, a copy of it goes to iCloud for as long as the link works, and anyone with the link can watch it. The only other thing that leaves your device is the anonymous record of a FreeView Pro purchase.</p>
+  <p><span class="pill">In short</span>&nbsp; Your files and history stay on your device, or in your own private iCloud if you turn on sync, unless you share them. When you share a presentation, a copy of it goes to iCloud for as long as the link works, and anyone with the link can watch it. The only other thing that leaves your device is the anonymous record of a FreeView Pro purchase.</p>
 
   <hr>
 
@@ -494,10 +494,13 @@ PRIVACY = f"""  <p class="muted">Last updated: {PRIVACY_UPDATED}</p>
   </ul>
   <p>None of this is sent to us unless you share a presentation. It may be included in your device's own iCloud or computer backup, under Apple's terms.</p>
 
+  <h2>iCloud sync (optional)</h2>
+  <p>If you turn on <strong>Sync with iCloud</strong> in Settings, your files and presentations (with their slides, styles and pictures, and their names and dates) are copied to the private database of FreeView's iCloud container in <em>your</em> iCloud account, so they appear on your other devices signed in to the same Apple Account. Apple stores them under its iCloud terms; they count toward your iCloud storage, and we have no access to them. Pages you browse are not synced. Turning sync off keeps everything on your device; choosing <strong>Remove from iCloud</strong> deletes the iCloud copies.</p>
+
   <h2>Shared presentations</h2>
   <p>When you use <strong>Share Presentation</strong>, FreeView uploads a copy of that presentation so it can be watched in a browser at freeview.app:</p>
   <ul>
-    <li><strong>What's uploaded</strong>: the presentation's title, your optional message, its slides as web-ready files (photos, PDF and document pages as pictures, videos, audio, 3D models, animations, tables), the text of your covers and text slides, and only the profile details you chose to show on them (for example your name, photo, logo, email, phone, website or social profiles).</li>
+    <li><strong>What's uploaded</strong>: the presentation's title, your optional message, its slides as web-ready files (photos, PDF and document pages as pictures, videos, audio, 3D models, animations, tables), the text of your covers and Magic slides, and only the profile details you chose to show on them (for example your name, photo, logo, email, phone, website or social profiles).</li>
     <li><strong>Where</strong>: the public database of FreeView's iCloud container (iCloud.com.fbmore.freeview), run by Apple. Each link has a long random address; there is no list or search of shared presentations, so it can only be found by someone you give the link to.</li>
     <li><strong>Who can see it</strong>: anyone who has the link, without signing in. Link previews in apps like Messages show its title, message and cover picture.</li>
     <li><strong>How long</strong>: until the link ends (after the time you choose) or you stop sharing it in the Shared Links tab. Ended links stop working right away, and their copies are deleted from iCloud within a day.</li>
@@ -536,6 +539,7 @@ PRIVACY = f"""  <p class="muted">Last updated: {PRIVACY_UPDATED}</p>
   <h2>Deleting your data</h2>
   <ul>
     <li><strong>On your device</strong>: swipe an item in Recent to remove it, use <strong>Clear History</strong> in Settings, clear your profile in Settings → Profile and Contacts, or delete the app.</li>
+    <li><strong>In your iCloud</strong>: with sync on, removing an item removes it from iCloud and your other devices too. To delete every iCloud copy, turn off <strong>Sync with iCloud</strong> in Settings and choose <strong>Remove from iCloud</strong>, or manage FreeView's data in iOS Settings → Apple Account → iCloud → Storage.</li>
     <li><strong>Shared links</strong>: in the Shared Links tab, a link's <strong>…</strong> menu → <strong>Stop Sharing</strong> deletes a link's copies from iCloud. Links you don't stop are deleted automatically after they end. Deleting the app doesn't stop links that are still running, so stop them first; or <a href="mailto:{EMAIL}">write to us</a> with the link and we'll remove it.</li>
   </ul>
 
@@ -553,7 +557,7 @@ TERMS = f"""  <p class="muted">Last updated: {UPDATED}</p>
   <hr>
 
   <h2>The service</h2>
-  <p>FreeView shows web pages and files full screen (PDFs, videos, images, documents, HTML prototypes and presentations) and lets you make presentations with your own cover and text slides, edit their photos, videos and audio, and share them as a link that plays in any browser. It is free to use, keeps your three most recent presentations and shares one link at a time; FreeView Pro keeps every presentation and shares more links, for longer, with passwords and per-slide views.</p>
+  <p>FreeView shows web pages and files full screen (PDFs, videos, images, documents, HTML prototypes and presentations) and lets you make presentations with your own covers and Magic slides, edit their photos, videos and audio, and share them as a link that plays in any browser. It is free to use, keeps your three most recent presentations and shares one link at a time; FreeView Pro keeps every presentation and shares more links, for longer, with passwords and per-slide views.</p>
 
   <h2>FreeView Pro and subscriptions</h2>
   <ul>
@@ -627,20 +631,22 @@ SUPPORT = f"""  <div class="contact">
   <h2>Presentations and sharing</h2>
   <h3>Can FreeView open Keynote, PowerPoint and Word files?</h3>
   <p>Yes. Each slide or page becomes a still picture, so the presentation looks right on any screen and in shared links. Animations, builds, transitions and embedded video aren't kept, and fonts your device doesn't have are replaced with similar ones. Spreadsheets and CSV files show as a table.</p>
-  <h3>How do I add a cover or a text slide?</h3>
-  <p>In <strong>Edit Presentation</strong>, choose <strong>Add Cover Slide</strong> or <strong>Add Text Slide</strong>. A cover can use any picture from the presentation, Photos or the camera as its background, and show your logo, name, photo and the contacts you pick. Any web address in a slide's text shows as a QR code.</p>
+  <h3>How do I add a cover or a Magic slide?</h3>
+  <p>In <strong>Edit Presentation</strong>, choose <strong>Add Cover Slide</strong> or <strong>Add Magic Slide</strong>. A Magic slide arranges itself around what you put on it: a title on its own becomes the hero, pictures on their own fill the slide, and text sits beside pictures. Tap a picture on a Magic slide to see it full screen; a picture taken from a video plays it. A cover can use any picture from the presentation, Photos or the camera as its background, and show your logo, name, photo and the contacts you pick. Any web address in a slide's text shows as a QR code.</p>
   <h3>How do styles work?</h3>
-  <p>Tap <strong>Style…</strong> in Edit Presentation to pick a preset, colours, font and logo, or make a style from your logo's colours. Styles affect covers and text slides only. Save a style by name to use it again, or copy one from another presentation.</p>
+  <p>Tap <strong>Style…</strong> in Edit Presentation to pick a preset, colours, font and logo, or make a style from your logo's colours. Styles affect covers and Magic slides only. Save a style by name to use it again, or copy one from another presentation.</p>
   <h3>Where do my name, logo and contacts come from?</h3>
   <p>Settings → <strong>Profile and Contacts</strong>. Each slide chooses which of them to show, if any.</p>
   <h3>Can I edit photos and videos in a presentation?</h3>
-  <p>Tap a photo, video, audio clip or PDF in Edit Presentation (or a cover's background or a text slide's picture). Photos can be cropped, rotated, made black and white, or reimagined with Image Playground where available; videos trimmed, muted, rotated or given a cover frame; audio trimmed or re-recorded; PDF pages rotated, cropped or made black and white. <strong>Revert</strong> always brings back the original.</p>
+  <p>Tap a photo, video, audio clip or PDF in Edit Presentation (or a cover's background or a Magic slide's picture). Photos can be cropped, rotated, made black and white, or reimagined with Image Playground where available; videos trimmed, muted, rotated or given a cover frame; audio trimmed or re-recorded; PDF pages rotated, cropped or made black and white. <strong>Revert</strong> always brings back the original.</p>
   <h3>How do I share a presentation?</h3>
   <p>Touch and hold it in Recent and choose <strong>Share Presentation…</strong>. Pick how long the link works and add a message if you like; the link opens in any browser, ready to present. If you edit the presentation later, choose <strong>Update Shared Link…</strong>: the link stays the same.</p>
   <h3>How do I stop sharing?</h3>
   <p>In the <strong>Shared Links</strong> tab, open the link's <strong>…</strong> menu and choose <strong>Stop Sharing</strong>. Its copies are deleted from iCloud. Links also end on their own, after the time you chose.</p>
   <h3>Someone sent me a presentation that's abusive or infringing. How do I report it?</h3>
   <p>Tap <strong>Report</strong> at the bottom of the presentation's opening screen, or write to <a href="mailto:{EMAIL}">{EMAIL}</a> with the link. We review reports within 24 hours and remove presentations that break the <a href="terms.html">terms</a>.</p>
+  <h3>How do I keep editing on my iPad or Mac?</h3>
+  <p>Turn on <strong>Sync with iCloud</strong> in FreeView's Settings on each device, signed in to the same Apple Account. Your files and presentations, and changes to them, follow you; pages you browse stay on each device. They use your own iCloud storage, and FreeView can't see them.</p>
   <h3>Do I need iCloud to share?</h3>
   <p>Yes: sharing uses iCloud, so sign in to iCloud in the Settings app. People watching the link don't need anything but a browser.</p>
 
@@ -671,7 +677,7 @@ SUPPORT = f"""  <div class="contact">
   <p>Cancel in iOS Settings → Apple Account → Subscriptions (or <strong>Manage Subscription</strong> in FreeView's Settings). Refunds are handled by Apple at <a href="https://reportaproblem.apple.com">reportaproblem.apple.com</a>.</p>
 
   <h2>Your data</h2>
-  <p>Everything stays on your device. Swipe an item to remove it, or use <strong>Clear History</strong> in Settings to remove everything, including imported files. See the <a href="privacy.html">privacy policy</a>.</p>
+  <p>Everything stays on your device, and in your own iCloud if you turn on sync. Swipe an item to remove it (with sync on, from your other devices too), or use <strong>Clear History</strong> in Settings to remove everything, including imported files. See the <a href="privacy.html">privacy policy</a>.</p>
 """
 
 NOT_FOUND = """<!DOCTYPE html>
