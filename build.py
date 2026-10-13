@@ -14,6 +14,7 @@ import pathlib
 OUT = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else ".")
 YEAR = "2026"
 UPDATED = "11 October 2026"
+PRIVACY_UPDATED = "13 October 2026"
 EMAIL = "hello@freeview.app"
 STORE = "https://apps.apple.com/app/id1526222244"
 # Public TestFlight link for the 2.0 beta (external group "FreeView"). Drop it once 2.0 is live.
@@ -475,7 +476,7 @@ def legal(title, desc, heading, body, path):
 """
 
 
-PRIVACY = f"""  <p class="muted">Last updated: {UPDATED}</p>
+PRIVACY = f"""  <p class="muted">Last updated: {PRIVACY_UPDATED}</p>
 
   <p class="lead">FreeView shows web pages and files full screen, and it keeps what you open on your device. It has no accounts, no analytics and no advertising. The only things that leave your device are presentations you choose to share as a link, and the anonymous record of a FreeView Pro purchase.</p>
 
@@ -496,11 +497,11 @@ PRIVACY = f"""  <p class="muted">Last updated: {UPDATED}</p>
   <h2>Shared presentations</h2>
   <p>When you use <strong>Share Presentation</strong>, FreeView uploads a copy of that presentation so it can be watched in a browser at freeview.app:</p>
   <ul>
-    <li><strong>What's uploaded</strong>: the presentation's title, your optional message, its slides as web-ready files (photos, PDF and document pages as pictures, videos, audio, 3D models, animations, tables), the text of your covers and text slides, and only the profile details you chose to show on them (for example your name, photo, logo, email or website).</li>
+    <li><strong>What's uploaded</strong>: the presentation's title, your optional message, its slides as web-ready files (photos, PDF and document pages as pictures, videos, audio, 3D models, animations, tables), the text of your covers and text slides, and only the profile details you chose to show on them (for example your name, photo, logo, email, phone, website or social profiles).</li>
     <li><strong>Where</strong>: the public database of FreeView's iCloud container (iCloud.com.fbmore.freeview), run by Apple. Each link has a long random address; there is no list or search of shared presentations, so it can only be found by someone you give the link to.</li>
     <li><strong>Who can see it</strong>: anyone who has the link, without signing in. Link previews in apps like Messages show its title, message and cover picture.</li>
     <li><strong>How long</strong>: until the link ends (after the time you choose) or you stop sharing it in the Shared Links tab. Ended links stop working right away, and their copies are deleted from iCloud within a day.</li>
-    <li><strong>Views</strong>: each opening of a link adds one to a count for that link, so you can see how often it was watched. The count is just a number per link, kept on Cloudflare; no IP address, cookie or device detail is stored.</li>
+    <li><strong>Views</strong>: each opening of a link adds one to a count for that link, and each slide shown adds one to a count for that slide, so you can see how often it was watched and which slides were seen. The counts are just numbers per link and per slide, kept on Cloudflare; no IP address, cookie or device detail is stored.</li>
     <li><strong>Viewer libraries</strong>: the web viewer loads open-source code (for Markdown, tables, Lottie animations, 3D models and QR codes) from cdnjs and jsDelivr, which, like any website, see the viewer's IP address when serving it.</li>
   </ul>
   <p>Share only what you have the right to share: anyone with the link can view and save what they see.</p>
