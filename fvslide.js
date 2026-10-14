@@ -167,9 +167,8 @@
     const s = document.createElement('style'); s.id = 'fv-css'; s.textContent = CSS; document.head.appendChild(s);
   }
 
-  // On a Magic slide the QR code sits under what it belongs to: the paragraph or list holding the web
-  // address (or the title), aligned with the text. It stays in the footer only when the address
-  // can't be found in the text.
+  // On a Magic slide the QR code sits after the text holding the web address (or under the title),
+  // aligned with it. It stays in the footer only when the address can't be found in the text.
   function placeQR(root, url) {
     const qr = root.querySelector('footer .qr');
     if (!qr) return;
@@ -177,7 +176,7 @@
     const holds = (el) => (el.textContent || '').toLowerCase().includes(key)
       || [...el.querySelectorAll('a[href]')].some((a) => a.href.replace(/\/$/, '').toLowerCase().includes(key));
     const blocks = [...root.querySelectorAll('.body > *')];
-    const target = blocks.find(holds) || [...root.querySelectorAll('h1, h2')].find(holds);
+    const target = blocks.some(holds) ? blocks[blocks.length - 1] : [...root.querySelectorAll('h1, h2')].find(holds);
     if (!target) return;
     qr.classList.add('inline');
     target.after(qr);
