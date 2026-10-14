@@ -62,6 +62,11 @@
   .fv .qr .code { width: 17cqmin; height: 17cqmin; padding: 1.4cqmin; border-radius: calc(var(--fv-radius) * 0.6cqmin + 1cqmin); background: var(--fv-qr-bg); }
   .fv .qr .code svg { display: block; width: 100%; height: 100%; }
   .fv .qr span { font-size: calc(1.8cqmin * var(--fv-body)); opacity: .75; max-width: 22cqmin; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fv .qr.inline { display: inline-flex; margin: .4cqmin 0 2cqmin; }
+  .fv > .qr.inline, .fv main > .qr.inline, .fv .copy > .qr.inline { align-self: var(--fv-items); }
+  .fv .qr.inline .code { width: 14cqmin; height: 14cqmin; padding: 1.2cqmin; }
+  .fv .body > .qr.inline { display: flex; width: max-content; }
+  .fv.center .body > .qr.inline { margin-left: auto; margin-right: auto; }
   .fv .cols { flex: 1; display: grid; grid-template-columns: 1fr; gap: 5cqmin; align-items: center; min-height: 0; }
   .fv .cols.media-on { grid-template-columns: 1fr 1fr; }
   .fv .copy { min-width: 0; }
@@ -162,6 +167,24 @@
     const s = document.createElement('style'); s.id = 'fv-css'; s.textContent = CSS; document.head.appendChild(s);
   }
 
+  // On a Magic slide the QR code sits under what it belongs to: the paragraph or list holding the web
+  // address (or the title), aligned with the text. It stays in the footer only when the address
+  // can't be found in the text.
+  function placeQR(root, url) {
+    const qr = root.querySelector('footer .qr');
+    if (!qr) return;
+    const key = url.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/$/, '').toLowerCase();
+    const holds = (el) => (el.textContent || '').toLowerCase().includes(key)
+      || [...el.querySelectorAll('a[href]')].some((a) => a.href.replace(/\/$/, '').toLowerCase().includes(key));
+    const blocks = [...root.querySelectorAll('.body > *')];
+    const target = blocks.find(holds) || [...root.querySelectorAll('h1, h2')].find(holds);
+    if (!target) return;
+    qr.classList.add('inline');
+    target.after(qr);
+    const footer = root.querySelector('footer');
+    if (footer && !footer.querySelector('.who, .qr')) footer.remove();
+  }
+
   function render(el, spec) {
     installCSS();
     const t = Object.assign({ mode: 'dark', background: '#0b0b0c', foreground: '#ffffff', accent: '#ffffff', font: 'system', align: 'left', titleScale: 1, bodyScale: 1, radius: 2 }, spec.theme || {});
@@ -225,6 +248,7 @@
         ${(who !== '<div></div>' || qr) ? `<footer>${who}${qr}</footer>` : ''}`;
     }
     root.querySelectorAll('.body a').forEach((a) => { a.target = '_blank'; a.rel = 'noopener'; });
+    if (!cover && url) placeQR(root, url);
     const pictures = root.querySelectorAll('.media img');
     if (pictures.length && spec.zoom !== false) {
       const app = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.fvPicture;
