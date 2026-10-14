@@ -324,7 +324,7 @@
       if (k === 'Escape') close();
       else if (k === 'ArrowRight') step(1);
       else if (k === 'ArrowLeft') step(-1);
-      else if (k !== ' ' && k !== 'ArrowUp' && k !== 'ArrowDown' && k !== 'PageUp' && k !== 'PageDown') return;
+      else if (![' ', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', 'Enter'].includes(k)) return;
       e.preventDefault(); e.stopImmediatePropagation();
     };
     button('close', 'Close').addEventListener('click', (e) => { e.stopPropagation(); close(); });
