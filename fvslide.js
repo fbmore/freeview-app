@@ -5,7 +5,8 @@
  *   title, subtitle, body (Markdown; rendered with marked + DOMPurify when present)
  *   background: image URL (cover), images: [URL] (text slide, up to 4)
  *   logo: URL, person: { name, role, photo: URL }, contacts: [{ label, value, href }]
- *   qr: false to turn off the QR code made from the first web address in the text
+ *   qr: false to turn off the QR codes made from the web addresses in the text (a cover shows the first;
+ *   a Magic slide up to four, side by side)
  *   theme: { mode, background, foreground, accent, font, align, titleScale, bodyScale, radius }
  *   align: 'left' | 'center' to override the theme's alignment for this slide
  * A Magic slide (kind 'text') lays itself out from what it has:
@@ -62,11 +63,14 @@
   .fv .qr .code { width: 17cqmin; height: 17cqmin; padding: 1.4cqmin; border-radius: calc(var(--fv-radius) * 0.6cqmin + 1cqmin); background: var(--fv-qr-bg); }
   .fv .qr .code svg { display: block; width: 100%; height: 100%; }
   .fv .qr span { font-size: calc(1.8cqmin * var(--fv-body)); opacity: .75; max-width: 22cqmin; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .fv .qr.inline { display: inline-flex; margin: .4cqmin 0 2cqmin; }
-  .fv > .qr.inline, .fv main > .qr.inline, .fv .copy > .qr.inline { align-self: var(--fv-items); }
-  .fv .qr.inline .code { width: 14cqmin; height: 14cqmin; padding: 1.2cqmin; }
-  .fv .body > .qr.inline { display: flex; width: max-content; }
-  .fv.center .body > .qr.inline { margin-left: auto; margin-right: auto; }
+  .fv .qrs { flex: none; display: flex; flex-wrap: wrap; gap: 2.4cqmin; align-items: flex-start; }
+  .fv footer .qrs { justify-content: flex-end; }
+  .fv .qrs.inline { margin: .4cqmin 0 2cqmin; justify-content: var(--fv-justify); }
+  .fv > .qrs.inline, .fv main > .qrs.inline, .fv .copy > .qrs.inline { align-self: var(--fv-items); }
+  .fv .qrs.inline .code { width: 14cqmin; height: 14cqmin; padding: 1.2cqmin; }
+  .fv .body > .qrs.inline { margin-top: 1.6cqmin; }
+  .fv .qrs.inline.many .code { width: 11cqmin; height: 11cqmin; padding: 1cqmin; }
+  .fv .qrs.many span { max-width: 15cqmin; }
   .fv .cols { flex: 1; display: grid; grid-template-columns: 1fr; gap: 5cqmin; align-items: center; min-height: 0; }
   .fv .cols.media-on { grid-template-columns: 1fr 1fr; }
   .fv .copy { min-width: 0; }
@@ -124,21 +128,30 @@
     .fv .cols.media-on { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
     .fv h1 { font-size: calc(10cqmin * var(--fv-title)); }
     .fv footer { flex-direction: column; align-items: stretch; }
-    .fv .qr { align-self: flex-end; }
+    .fv footer > .qrs { align-self: flex-end; }
     .fv .media.fill.n2 { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
     .fv .media.fill.n3 { grid-template-rows: 2fr 1fr; }
     .fv .media.fill.n3 img:first-child { grid-row: auto; grid-column: span 2; }
   }`;
 
-  // The first web address written in the text: a full URL, www., or a bare domain like freeview.app.
+  // Web addresses written in the text: a full URL, www., or a bare domain like freeview.app.
   const URL_RE = /\b((?:https?:\/\/|www\.)[^\s<>"')\]]+|[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9-]+)*\.(?:app|com|io|dev|org|net|co|me|ai|design|studio|xyz|link|page|site|tv)(?:\/[^\s<>"')\]]*)?)/i;
-  function firstURL(...texts) {
+  // Each address once, in reading order (a Markdown link counts once, by its target).
+  function allURLs(...texts) {
+    const found = [], seen = new Set();
     for (const t of texts) {
-      const m = (t || '').replace(/\]\(([^)]+)\)/g, ' $1 ').match(URL_RE);
-      if (m) { let u = m[1].replace(/[.,;:!?]+$/, ''); if (!/^https?:\/\//i.test(u)) u = 'https://' + u; return u; }
+      const text = (t || '').replace(/\[([^\]]*)\]\(([^)]+)\)/g, ' $2 ');
+      for (const m of text.matchAll(new RegExp(URL_RE.source, 'gi'))) {
+        let u = m[1].replace(/[.,;:!?]+$/, '');
+        if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+        const key = urlKey(u);
+        if (!seen.has(key)) { seen.add(key); found.push(u); }
+      }
     }
-    return null;
+    return found;
   }
+  function firstURL(...texts) { return allURLs(...texts)[0] || null; }
+  const urlKey = (u) => u.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/$/, '').toLowerCase();
 
   function qrSVG(text, color) {
     if (typeof qrcode !== 'function') return '';
@@ -167,19 +180,19 @@
     const s = document.createElement('style'); s.id = 'fv-css'; s.textContent = CSS; document.head.appendChild(s);
   }
 
-  // On a Magic slide the QR code sits after the text holding the web address (or under the title),
-  // aligned with it. It stays in the footer only when the address can't be found in the text.
-  function placeQR(root, url) {
-    const qr = root.querySelector('footer .qr');
-    if (!qr) return;
-    const key = url.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/$/, '').toLowerCase();
-    const holds = (el) => (el.textContent || '').toLowerCase().includes(key)
-      || [...el.querySelectorAll('a[href]')].some((a) => a.href.replace(/\/$/, '').toLowerCase().includes(key));
+  // On a Magic slide the QR codes sit side by side after the text holding the web addresses (or under
+  // the title), aligned with it. They stay in the footer only when no address can be found in the text.
+  function placeQR(root, urls) {
+    const qrs = root.querySelector('footer .qrs');
+    if (!qrs) return;
+    const keys = urls.map(urlKey);
+    const holds = (el) => keys.some((key) => (el.textContent || '').toLowerCase().includes(key)
+      || [...el.querySelectorAll('a[href]')].some((a) => a.href.replace(/\/$/, '').toLowerCase().includes(key)));
     const blocks = [...root.querySelectorAll('.body > *')];
-    const target = blocks.some(holds) ? blocks[blocks.length - 1] : [...root.querySelectorAll('h1, h2')].find(holds);
+    const target = blocks.some(holds) ? root.querySelector('.body') : [...root.querySelectorAll('h1, h2')].find(holds);
     if (!target) return;
-    qr.classList.add('inline');
-    target.after(qr);
+    qrs.classList.add('inline');
+    if (target.classList.contains('body')) target.appendChild(qrs); else target.after(qrs);
     const footer = root.querySelector('footer');
     if (footer && !footer.querySelector('.who, .qr')) footer.remove();
   }
@@ -213,9 +226,10 @@
     };
     for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v);
 
-    const url = spec.qr === false ? null : firstURL(spec.title, spec.subtitle, spec.body);
+    const urls = spec.qr === false ? [] : allURLs(spec.title, spec.subtitle, spec.body).slice(0, cover ? 1 : 4);
     const qrColor = hasBg || !light ? '#000000' : t.foreground;
-    const qr = url ? `<div class="qr"><div class="code">${qrSVG(url, qrColor)}</div><span>${esc(url.replace(/^https?:\/\//i, '').replace(/\/$/, ''))}</span></div>` : '';
+    const qr = urls.length ? `<div class="qrs${urls.length > 2 ? ' many' : ''}">${urls.map((u) =>
+      `<div class="qr"><div class="code">${qrSVG(u, qrColor)}</div><span>${esc(u.replace(/^https?:\/\//i, '').replace(/\/$/, ''))}</span></div>`).join('')}</div>` : '';
 
     const person = spec.person || {};
     const contacts = (spec.contacts || []).filter((c) => c && c.value);
@@ -247,7 +261,7 @@
         ${(who !== '<div></div>' || qr) ? `<footer>${who}${qr}</footer>` : ''}`;
     }
     root.querySelectorAll('.body a').forEach((a) => { a.target = '_blank'; a.rel = 'noopener'; });
-    if (!cover && url) placeQR(root, url);
+    if (!cover && urls.length) placeQR(root, urls);
     const pictures = root.querySelectorAll('.media img');
     if (pictures.length && spec.zoom !== false) {
       const app = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.fvPicture;
@@ -335,5 +349,5 @@
     box.querySelector('.close').focus({ preventScroll: true });
   }
 
-  window.FV = { render, firstURL, fonts: FONTS };
+  window.FV = { render, firstURL, allURLs, fonts: FONTS };
 })();
