@@ -227,6 +227,71 @@
   #report:hover { color: var(--fg); }
   body:not(.started) #report { display: inline-flex; }
 
+  /* ── commentary (guided tour): the presenter's camera as a layer, the slides placed by the layout ── */
+  #safe { position: fixed; left: 0; top: 0; width: 0; height: 0; visibility: hidden; pointer-events: none;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+  #cam { position: fixed; z-index: 6; display: none; object-fit: cover; background: #000; overflow: hidden;
+    box-shadow: 0 0 0 2px rgba(255,255,255,.9), 0 8px 28px rgba(0,0,0,.35); opacity: 1;
+    transition-property: left, top, width, height, border-radius, opacity, box-shadow; transition-duration: 400ms; transition-timing-function: var(--ease); }
+  #cam.full { box-shadow: none; }
+  body.tour #cam { display: block; }
+  body.tour.face-behind #cam { z-index: 0; }
+  body.tour #stage { z-index: 1; overflow: hidden; background: #000;
+    transition-property: left, top, width, height, border-radius, opacity; transition-duration: 400ms; transition-timing-function: var(--ease); }
+  body.tour.face-behind #stage { box-shadow: 0 0 0 2px rgba(255,255,255,.9), 0 8px 28px rgba(0,0,0,.35); }
+  body.tour #counter, body.tour #prev, body.tour #next, body.tour #sound { display: none; }
+  body.tour #mark { bottom: max(84px, calc(env(safe-area-inset-bottom) + 66px)); }
+  #tourbar { position: fixed; z-index: 12; left: max(16px, env(safe-area-inset-left)); right: max(16px, env(safe-area-inset-right));
+    bottom: max(14px, env(safe-area-inset-bottom)); display: none; align-items: center; gap: 4px; height: 52px; padding: 0 6px 0 4px;
+    border-radius: 999px; background: var(--chip); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+    box-shadow: 0 0 0 1px var(--hairline), 0 8px 24px rgba(0,0,0,.3); }
+  body.tour #tourbar { display: flex; }
+  body.tour.paused .chrome { opacity: 1; pointer-events: auto; }
+  .tb { width: 44px; height: 44px; flex: none; border: 0; padding: 0; border-radius: 50%; background: transparent; color: var(--fg);
+    display: grid; place-items: center; cursor: pointer; transition-property: background-color, scale; transition-duration: 150ms; transition-timing-function: var(--ease); }
+  .tb:hover { background: rgba(255,255,255,.1); }
+  .tb:active { scale: .96; }
+  .tb:focus-visible { outline: 2px solid var(--fg); outline-offset: -2px; }
+  .tb svg { width: 20px; height: 20px; }
+  .tb .pause, .tb.playing .play { display: none; } .tb.playing .pause { display: block; }
+  #tourbar time { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--muted); min-width: 36px; text-align: center; }
+  #scrub { flex: 1; min-width: 60px; height: 44px; margin: 0; -webkit-appearance: none; appearance: none; background: transparent; cursor: pointer; }
+  #scrub::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(to right, var(--fg) var(--p, 0%), rgba(255,255,255,.28) var(--p, 0%)); }
+  #scrub::-moz-range-track { height: 4px; border-radius: 2px; background: rgba(255,255,255,.28); }
+  #scrub::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--fg); }
+  #scrub::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; margin-top: -6px; border-radius: 50%; background: var(--fg);
+    box-shadow: 0 1px 3px rgba(0,0,0,.4); transition: scale 150ms var(--ease); }
+  #scrub:active::-webkit-slider-thumb { scale: 1.15; }
+  #scrub::-moz-range-thumb { width: 16px; height: 16px; border: 0; border-radius: 50%; background: var(--fg); box-shadow: 0 1px 3px rgba(0,0,0,.4); }
+  #scrub:focus-visible { outline: 2px solid var(--fg); outline-offset: -2px; border-radius: 999px; }
+  #layouts { position: fixed; z-index: 13; right: max(16px, env(safe-area-inset-right)); bottom: max(74px, calc(env(safe-area-inset-bottom) + 60px));
+    display: flex; flex-direction: column; gap: 2px; padding: 6px; border-radius: 18px; background: var(--chip);
+    -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); box-shadow: 0 0 0 1px var(--hairline), 0 12px 32px rgba(0,0,0,.4);
+    opacity: 0; translate: 0 6px; pointer-events: none; transition-property: opacity, translate; transition-duration: 150ms; transition-timing-function: var(--ease); }
+  #layouts.open { opacity: 1; translate: 0 0; pointer-events: auto; }
+  #layouts button { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 14px 0 10px; border: 0; border-radius: 12px;
+    background: transparent; color: var(--fg); font-size: 14px; font-weight: 600; cursor: pointer; text-align: left; white-space: nowrap;
+    transition-property: background-color, scale; transition-duration: 150ms; transition-timing-function: var(--ease); }
+  #layouts button:hover { background: rgba(255,255,255,.1); }
+  #layouts button:active { scale: .96; }
+  #layouts button svg { width: 18px; height: 18px; flex: none; }
+  #layouts button .tick { width: 14px; height: 14px; margin-left: auto; opacity: 0; }
+  #layouts button.on .tick { opacity: 1; }
+  #layouts hr { border: 0; border-top: 1px solid var(--hairline); margin: 4px 8px; }
+  #tourend { position: fixed; inset: 0; z-index: 11; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    padding: 24px 16px max(96px, calc(env(safe-area-inset-bottom) + 80px)); background: rgba(0,0,0,.55);
+    opacity: 0; pointer-events: none; transition: opacity 300ms var(--ease); }
+  #tourend.on { opacity: 1; pointer-events: auto; }
+  .pill.quiet { background: var(--chip); color: var(--fg); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); box-shadow: 0 0 0 1px var(--hairline); }
+  #cover .actions, #welcome .actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; }
+  #cover .actions .pill, #welcome .actions .pill { white-space: nowrap; }
+  #present .dur { font-weight: 600; opacity: .6; font-variant-numeric: tabular-nums; }
+  #browse[hidden] { display: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    #cam, body.tour #stage { transition-duration: 1ms; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     :root { --dur: 1ms; }
     #stage.t-slide .slide { transition: none; }
@@ -234,8 +299,33 @@
 </style>
 </head>
 <body>
+<div id="safe" aria-hidden="true"></div>
 <div id="stage" class="t-crossfade" aria-live="polite"></div>
 <div id="curtain"></div>
+<video id="cam" playsinline preload="metadata" aria-label="The presenter"></video>
+<div id="tourbar" class="chrome">
+  <button class="tb" id="playpause" aria-label="Pause">
+    <svg class="play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>
+    <svg class="pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4.5" width="4" height="15" rx="1"/><rect x="14" y="4.5" width="4" height="15" rx="1"/></svg>
+  </button>
+  <time id="tnow">0:00</time>
+  <input id="scrub" type="range" min="0" max="1000" value="0" step="1" aria-label="Position">
+  <time id="tend">0:00</time>
+  <button class="tb" id="layoutbtn" aria-label="Layout" aria-haspopup="menu" aria-expanded="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><rect x="12.5" y="11.5" width="6" height="6" rx="1.5" fill="currentColor" stroke="none"/></svg>
+  </button>
+  <button class="tb" id="leave" aria-label="Leave the commentary">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+  </button>
+</div>
+<div id="layouts" role="menu" aria-label="Layout"></div>
+<div id="tourend">
+  <button class="pill" id="again">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.6"/><path d="M4 4v5h5"/></svg>
+    Watch again
+  </button>
+  <button class="pill quiet" id="browse-end">Browse the slides</button>
+</div>
 
 <a id="open" class="chip chrome" target="_blank" rel="noopener" hidden>
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></svg>
@@ -266,10 +356,13 @@
   <p id="note" hidden></p>
   <h1 id="title"></h1>
   <p id="meta"></p>
-  <button class="pill" id="present">
-    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>
-    Present
-  </button>
+  <div class="actions">
+    <button class="pill" id="present">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>
+      <span class="label">Present</span>
+    </button>
+    <button class="pill quiet" id="browse" hidden>Browse the slides</button>
+  </div>
   <small>Shared with <a href="/" target="_blank" rel="noopener">FreeView</a></small>
 </div>
 
@@ -300,6 +393,7 @@
   let slides = [];      // { kind: 'image'|'video'|'web', src, name }
   let index = 0, busy = false, queued = null, started = false, soundOn = false;
   let nodes = [];
+  let tour = null, tourOn = false;   // the commentary (presenter video + marks + layout), and whether it's playing the slides
 
   function show(title, text) {
     msg.hidden = false;
@@ -371,9 +465,17 @@
       setTimeout(() => form.querySelector('input').focus(), 50);
     } else {
       const btn = document.createElement('button'); btn.className = 'pill';
-      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>Present';
-      btn.addEventListener('click', begin);
-      action.appendChild(btn);
+      btn.innerHTML = tour ? MIC + `Watch with commentary <span class="dur">${clock(tour.duration)}</span>`
+        : '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>Present';
+      btn.addEventListener('click', tour ? beginTour : begin);
+      if (tour) {
+        const box = document.createElement('div'); box.className = 'actions';
+        const b2 = document.createElement('button'); b2.className = 'pill quiet'; b2.textContent = 'Browse the slides';
+        b2.addEventListener('click', begin);
+        box.append(btn, b2); action.appendChild(box);
+      } else {
+        action.appendChild(btn);
+      }
       setTimeout(() => btn.focus({ preventScroll: true }), 50);
     }
     $('#mark').hidden = !w.mark;
@@ -440,6 +542,14 @@
     }
     if (!slides.length) return ended();
 
+    // The commentary (alpha): the presenter's video and when each slide came on, in web slide numbers.
+    try {
+      const c = JSON.parse(val(f.commentary) || 'null');
+      const vid = f.commentaryVideo ? assetURL(f.commentaryVideo, 'commentary.mp4') : '';
+      if (c && vid && Array.isArray(c.marks) && c.marks.length) tour = { ...c, video: vid };
+    } catch {}
+    if (tour) setupTour();
+
     const t = val(f.transition) || 'crossfade';
     stage.className = 't-' + ({ slide: 'slide', instant: 'instant', crossfade: 'crossfade', fadeBlack: 'fade', fadeWhite: 'fade' }[t] || 'crossfade');
     if (t === 'fadeWhite') curtain.classList.add('white');
@@ -453,8 +563,13 @@
     const exp = val(f.expiresAt);
     // What's inside is the creator's business: recipients see only how long it is and until when.
     let meta = `${slides.length} slide${slides.length === 1 ? '' : 's'}`;
+    if (tour) meta += ` · ${clock(tour.duration)} of commentary`;
     if (exp) meta += ` · available until ${new Date(exp).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`;
     $('#meta').textContent = meta;
+    if (tour) {
+      $('#present').innerHTML = MIC + `<span class="label">Watch with commentary</span> <span class="dur">${clock(tour.duration)}</span>`;
+      $('#browse').hidden = false;
+    }
 
     nodes = slides.map((s, i) => {
       const el = document.createElement('div');
@@ -753,7 +868,7 @@
         }
         el.classList.toggle('on', i === n);
         const v = el.querySelector('video, audio');
-        if (v) { if (i === n && started) { v.currentTime = 0; v.play().catch(() => {}); } else v.pause(); }
+        if (v) { if (i === n && started) { if (!tourOn) v.currentTime = 0; v.muted = tourOn || !soundOn; v.play().catch(() => {}); } else v.pause(); }
         if (el.lottie) { if (i === n) el.lottie.goToAndPlay(0, true); else el.lottie.pause(); }
       });
       document.body.classList.toggle('web', slides[n].kind === 'model');
@@ -816,7 +931,8 @@
     if (v) v.play().catch(() => {});
     wake();
   }
-  $('#present').addEventListener('click', begin);
+  $('#present').addEventListener('click', () => (tour ? beginTour() : begin()));
+  $('#browse').addEventListener('click', begin);
 
   function fullscreen(on) {
     const root = document.documentElement;
@@ -839,7 +955,7 @@
     b.querySelector('.wave').style.display = soundOn ? '' : 'none';
     b.querySelector('.mute').style.display = soundOn ? 'none' : '';
     b.setAttribute('aria-label', soundOn ? 'Turn sound off' : 'Turn sound on');
-    nodes.forEach((el) => { el.querySelectorAll('video, audio').forEach((v) => { v.muted = !soundOn; }); });
+    nodes.forEach((el) => { el.querySelectorAll('video, audio').forEach((v) => { v.muted = tourOn || !soundOn; }); });
   }
   $('#sound').addEventListener('click', () => { soundOn = !soundOn; updateSound(); });
   $('#prev').addEventListener('click', prev);
@@ -851,6 +967,16 @@
     if (e.target && e.target.tagName === 'INPUT') return;
     if (!started && slides.length && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); begin(); return; }
     const k = e.key;
+    if (tourOn) {
+      if (k === ' ') { e.preventDefault(); togglePlay(); }
+      else if (['ArrowRight', 'ArrowDown', 'PageDown'].includes(k)) { e.preventDefault(); seekMark(1); }
+      else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(k)) { e.preventDefault(); seekMark(-1); }
+      else if (k === 'Home') seekTo(0);
+      else if (k === 'End') seekTo(cam.duration || tour.duration);
+      else if (k === 'Escape') leaveTour();
+      else if (k === 'f') fullscreen(!(document.fullscreenElement || document.webkitFullscreenElement));
+      return;
+    }
     if (['ArrowRight', 'ArrowDown', 'PageDown', ' '].includes(k)) { e.preventDefault(); begin(); next(); }
     else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(k)) { e.preventDefault(); prev(); }
     else if (k === 'Home') go(0);
@@ -867,10 +993,12 @@
     const dx = e.changedTouches[0].clientX - touch.x, dy = e.changedTouches[0].clientY - touch.y;
     const swipe = Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5 && Date.now() - touch.t < 600;
     touch = null;
+    if (tourOn) return;
     if (swipe) { e.preventDefault(); dx < 0 ? next() : prev(); }
   });
   stage.addEventListener('click', (e) => {
     if (!started) return begin();
+    if (tourOn) { $('#layouts').classList.remove('open'); document.body.classList.contains('idle') ? wake() : togglePlay(); return; }
     if (document.body.classList.contains('idle')) { wake(); }
     e.clientX < innerWidth / 3 ? prev() : next();
   });
@@ -882,6 +1010,177 @@
     document.body.classList.remove('idle');
     clearTimeout(idleTimer);
     if (started) idleTimer = setTimeout(() => document.body.classList.add('idle'), 2600);
+  }
+
+  // ── Commentary: the presenter's video is the clock; the slides follow its marks and the layout
+  // places both. Templates are described along the long axis and across the short one, as in the
+  // app, so one layout works in portrait and landscape and a corner stays in its corner.
+  const cam = $('#cam');
+  const MIC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>';
+  const clock = (sec) => { const t = Math.max(0, Math.floor(sec || 0)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
+  const FULL = { along: [0, 1], across: [0, 1] }, HIDDEN = { along: [0, 1], across: [0, 1], hidden: true };
+  const TEMPLATES = {
+    split: { name: 'Split', face: { along: [0.5, 1], across: [0, 1] }, scene: { along: [0, 0.5], across: [0, 1] } },
+    faceWithSlides: { name: 'You, slides inset', face: FULL, scene: { corner: 'nearAlongFarAcross', side: 0.42, margin: 0.04, radius: 0.1 } },
+    faceOnly: { name: 'You only', face: FULL, scene: HIDDEN },
+    slidesOnly: { name: 'Slides only', face: HIDDEN, scene: FULL },
+  };
+  function template(tid) {
+    const [kind, corner] = (tid || '').split(':');
+    if (kind === 'bubble' && corner) return { name: 'Bubble', face: { corner, side: 0.30, margin: 0.04, radius: 0.5 }, scene: FULL };
+    if (kind === 'inset' && corner) return { name: 'Inset', face: { corner, side: 0.34, margin: 0.04, radius: 0.14 }, scene: FULL };
+    return TEMPLATES[tid] || template('bubble:farAlongFarAcross');
+  }
+  const cornerOf = (t) => (t.face.corner || t.scene.corner || null);
+  function moved(tid, corner) { const k = (tid || '').split(':')[0]; return k === 'bubble' || k === 'inset' ? `${k}:${corner}` : tid; }
+  // Safe-area insets, read from a probe padded with env().
+  function insets() {
+    const c = getComputedStyle($('#safe'));
+    return { t: parseFloat(c.paddingTop) || 0, r: parseFloat(c.paddingRight) || 0, b: parseFloat(c.paddingBottom) || 0, l: parseFloat(c.paddingLeft) || 0 };
+  }
+  // A layer's rectangle in pixels. Spans use the whole screen (slides stay edge to edge, as they do
+  // outside the tour); a corner keeps inside the safe area, clear of the notch and the home bar.
+  function rect(frame, W, H, ins) {
+    const portrait = H >= W;
+    if (frame.corner) {
+      const x0 = ins.l, y0 = ins.t, w = W - ins.l - ins.r, h = H - ins.t - ins.b;
+      const short = Math.min(w, h), side = frame.side * short, m = frame.margin * short;
+      const farAlong = frame.corner.startsWith('farAlong'), farAcross = frame.corner.endsWith('FarAcross');
+      const a = farAlong ? (portrait ? h : w) - m - side : m, c = farAcross ? (portrait ? w : h) - m - side : m;
+      return portrait ? { x: x0 + c, y: y0 + a, w: side, h: side, r: frame.radius * side, hidden: !!frame.hidden }
+                      : { x: x0 + a, y: y0 + c, w: side, h: side, r: frame.radius * side, hidden: !!frame.hidden };
+    }
+    const long = portrait ? H : W, short = portrait ? W : H;
+    const a0 = frame.along[0] * long, a1 = frame.along[1] * long, c0 = frame.across[0] * short, c1 = frame.across[1] * short;
+    return portrait ? { x: c0, y: a0, w: c1 - c0, h: a1 - a0, r: 0, hidden: !!frame.hidden }
+                    : { x: a0, y: c0, w: a1 - a0, h: c1 - c0, r: 0, hidden: !!frame.hidden };
+  }
+  let override = null;          // a layout chosen here: a template id, 'recorded', or null for the creator's choice
+  let appliedTemplate = null, markShown = -1, raf = 0, scrubbing = false, tourStarted = false;
+  function layoutAt(t) {
+    const L = override === 'recorded' ? tour.recordedLayout : override ? null : tour.layout;
+    if (!L) return override;
+    let id = L.baseTemplateID || 'bubble:farAlongFarAcross';
+    for (const sw of L.switches || []) { if (sw.time <= t) id = sw.templateID; else break; }
+    return id;
+  }
+  function place(el, r, hidden) {
+    el.style.left = r.x + 'px'; el.style.top = r.y + 'px'; el.style.width = r.w + 'px'; el.style.height = r.h + 'px';
+    el.style.borderRadius = r.r + 'px'; el.style.opacity = hidden ? '0' : '1';
+  }
+  function applyLayout(tid, force) {
+    if (!force && tid === appliedTemplate) return;
+    appliedTemplate = tid;
+    const t = template(tid), W = innerWidth, H = innerHeight, ins = insets();
+    const face = rect(t.face, W, H, ins), scene = rect(t.scene, W, H, ins);
+    place(cam, face, face.hidden); place(stage, scene, scene.hidden);
+    cam.classList.toggle('full', face.w >= W - 1 && face.h >= H - 1);
+    // The smaller layer sits on top (the slides over the camera when they're the inset).
+    document.body.classList.toggle('face-behind', !scene.hidden && scene.w * scene.h < face.w * face.h);
+    renderLayouts();
+  }
+  function relayout() { if (tourOn) applyLayout(appliedTemplate, true); }
+  addEventListener('resize', relayout);
+  function markAt(t) { let n = tour.marks[0].slide; for (const m of tour.marks) { if (m.time <= t + 0.001) n = m.slide; else break; } return n; }
+  function tick() {
+    if (!tourOn) return;
+    const t = cam.currentTime || 0;
+    const n = Math.min(slides.length - 1, Math.max(0, markAt(t)));
+    if (n !== markShown) { markShown = n; if (n !== index) go(n, true); }
+    applyLayout(layoutAt(t));
+    if (!scrubbing) {
+      const d = cam.duration || tour.duration || 1;
+      $('#scrub').value = Math.round(1000 * t / d); $('#scrub').style.setProperty('--p', (100 * t / d) + '%');
+      $('#tnow').textContent = clock(t);
+    }
+    raf = requestAnimationFrame(tick);
+  }
+  function setupTour() {
+    cam.src = tour.video;
+    $('#tend').textContent = clock(tour.duration);
+    cam.addEventListener('loadedmetadata', () => { if (cam.duration) $('#tend').textContent = clock(cam.duration); });
+    cam.addEventListener('play', () => { $('#playpause').classList.add('playing'); $('#playpause').setAttribute('aria-label', 'Pause'); document.body.classList.remove('paused'); wake(); });
+    cam.addEventListener('pause', () => { $('#playpause').classList.remove('playing'); $('#playpause').setAttribute('aria-label', 'Play'); document.body.classList.add('paused'); wake(); });
+    cam.addEventListener('ended', () => { $('#tourend').classList.add('on'); event('tourEnd'); });
+    cam.addEventListener('seeking', () => $('#tourend').classList.remove('on'));
+    $('#playpause').addEventListener('click', togglePlay);
+    $('#leave').addEventListener('click', leaveTour);
+    $('#again').addEventListener('click', () => { $('#tourend').classList.remove('on'); seekTo(0); cam.play().catch(() => {}); });
+    $('#browse-end').addEventListener('click', leaveTour);
+    const scrub = $('#scrub');
+    const preview = () => { const d = cam.duration || tour.duration || 1, t = scrub.value / 1000 * d; $('#tnow').textContent = clock(t); scrub.style.setProperty('--p', (100 * t / d) + '%'); };
+    scrub.addEventListener('pointerdown', () => { scrubbing = true; });
+    scrub.addEventListener('input', () => { scrubbing = true; preview(); });
+    scrub.addEventListener('change', () => { const d = cam.duration || tour.duration || 1; seekTo(scrub.value / 1000 * d); scrubbing = false; });
+    scrub.addEventListener('pointerup', () => { scrubbing = false; });
+    $('#layoutbtn').addEventListener('click', (e) => { e.stopPropagation(); const m = $('#layouts'); const open = !m.classList.contains('open'); m.classList.toggle('open', open); $('#layoutbtn').setAttribute('aria-expanded', String(open)); wake(); });
+    addEventListener('click', (e) => { if (!$('#layouts').contains(e.target) && e.target !== $('#layoutbtn')) $('#layouts').classList.remove('open'); });
+    renderLayouts();
+  }
+  const ICONS = {
+    bubble: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="16" cy="15" r="2.6" fill="currentColor" stroke="none"/></svg>',
+    inset: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><rect x="12.5" y="11.5" width="6" height="6" rx="1.5" fill="currentColor" stroke="none"/></svg>',
+    split: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 12h18"/></svg>',
+    faceWithSlides: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><rect x="12.5" y="6.5" width="6" height="5" rx="1.5" fill="currentColor" stroke="none"/></svg>',
+    faceOnly: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="9" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>',
+    slidesOnly: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/></svg>',
+    recorded: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg>',
+  };
+  const TICK = '<svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
+  function renderLayouts() {
+    const menu = $('#layouts');
+    const current = appliedTemplate || layoutAt(0) || 'bubble:farAlongFarAcross';
+    const corner = cornerOf(template(current)) || 'farAlongFarAcross';
+    const choices = [['recorded', 'As recorded', ICONS.recorded], [`bubble:${corner}`, 'Bubble', ICONS.bubble], [`inset:${corner}`, 'Inset', ICONS.inset],
+      ['split', 'Split', ICONS.split], ['faceWithSlides', 'You, slides inset', ICONS.faceWithSlides], ['faceOnly', 'You only', ICONS.faceOnly], ['slidesOnly', 'Slides only', ICONS.slidesOnly]];
+    // What's ticked: the choice made here, else the creator's (their chosen template, or As recorded).
+    const creators = JSON.stringify(tour.layout || {}) === JSON.stringify(tour.recordedLayout || {}) ? 'recorded' : ((tour.layout || {}).baseTemplateID || current);
+    const chosen = override !== null ? override : creators;
+    const on = (id) => id === chosen;
+    menu.innerHTML = choices.map(([id, name, icon], k) => `${k === 1 ? '<hr>' : ''}<button role="menuitemradio" data-id="${id}" aria-checked="${on(id)}" class="${on(id) ? 'on' : ''}">${icon}${name}${TICK}</button>`).join('');
+    menu.querySelectorAll('button').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); override = b.dataset.id; applyLayout(layoutAt(cam.currentTime || 0), true); menu.classList.remove('open'); $('#layoutbtn').setAttribute('aria-expanded', 'false'); }));
+  }
+  function togglePlay() { if (!tourOn) return; if (cam.ended) { seekTo(0); cam.play().catch(() => {}); } else if (cam.paused) cam.play().catch(() => {}); else cam.pause(); }
+  function seekTo(t) { cam.currentTime = Math.max(0, Math.min(t, cam.duration || tour.duration || t)); markShown = -1; tick0(); }
+  function seekMark(dir) {
+    const t = cam.currentTime || 0, times = tour.marks.map((m) => m.time);
+    const to = dir > 0 ? times.find((x) => x > t + 0.3) : [...times].reverse().find((x) => x < t - 0.7);
+    seekTo(to == null ? (dir > 0 ? cam.duration || tour.duration : 0) : to);
+  }
+  function tick0() { if (!tourOn) return; cancelAnimationFrame(raf); raf = requestAnimationFrame(tick); }
+  function event(name) {
+    try { const key = `fv-ev-${id}-${name}`; if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, '1'); } catch {}
+    fetch(`${API}/hit/${encodeURIComponent(id)}/e/${name}`).catch(() => {});
+  }
+  function beginTour() {
+    if (!tour) return begin();
+    tourOn = true; tourStarted = true;
+    begin();
+    document.body.classList.add('tour');
+    document.body.classList.remove('idle');
+    updateSound();
+    $('#tourend').classList.remove('on');
+    applyLayout(layoutAt(0), true);
+    markShown = -1;
+    cam.currentTime = 0;
+    cam.muted = false;
+    cam.play().catch(() => {});
+    tick0();
+    event('tourStart');
+  }
+  function leaveTour() {
+    if (!tourOn) return;
+    tourOn = false;
+    cancelAnimationFrame(raf);
+    cam.pause();
+    $('#layouts').classList.remove('open');
+    $('#tourend').classList.remove('on');
+    document.body.classList.remove('tour', 'face-behind', 'paused');
+    for (const el of [cam, stage]) el.removeAttribute('style');
+    appliedTemplate = null;
+    updateSound();
+    go(index, true);
+    wake();
   }
   addEventListener('mousemove', wake, { passive: true });
   addEventListener('touchstart', wake, { passive: true });
