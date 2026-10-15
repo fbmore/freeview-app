@@ -280,7 +280,7 @@
 
   // Full screen on the web: one picture (or its video) at a time over everything, until closed.
   const ICON = { close: '<path d="M6 6l12 12M18 6L6 18"/>', prev: '<path d="M15 5l-7 7 7 7"/>', next: '<path d="M9 5l7 7-7 7"/>' };
-  function focus(items, start) {
+  function focus(items, start, quiet) {
     installCSS();
     let index = start, media = null, touch = null;
     const box = document.createElement('div');
@@ -300,7 +300,7 @@
       const it = items[index];
       if (it.video) {
         media = document.createElement('video');
-        media.controls = true; media.autoplay = true; media.playsInline = true; media.poster = it.src;
+        media.controls = !quiet; media.autoplay = true; media.playsInline = true; media.poster = it.src;
         media.setAttribute('playsinline', ''); media.setAttribute('controlslist', 'nodownload');
         media.src = it.video;
       } else {
@@ -351,16 +351,24 @@
     return close;
   }
 
-  // A commentary's replay opens and closes a slide's pictures the way the presenter did.
+  // A commentary's replay opens and closes a slide's pictures the way the presenter did (without
+  // the video's own controls: the take drives it), and keeps an opened video at the recorded position.
   let openFocus = null;
   function focusPicture(el, i) {
     unfocus();
     const pictures = el.querySelectorAll('.media img');
     if (!pictures.length) return;
     const items = [...pictures].map((img) => ({ src: img.getAttribute('src'), video: img.dataset.video || null }));
-    openFocus = focus(items, Math.min(Math.max(i, 0), items.length - 1));
+    openFocus = focus(items, Math.min(Math.max(i, 0), items.length - 1), true);
   }
   function unfocus() { if (openFocus) { openFocus(); openFocus = null; } }
+  function driveFocused(t, playing) {
+    const v = document.querySelector('.fv-focus video.item');
+    if (!v) return;
+    if (Math.abs(v.currentTime - t) > 0.35 && v.readyState >= 1) v.currentTime = t;
+    if (playing && v.paused) v.play().catch(() => {});
+    if (!playing && !v.paused) v.pause();
+  }
 
-  window.FV = { render, firstURL, allURLs, fonts: FONTS, focusPicture, unfocus };
+  window.FV = { render, firstURL, allURLs, fonts: FONTS, focusPicture, unfocus, driveFocused };
 })();

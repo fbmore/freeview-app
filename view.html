@@ -661,7 +661,7 @@
     fflate: 'https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js',
     modelViewer: 'https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js',
     qrcode: 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js',
-    fvslide: '/fvslide.js?v=9',   // the app's custom-slide renderer (FreeView/Support/Web/fvslide.js)
+    fvslide: '/fvslide.js?v=10',   // the app's custom-slide renderer (FreeView/Support/Web/fvslide.js)
   };
   // <model-viewer> is an ES module.
   function loadModule(url) {
@@ -1214,6 +1214,9 @@
       const pair = lastOf('focus', n, t);
       const want = pair ? Math.round(pair.last.v[0]) : -1;
       if (want !== el.fvFocused) { el.fvFocused = want; if (want >= 0) FV.focusPicture(el, want); else FV.unfocus(); }
+      // An opened video follows the take, as the presenter had it.
+      const vp = want >= 0 && FV.driveFocused ? lastOf('video', n, t) : null;
+      if (vp) { const [pos, playing] = vp.last.v; FV.driveFocused(pos + (playing ? t - vp.last.t : 0), playing && !cam.paused); }
     } else if (s.kind === 'model') {
       const mv = el.querySelector('model-viewer'), pair = lastOf('orbit', n, t);
       if (mv && pair) {
