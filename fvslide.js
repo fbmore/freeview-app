@@ -266,6 +266,7 @@
     if (pictures.length && spec.zoom !== false) {
       const app = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.fvPicture;
       const items = [...pictures].map((img, i) => ({ src: img.getAttribute('src'), video: shown[i] ? shown[i].video : null }));
+      pictures.forEach((img, i) => { if (items[i].video) img.dataset.video = items[i].video; });
       root.classList.add('zoomable');
       pictures.forEach((img, i) => img.addEventListener('click', (e) => {
         e.stopPropagation();   // the web viewer's click-to-advance stays out of it
@@ -347,7 +348,19 @@
     document.body.appendChild(box);
     requestAnimationFrame(() => requestAnimationFrame(() => box.classList.add('on')));
     box.querySelector('.close').focus({ preventScroll: true });
+    return close;
   }
 
-  window.FV = { render, firstURL, allURLs, fonts: FONTS };
+  // A commentary's replay opens and closes a slide's pictures the way the presenter did.
+  let openFocus = null;
+  function focusPicture(el, i) {
+    unfocus();
+    const pictures = el.querySelectorAll('.media img');
+    if (!pictures.length) return;
+    const items = [...pictures].map((img) => ({ src: img.getAttribute('src'), video: img.dataset.video || null }));
+    openFocus = focus(items, Math.min(Math.max(i, 0), items.length - 1));
+  }
+  function unfocus() { if (openFocus) { openFocus(); openFocus = null; } }
+
+  window.FV = { render, firstURL, allURLs, fonts: FONTS, focusPicture, unfocus };
 })();
