@@ -13,12 +13,10 @@ import pathlib
 
 OUT = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else ".")
 YEAR = "2026"
-UPDATED = "11 October 2026"
-PRIVACY_UPDATED = "13 October 2026"
+UPDATED = "12 October 2026"
+PRIVACY_UPDATED = "15 October 2026"
 EMAIL = "hello@freeview.app"
 STORE = "https://apps.apple.com/app/id1526222244"
-# Public TestFlight link for the 2.0 beta (external group "FreeView"). Drop it once 2.0 is live.
-TESTFLIGHT = "https://testflight.apple.com/join/4T1Lixbc"
 
 # ── shared bits ──────────────────────────────────────────────────────────────
 
@@ -346,7 +344,7 @@ FEATURES = "\n".join([
     feature("Any mix of files, one presentation", "Pick a Keynote deck, a PDF, a film, photos, a 3D model, a voice note and a spreadsheet, and they become one presentation, a slide each, in the order you want. No converting, no copying and pasting, no slide software.",
             [("stack", "Keynote, PowerPoint, Word, PDFs, videos, photos, audio"), ("check", "3D models, Lottie animations, Markdown, tables and live web pages"),
              ("folder", "From Files, Photos, AirDrop, Mail or the camera, even a scan")],
-            shot("shot-deck.webp", "Editing a presentation in FreeView: a cover, a brief, photos, a film, a 3D prototype, numbers, a Keynote review and a voice note, in order")),
+            shot("shot-deck.webp", "Editing a presentation in FreeView: a cover, a brief, a photo, a film, a 3D prototype, a table of numbers and a sunset, in order")),
     feature("Make it yours in seconds", "Add a cover with your logo, name, photo and contacts, and text slides for the bits in between. Any web address on a slide becomes a QR code. Pick a style or make one from your logo's colours.",
             [("photo", "Any picture from the presentation as the cover"), ("check", "Saved styles you can copy to other presentations"),
              ("code", "A QR code for every link, automatically")],
@@ -378,10 +376,9 @@ INDEX_BODY = f"""{ICONS}
   <a class="appstore heroBadge" href="{STORE}" target="_blank" rel="noopener" aria-label="Download FreeView on the App Store">
     <img src="appstore-badge.svg" alt="Download on the App Store">
   </a>
-  <p class="storenote">For iPhone, iPad and Mac · Free to start · The new 2.0 is in beta on TestFlight</p>
+  <p class="storenote">For iPhone, iPad and Mac · Free to start</p>
   <div class="ctarow">
-    <a class="cta" href="{TESTFLIGHT}" target="_blank" rel="noopener">Join the 2.0 beta</a>
-    <a class="cta ghost" href="#tour">See the tour</a>
+    <a class="cta" href="#tour">See the tour</a>
     <a class="cta ghost" href="support.html">Support</a>
   </div>
 </header>
@@ -395,14 +392,14 @@ INDEX_BODY = f"""{ICONS}
     <h2>Straight from the app</h2>
     <p>Real screens on iPhone and iPad: the home screen, a PDF as a slide, night mode on a web page, and FreeView&nbsp;Pro.</p>
     <div class="shots">
-      <div class="shotframe"><img src="shot-home.webp" width="612" height="1330" alt="The home screen with an address field, Paste and File buttons, and three recent items" loading="lazy"></div>
+      <div class="shotframe"><img src="shot-home.webp" width="612" height="1330" alt="The home screen: New Presentation, Library and Files, and three recent items" loading="lazy"></div>
       <div class="shotframe"><img src="shot-pdf.webp" width="612" height="1330" alt="A PDF slide shown full screen on black" loading="lazy"></div>
       <div class="shotframe"><img src="shot-night.webp" width="612" height="1330" alt="A Wikipedia article in night mode, deep red on black" loading="lazy"></div>
-      <div class="shotframe"><img src="shot-paywall.webp" width="612" height="1330" alt="FreeView Pro: monthly, yearly with a free week, or lifetime" loading="lazy"></div>
+      <div class="shotframe"><img src="shot-paywall.webp" width="612" height="1330" alt="FreeView Pro: yearly, lifetime or monthly, at the launch prices" loading="lazy"></div>
     </div>
     <div class="shots ipad">
-      <div class="tabframe"><img src="shot-ipad-home.webp" width="880" height="1260" alt="The FreeView home screen on iPad with recent pages, files and presentations" loading="lazy"></div>
-      <div class="tabframe"><img src="shot-ipad-pdf.webp" width="880" height="1260" alt="A PDF slide full screen on iPad" loading="lazy"></div>
+      <div class="tabframe"><img src="shot-ipad-home.webp" width="880" height="1173" alt="The FreeView home screen on iPad: New Presentation, Library and Files, and the recent presentations, pages and files" loading="lazy"></div>
+      <div class="tabframe"><img src="shot-ipad-pdf.webp" width="880" height="1173" alt="A PDF slide full screen on iPad" loading="lazy"></div>
     </div>
   </div>
 </section>
@@ -413,14 +410,13 @@ INDEX_BODY = f"""{ICONS}
     <p>Viewing, presenting, editing, custom slides and styles are free. Free keeps your three most recent presentations and shares one link at a time, for up to a week. FreeView Pro keeps every presentation and shares as many links as you like, for up to 90 days, with passwords, per-slide views and no FreeView mark.</p>
     <div class="price">
       <div class="cardp"><div class="amt">$1.99</div><div class="per">Pro · monthly</div></div>
-      <div class="cardp best"><div class="amt">$9.99</div><div class="per">Pro · yearly · first week free</div></div>
-      <div class="cardp"><div class="amt">$19.99</div><div class="per">Lifetime · pay once</div></div>
+      <div class="cardp best"><div class="amt">$4.99</div><div class="per">Pro · first year · then $9.99 a year</div></div>
+      <div class="cardp"><div class="amt">$9.99</div><div class="per">Lifetime · pay once · launch price</div></div>
     </div>
-    <p style="font-size:13px;margin-top:16px">US prices; your App Store shows local pricing. Monthly and yearly plans renew automatically unless cancelled at least 24 hours before the period ends; manage them in Settings → Apple Account → Subscriptions.</p>
+    <p style="font-size:13px;margin-top:16px">Launch prices until 15 November 2026; after that the yearly plan starts with a free week at $9.99 a year and Lifetime is $19.99. US prices; your App Store shows local pricing. Monthly and yearly plans renew automatically unless cancelled at least 24 hours before the period ends; manage them in Settings → Apple Account → Subscriptions.</p>
     <a class="appstore" style="margin-top:26px" href="{STORE}" target="_blank" rel="noopener" aria-label="Download FreeView on the App Store">
       <img src="appstore-badge.svg" alt="Download on the App Store">
     </a>
-    <p style="font-size:13px;margin-top:14px">Want the new version today? <a href="{TESTFLIGHT}" target="_blank" rel="noopener" style="text-decoration:underline;text-underline-offset:3px">Join the FreeView 2.0 beta on TestFlight</a>.</p>
   </div>
 </section>
 
@@ -488,7 +484,7 @@ PRIVACY = f"""  <p class="muted">Last updated: {PRIVACY_UPDATED}</p>
   <ul>
     <li><strong>History</strong>: the addresses, titles and dates of what you open, and any names you give them.</li>
     <li><strong>Files and presentations</strong>: PDFs, videos, photos, audio, documents and the slides you make are copied into FreeView's own storage, with pictures FreeView makes from them (pages of Keynote, PowerPoint or Word files, previews and edits).</li>
-    <li><strong>Profile</strong>: the name, role, photo, logo and contact details you add in Settings, for your covers and slides. They appear only on slides where you turn them on.</li>
+    <li><strong>Profile</strong>: the name, role, photo, logo and contact details you add in Settings, for your covers and slides, kept in a hidden folder beside your presentations. A presentation can have a presenter and a logo of its own, kept inside it. They appear only on slides where you turn them on.</li>
     <li><strong>Styles, settings and the kiosk PIN</strong>: your choices, saved styles, and the PIN as a salted hash in the Keychain.</li>
     <li><strong>Web data</strong>: cookies, site storage and cache, kept by Apple's WebKit as in Safari. Private browsing keeps none of it once a page closes.</li>
   </ul>
@@ -511,6 +507,9 @@ PRIVACY = f"""  <p class="muted">Last updated: {PRIVACY_UPDATED}</p>
 
   <h2>Reimagine</h2>
   <p>On devices with Apple Intelligence, <strong>Reimagine</strong> uses Apple's Image Playground to make a new picture from a photo. Apple processes it on your device or with Private Cloud Compute, under Apple's privacy terms; FreeView sends nothing to us.</p>
+
+  <h2>Shortcuts, Siri and Spotlight</h2>
+  <p>FreeView offers actions to the Shortcuts app and Siri (open a presentation, next and previous slide, create a presentation or a link). To do that it gives Apple's frameworks on your device the titles, dates, covers and link addresses of your presentations and what the viewer is showing. This stays on your device under Apple's terms; nothing is sent to us. Nothing is listed while FreeView is locked with Face ID.</p>
 
   <h2>Face ID and Touch ID</h2>
   <p>Used only if you turn on <strong>Lock with Face ID</strong>, to unlock FreeView. Your device handles it entirely; FreeView never receives face or fingerprint data.</p>
