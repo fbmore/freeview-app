@@ -34,16 +34,19 @@
   const CSS = `
   .fv { position: absolute; inset: 0; container-type: size; overflow: hidden; background: var(--fv-bg); color: var(--fv-fg);
     font-family: var(--fv-font); -webkit-font-smoothing: antialiased; text-align: var(--fv-align); display: flex; flex-direction: column;
-    --fv-pad-y: 6cqmin; --fv-pad-x: 7cqmin; box-sizing: border-box;
+    --fv-pad-y: 5cqmin; --fv-pad-x: 5cqmin; box-sizing: border-box;
     padding: max(var(--fv-pad-y), calc(var(--safe-top, env(safe-area-inset-top, 0px)) + 3cqmin)) max(var(--fv-pad-x), calc(var(--safe-right, env(safe-area-inset-right, 0px)) + 3cqmin))
       max(var(--fv-pad-y), calc(var(--safe-bottom, env(safe-area-inset-bottom, 0px)) + 3cqmin)) max(var(--fv-pad-x), calc(var(--safe-left, env(safe-area-inset-left, 0px)) + 3cqmin)); }
   .fv * { box-sizing: border-box; }
   .fv .bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
   .fv .scrim { position: absolute; inset: 0; background: linear-gradient(to top, var(--fv-scrim) 0%, transparent 65%), linear-gradient(to bottom, var(--fv-scrim-top) 0%, transparent 30%); }
   .fv header, .fv main, .fv footer, .fv .cols { position: relative; }
-  .fv header { display: flex; justify-content: var(--fv-justify); min-height: 6cqmin; }
-  .fv .logo { height: 7cqmin; max-width: 28cqmin; object-fit: contain; }
-  .fv.text .logo { height: 5cqmin; }
+  .fv header { display: flex; justify-content: var(--fv-justify); align-items: flex-start; min-height: 6cqmin; }
+  /* One size in one corner on every slide, cover or Magic, mirroring the presenter at the bottom. Chrome gives a flex
+     img its natural width (capped by max-width) rather than the width its height implies, and would centre the
+     drawing in that wide box: anchor it to the start edge instead. */
+  .fv .logo { flex: none; width: auto; height: 6cqmin; max-width: 28cqmin; object-fit: contain; object-position: left center; }
+  .fv.center .logo { object-position: center; }
   .fv main { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: var(--fv-items); }
   .fv h1 { margin: 0; font-size: calc(8.4cqmin * var(--fv-title)); line-height: 1.04; font-weight: 700; letter-spacing: -0.02em; text-wrap: balance; max-width: 22ch; }
   .fv h2 { margin: 0 0 3cqmin; font-size: calc(6cqmin * var(--fv-title)); line-height: 1.08; font-weight: 700; letter-spacing: -0.015em; text-wrap: balance; }
@@ -86,7 +89,6 @@
   .fv.hero.dense .body { margin-top: 2.6cqmin; font-size: calc(3cqmin * var(--fv-body)); max-width: 60ch; }
   .fv.hero.quote .body { margin-top: 0; font-size: calc(5.4cqmin * var(--fv-title)); line-height: 1.22; font-weight: 600; letter-spacing: -0.01em; text-wrap: balance; max-width: 30ch; }
   .fv.hero .body > :last-child { margin-bottom: 0; }
-  .fv.grid, .fv.gallery { --fv-pad-y: 4cqmin; --fv-pad-x: 4cqmin; }
   .fv.gallery h2 { margin: 0 0 2.6cqmin; font-size: calc(4.8cqmin * var(--fv-title)); }
   .fv.grid header, .fv.gallery header { margin-bottom: 2.4cqmin; }
   .fv.grid footer, .fv.gallery footer { margin-top: 2.4cqmin; }
