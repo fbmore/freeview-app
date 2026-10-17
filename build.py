@@ -340,7 +340,7 @@ FEATURES = "\n".join([
     feature("Any mix of files, one presentation", "Pick a Keynote deck, a PDF, a film, photos, a 3D model, a voice note and a spreadsheet, and they become one presentation, a slide each, in the order you want. No converting, no copying and pasting, no slide software.",
             [("stack", "Keynote, PowerPoint, Word, PDFs, videos, photos, audio"), ("check", "3D models, Lottie animations, Markdown, tables and live web pages"),
              ("folder", "From Files, Photos, AirDrop, Mail or the camera, even a scan")],
-            shot("shot-deck.webp", "Editing a presentation in FreeView: a cover, a brief, a photo, a film, a 3D prototype, a table of numbers and a sunset, in order")),
+            shot("shot-deck.webp", "Editing a presentation in FreeView: a cover, a product brief, photos, a Magic slide, a film, a 3D prototype and a table of preorders, in order")),
     feature("Make it yours in seconds", "Add a cover with your logo, name, photo and contacts, and text slides for the bits in between. Any web address on a slide becomes a QR code. Pick a style or make one from your logo's colours.",
             [("photo", "Any picture from the presentation as the cover"), ("check", "Saved styles you can copy to other presentations"),
              ("code", "A QR code for every link, automatically")],
