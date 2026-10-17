@@ -50,7 +50,6 @@ HEAD = """<!DOCTYPE html>
 """
 
 # The FreeView mark: four viewfinder corners. Animated in the hero, static elsewhere.
-MARK_PATH = "M4 9V6.5A2.5 2.5 0 0 1 6.5 4H9M15 4h2.5A2.5 2.5 0 0 1 20 6.5V9M20 15v2.5a2.5 2.5 0 0 1-2.5 2.5H15M9 20H6.5A2.5 2.5 0 0 1 4 17.5V15"
 
 # SF Symbol-style icons, stroke = currentColor.
 ICONS = """<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
@@ -112,11 +111,8 @@ h1,h2{text-wrap:balance}p,li{text-wrap:pretty}
 
 /* hero */
 header.hero{text-align:center;padding:96px 24px 72px;background:radial-gradient(52% 40% at 50% 8%,rgba(255,255,255,.05),transparent 70%)}
-.logo{width:116px;height:116px;margin:0 auto 26px;border-radius:26px;background:#000;box-shadow:0 0 0 1px var(--line),0 24px 60px rgba(0,0,0,.8);
-  display:flex;align-items:center;justify-content:center}
-.logo svg{width:64px;height:64px}
-.logo path{animation:breathe 4.8s cubic-bezier(.65,0,.35,1) infinite;transform-origin:12px 12px}
-@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(.86)}}
+/* The app icon itself, the same artwork as the iPhone, iPad and Mac icon. */
+.logo{display:block;width:116px;height:116px;margin:0 auto 26px;border-radius:26px;background:#000;box-shadow:0 0 0 1px var(--line),0 24px 60px rgba(0,0,0,.8)}
 h1{font-size:clamp(38px,7vw,64px);font-weight:300;letter-spacing:-.02em;margin:0 0 14px}
 .tag{font-size:clamp(16px,2.3vw,20px);color:var(--muted2);font-weight:300;max-width:560px;margin:0 auto 30px}
 .tag strong{display:block;font-weight:600;color:var(--ink,#fff);font-size:1.25em;letter-spacing:-.01em;margin-bottom:6px;text-wrap:balance}
@@ -156,7 +152,7 @@ section.feat{padding:60px 0;border-top:1px solid var(--line)}
 .screen .st svg{width:34px;height:12px;opacity:.9}
 .screen .body{flex:1;display:flex;flex-direction:column;align-items:center;padding:26px 20px 22px;text-align:center}
 .mini-mark{display:flex;gap:6px;align-items:center;font-weight:700;font-size:19px;letter-spacing:-.01em;margin-top:18px}
-.mini-mark svg{width:17px;height:17px}
+.mini-mark img{width:20px;height:20px;border-radius:4.5px;outline:1px solid rgba(255,255,255,.1);outline-offset:-1px}
 .mini-sub{font-size:11px;color:var(--muted);margin-top:4px}
 .corner{position:absolute;right:12px;bottom:12px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.14);
   display:flex;align-items:center;justify-content:center;gap:2.5px}
@@ -288,7 +284,7 @@ footer a{color:var(--muted2);display:inline-block;padding:12px 10px}
 PG_A = '<div class="pg a"><div class="k">Lumen Studio</div><b>New season,<br>new light.</b><div class="k">01</div></div>'
 
 MOCK_OPEN = phone(
-    '<div class="body"><div class="mini-mark">' + f'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="{MARK_PATH}"/></svg>'
+    '<div class="body"><div class="mini-mark"><img src="logo.png" alt="" width="20" height="20">'
     + 'FreeView</div><div class="mini-sub">View and present anything, full screen</div>'
     '<div class="field"><span class="typed">freeview.app</span><span class="caret"></span></div>'
     '<div class="kinds">'
@@ -327,7 +323,7 @@ MOCK_NIGHT = phone(
     "A white web page that turns deep red on black, image included, when night mode comes on", status=False)
 
 MOCK_PRIVATE = phone(
-    '<div class="body"><div class="mini-mark">' + f'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="{MARK_PATH}"/></svg>'
+    '<div class="body"><div class="mini-mark"><img src="logo.png" alt="" width="20" height="20">'
     + f'FreeView</div><div class="chipp">{icon("eyeslash")}Private</div><div class="hist">'
     f'<div class="r">{icon("doc",1.6)}<div><b>Lumen Spring 2026</b><span>Lumen-Spring-2026.pdf</span></div></div>'
     f'<div class="r">{icon("stack",1.6)}<div><b>Launch deck</b><span>Presentation · 3 items</span></div></div>'
@@ -368,10 +364,10 @@ FEATURES = "\n".join([
 
 INDEX_BODY = f"""{ICONS}
 <header class="hero">
-  <div class="logo" role="img" aria-label="FreeView"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="{MARK_PATH}"/></svg></div>
+  <img class="logo" src="logo.png" alt="FreeView" width="116" height="116">
   <h1>FreeView</h1>
   <p class="tag"><strong>Easy to build. Easier to share.</strong> Drop in any mix of files for a presentation, then send one link that plays on any screen.</p>
-  <video class="herovid" src="hero.mp4?v=6" poster="hero-poster.webp?v=6" width="1280" height="720" autoplay muted loop playsinline preload="auto"
+  <video class="herovid" src="hero.mp4?v=7" poster="hero-poster.webp?v=7" width="1280" height="720" autoplay muted loop playsinline preload="auto"
     aria-label="A 30-second tour: a pile of files (a deck, a PDF, a film, photos, a 3D model, a spreadsheet, a voice note) drops into FreeView and becomes a presentation; a branded cover is added in one tap; it is sent as one link, up to 2 GB with Pro; and it plays on a laptop, tablet, phone, or a TV through AirPlay, with no app or account. Easy to build, easier to share."></video>
   <a class="appstore heroBadge" href="{STORE}" target="_blank" rel="noopener" aria-label="Download FreeView on the App Store">
     <img src="appstore-badge.svg" alt="Download on the App Store">

@@ -201,7 +201,7 @@
   #message { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 14px; padding: 24px 16px; text-align: center; background: var(--bg); }
   #message[hidden] { display: none; }
-  #message svg.mark { width: 44px; height: 44px; color: var(--fg); }
+  #message img.mark { width: 56px; height: 56px; border-radius: 12.5px; outline: 1px solid rgb(255 255 255 / .1); outline-offset: -1px; }
   #message h1 { margin: 0; font-size: 22px; font-weight: 700; text-wrap: balance; }
   #message p { margin: 0; max-width: 340px; color: var(--muted); font-size: 15px; line-height: 1.45; text-wrap: pretty; }
   #message a { color: var(--fg); }
@@ -213,16 +213,16 @@
   #message .err { color: #ff8a80; min-height: 1.2em; font-size: 14px; }
   /* Free links carry a small mark; Pro links don't. */
   #mark { position: fixed; z-index: 10; left: max(16px, env(safe-area-inset-left)); bottom: max(18px, env(safe-area-inset-bottom));
-    display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 999px; text-decoration: none;
+    display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px 0 7px; border-radius: 999px; text-decoration: none;
     background: var(--chip); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); color: var(--muted);
     font-size: 12px; font-weight: 600; letter-spacing: .01em; transition: color 150ms var(--ease), opacity 300ms var(--ease); }
   #mark:hover { color: var(--fg); }
-  #mark svg { width: 13px; height: 13px; }
+  #mark img { width: 16px; height: 16px; border-radius: 3.6px; }
   #mark[hidden] { display: none; }
   body:not(.started) #mark { opacity: 1; pointer-events: auto; z-index: 30; }   /* visible on the welcome screen too */
   /* Report a presentation (App Store 1.2): on the welcome and cover screens, before it starts. */
   #report { position: fixed; z-index: 30; right: max(16px, env(safe-area-inset-right)); bottom: max(18px, env(safe-area-inset-bottom));
-    display: none; align-items: center; height: 30px; padding: 0 12px; border-radius: 999px; text-decoration: none;
+    display: none; align-items: center; height: 30px; padding: 0 12px 0 7px; border-radius: 999px; text-decoration: none;
     color: var(--muted); font-size: 12px; font-weight: 600; transition: color 150ms var(--ease); }
   #report:hover { color: var(--fg); }
   body:not(.started) #report { display: inline-flex; }
@@ -348,7 +348,7 @@
 </button>
 <div id="counter" class="chrome" aria-hidden="true"></div>
 <a id="mark" class="chrome" href="https://freeview.app/?ref=link" target="_blank" rel="noopener" hidden>
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4 9V6.5A2.5 2.5 0 0 1 6.5 4H9M15 4h2.5A2.5 2.5 0 0 1 20 6.5V9M20 15v2.5a2.5 2.5 0 0 1-2.5 2.5H15M9 20H6.5A2.5 2.5 0 0 1 4 17.5V15"/></svg>
+  <img src="/logo.png" alt="" width="16" height="16">
   Made with FreeView
 </a>
 
@@ -380,7 +380,7 @@
 </div>
 
 <div id="message" role="status">
-  <svg class="mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 9V6.5A2.5 2.5 0 0 1 6.5 4H9M15 4h2.5A2.5 2.5 0 0 1 20 6.5V9M20 15v2.5a2.5 2.5 0 0 1-2.5 2.5H15M9 20H6.5A2.5 2.5 0 0 1 4 17.5V15"/></svg>
+  <img class="mark" src="/logo.png" alt="" width="56" height="56">
   <h1>Opening…</h1>
   <p></p>
 </div>
