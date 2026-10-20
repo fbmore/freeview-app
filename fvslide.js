@@ -62,7 +62,11 @@
   .fv .contacts { display: flex; flex-wrap: wrap; gap: .4cqmin 2.4cqmin; margin-top: .8cqmin; font-size: calc(2.1cqmin * var(--fv-body)); opacity: .85; }
   .fv .contacts a { color: inherit; text-decoration: none; }
   .fv .contacts b { font-weight: 600; color: var(--fv-accent); margin-right: .6cqmin; }
-  .fv .qr { flex: none; display: flex; flex-direction: column; align-items: center; gap: 1cqmin; }
+  .fv .qr { flex: none; display: flex; flex-direction: column; align-items: center; gap: 1cqmin; color: inherit; text-decoration: none; cursor: pointer; transition: transform .16s ease-out, opacity .16s ease-out; -webkit-tap-highlight-color: transparent; }
+  /* A code is its address too: a click opens it. */
+  .fv .qr:hover { opacity: .88; }
+  .fv .qr:active { transform: scale(.97); }
+  @media (prefers-reduced-motion: reduce) { .fv .qr { transition: none; } .fv .qr:active { transform: none; } }
   .fv .qr .code { width: 17cqmin; height: 17cqmin; padding: 1.4cqmin; border-radius: calc(var(--fv-radius) * 0.6cqmin + 1cqmin); background: var(--fv-qr-bg); }
   .fv .qr .code svg { display: block; width: 100%; height: 100%; }
   .fv .qr span { font-size: calc(1.8cqmin * var(--fv-body)); opacity: .75; max-width: 22cqmin; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -231,7 +235,7 @@
     const urls = spec.qr === false ? [] : allURLs(spec.title, spec.subtitle, spec.body).slice(0, cover ? 1 : 4);
     const qrColor = hasBg || !light ? '#000000' : t.foreground;
     const qr = urls.length ? `<div class="qrs${urls.length > 2 ? ' many' : ''}">${urls.map((u) =>
-      `<div class="qr"><div class="code">${qrSVG(u, qrColor)}</div><span>${esc(u.replace(/^https?:\/\//i, '').replace(/\/$/, ''))}</span></div>`).join('')}</div>` : '';
+      `<a class="qr" href="${esc(u)}" target="_blank" rel="noopener"><div class="code">${qrSVG(u, qrColor)}</div><span>${esc(u.replace(/^https?:\/\//i, '').replace(/\/$/, ''))}</span></a>`).join('')}</div>` : '';
 
     const person = spec.person || {};
     const contacts = (spec.contacts || []).filter((c) => c && c.value);
