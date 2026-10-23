@@ -350,7 +350,7 @@ FEATURES = "\n".join([
              ("clock", "Ends when you choose; see how often it was opened")],
             shot("shot-share.webp", "Sharing a presentation: its cover, what's in it, a title and message, and how long the link works")),
     feature("Talk over your slides", "Record yourself presenting, slide by slide, with your camera and voice, then send it in the same link. They watch you walk through it whenever suits them, on any screen.",
-            [("face", "Your camera as a bubble, an inset or side by side"), ("play", "Pause, re-record a slide, pick the layout as it plays"),
+            [("face", "Your camera as a bubble, an inset or a split"), ("play", "Pause as you go, change the layout as it plays"),
              ("airplay", "Include it in a shared link, or save it as a video")],
             shot("shot-commentary.webp", "Reviewing a commentary in FreeView: a workbench photo on the slide, the presenter in a round bubble below, and the Bubble, Inset and Split layouts"), flip=True),
     feature("Opens on any screen", "Whoever gets the link watches it in their browser, on a laptop, tablet, phone or TV, ready to present. No app, no account, nothing to install, and Keynote, video and 3D all just play.",
@@ -655,6 +655,12 @@ SUPPORT = f"""  <div class="contact">
   <p>Kiosk mode controls what happens inside FreeView. To keep an iPhone or iPad locked to FreeView, also turn on Guided Access: Settings → Accessibility → Guided Access.</p>
   <h3>FreeView on a Mac</h3>
   <p>FreeView runs on Apple silicon Macs as an iPad app in a window. Kiosk mode hides the controls there, but macOS always lets people close or quit the window, so use it for presenting rather than unattended kiosks.</p>
+
+  <h2>Recording</h2>
+  <h3>How do I record a commentary?</h3>
+  <p>Open a presentation, tap <strong>⋯</strong> and choose <strong>Record Commentary</strong> (or touch and hold it on Home). After a 3-2-1 you present as usual while the camera and microphone record you; drag your camera bubble to any corner, and pause or stop from the bar at the bottom. When you stop, try the layouts (Bubble, Inset, Split, You only and more) and press Done. A commentary is up to 10 minutes and stays with its presentation.</p>
+  <h3>Can people watch my commentary?</h3>
+  <p>Yes: turn on <strong>Include Commentary</strong> when you share the presentation. People who open the link can watch you present over the live slides, or browse the slides on their own. <strong>Save as Video</strong> makes a video of it for social posts, in the shape you choose.</p>
 
   <h2>Privacy and night mode</h2>
   <h3>Private browsing or "Don't remember my browsing"?</h3>
