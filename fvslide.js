@@ -21,8 +21,8 @@
  * Island and home indicator (the page needs viewport-fit=cover; a box away from the edges has no insets).
  * The app sets --safe-top/right/bottom/left from the screen, where env() reads 0 inside its viewer.
  *   videos: [URL | null] beside images: the video or audio a picture was made from, played when it's opened
- *   files: [{ name, size, href }] on a Magic slide: files to download, a row of buttons after the text (or in
- *   the footer when there's no text). The app takes the click (fvFile) to share the file; on the web it downloads.
+ *   downloads: [{ name, size, href } | null] beside images: a file to download (a zip…) whose card is the
+ *   picture. The app takes the click to share it; on the web a click downloads it.
  *   sites: [URL | null] beside images: the web address a picture of a page was taken from. The app lays the
  *   live page over the picture; on the web (where most sites refuse to be framed) a click opens the address
  * A Magic slide's pictures can be tapped to see them full screen: in the app, the app shows the item
@@ -85,19 +85,6 @@
   .fv .body > .qrs.inline { margin-top: 1.6cqmin; }
   .fv .qrs.inline.many .code { width: 11cqmin; height: 11cqmin; padding: 1cqmin; }
   .fv .qrs.many span { max-width: 15cqmin; }
-  /* Files to download: one pill each, its name and size. */
-  .fv .files { display: flex; flex-wrap: wrap; gap: 1.4cqmin; margin-top: 2cqmin; justify-content: var(--fv-justify); }
-  .fv footer .files { margin-top: 0; }
-  .fv .file { display: inline-flex; align-items: center; gap: 1.2cqmin; max-width: 100%; padding: 1.1cqmin 2.2cqmin 1.1cqmin 1.6cqmin;
-    border-radius: 99px; color: inherit; text-decoration: none; cursor: pointer; font-size: calc(2.1cqmin * var(--fv-body)); line-height: 1.2;
-    background: color-mix(in srgb, var(--fv-fg) 9%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fv-fg) 14%, transparent);
-    transition: transform .15s ease-out, background-color .15s ease-out; -webkit-tap-highlight-color: transparent; }
-  .fv .file:hover { background: color-mix(in srgb, var(--fv-fg) 14%, transparent); }
-  .fv .file:active { transform: scale(.97); }
-  .fv .file svg { flex: none; width: 2.6cqmin; height: 2.6cqmin; stroke: var(--fv-accent); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
-  .fv .file b { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .fv .file span { opacity: .65; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  @media (prefers-reduced-motion: reduce) { .fv .file { transition: none; } .fv .file:active { transform: none; } }
   .fv .cols { flex: 1; display: grid; grid-template-columns: 1fr; gap: 5cqmin; align-items: center; min-height: 0; }
   .fv .cols.media-on { grid-template-columns: var(--fv-cols, 1fr 1fr); }
   .fv .copy { min-width: 0; }
@@ -134,7 +121,7 @@
   .fv .media.n3 img:first-child { grid-row: span 2; }
   .fv.zoomable .media img { cursor: zoom-in; transition: transform .16s ease-out, filter .16s ease-out; -webkit-tap-highlight-color: transparent; }
   .fv.zoomable .media img:hover { filter: brightness(1.06); }
-  .fv.zoomable .media img[data-site] { cursor: pointer; }
+  .fv.zoomable .media img[data-site], .fv.zoomable .media img[data-download] { cursor: pointer; }
   .fv.zoomable .media img:active { transform: scale(.97); }
   @media (prefers-reduced-motion: reduce) { .fv.zoomable .media img { transition: none; } .fv.zoomable .media img:active { transform: none; } }
   .fv-focus { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.94); display: flex; align-items: center; justify-content: center;
@@ -230,32 +217,6 @@
     if (footer && !footer.querySelector('.who, .qr')) footer.remove();
   }
 
-  // A Magic slide's files to download: after the text, else in the footer (made if there's none).
-  function fileSize(n) {
-    if (!(n > 0)) return '';
-    const units = ['bytes', 'KB', 'MB', 'GB']; let i = 0;
-    while (n >= 1000 && i < units.length - 1) { n /= 1000; i++; }
-    return `${i ? n.toFixed(n < 10 ? 1 : 0) : n} ${units[i]}`;
-  }
-  function placeFiles(root, files) {
-    if (!files.length) return;
-    const row = document.createElement('div');
-    row.className = 'files';
-    row.innerHTML = files.map((f, i) => `<a class="file" href="${esc(f.href)}" download="${esc(f.name)}" target="_blank" rel="noopener" data-i="${i}" title="${esc(f.name)}">`
-      + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>'
-      + `<b>${esc(f.name)}</b>${f.size ? `<span>${fileSize(f.size)}</span>` : ''}</a>`).join('');
-    const app = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.fvFile;
-    row.querySelectorAll('.file').forEach((a) => a.addEventListener('click', (e) => {
-      e.stopPropagation();   // the web viewer's click-to-advance stays out of it
-      if (app) { e.preventDefault(); app.postMessage(parseInt(a.dataset.i, 10)); }
-    }));
-    const text = root.querySelector('.copy') || root.querySelector('main');
-    if (text) { text.appendChild(row); return; }
-    let footer = root.querySelector('footer');
-    if (!footer) { footer = document.createElement('footer'); root.appendChild(footer); }
-    footer.prepend(row);
-  }
-
   function render(el, spec) {
     installCSS();
     const t = Object.assign({ mode: 'dark', background: '#0b0b0c', foreground: '#ffffff', accent: '#ffffff', font: 'system', align: 'left', titleScale: 1, bodyScale: 1, radius: 2 }, spec.theme || {});
@@ -266,7 +227,7 @@
 
     // A Magic slide's layout, from what it has.
     // Each picture keeps the video or audio behind it (a picture that couldn't be made is left out).
-    const shown = cover ? [] : (spec.images || []).map((src, i) => ({ src, video: (spec.videos || [])[i] || null, site: (spec.sites || [])[i] || null })).filter((p) => p.src).slice(0, 4);
+    const shown = cover ? [] : (spec.images || []).map((src, i) => ({ src, video: (spec.videos || [])[i] || null, site: (spec.sites || [])[i] || null, download: (spec.downloads || [])[i] || null })).filter((p) => p.src).slice(0, 4);
     const images = shown.map((p) => p.src);
     const body = (spec.body || '').trim(), hasTitle = !!(spec.title || '').trim();
     const layout = cover ? '' : images.length ? (body ? 'split' : hasTitle ? 'gallery' : 'grid') : 'hero';
@@ -328,7 +289,6 @@
         ${(who !== '<div></div>' || qr) ? `<footer>${who}${qr}</footer>` : ''}`;
     }
     root.querySelectorAll('.body a').forEach((a) => { a.target = '_blank'; a.rel = 'noopener'; });
-    if (!cover) placeFiles(root, (spec.files || []).filter((f) => f && f.href && f.name));
     if (!cover && urls.length) placeQR(root, urls);
     const pictures = root.querySelectorAll('.media img');
     if (pictures.length && spec.zoom !== false) {
@@ -337,12 +297,19 @@
       pictures.forEach((img, i) => {
         if (items[i].video) img.dataset.video = items[i].video;
         if (shown[i] && shown[i].site && /^https?:\/\//i.test(shown[i].site)) { img.dataset.site = shown[i].site; img.title = shown[i].site.replace(/^https?:\/\//i, '').replace(/\/$/, ''); }
+        const d = shown[i] && shown[i].download;
+        if (d && d.href) { img.dataset.download = d.href; img.title = d.name || ''; img.alt = d.name || ''; }
       });
       root.classList.add('zoomable');
       pictures.forEach((img, i) => img.addEventListener('click', (e) => {
         e.stopPropagation();   // the web viewer's click-to-advance stays out of it
         if (app) app.postMessage(i);
         else if (img.dataset.site) window.open(img.dataset.site, '_blank', 'noopener');
+        else if (img.dataset.download) {
+          const a = document.createElement('a');
+          a.href = img.dataset.download; a.download = img.title || ''; a.target = '_blank'; a.rel = 'noopener';
+          document.body.appendChild(a); a.click(); a.remove();
+        }
         else focus(items, i);
       }));
     }
