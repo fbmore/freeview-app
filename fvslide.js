@@ -9,6 +9,9 @@
  *   a Magic slide up to four, side by side)
  *   theme: { mode, background, foreground, accent, font, align, titleScale, bodyScale, radius }
  *   align: 'left' | 'center' to override the theme's alignment for this slide
+ *   split: 0.3–0.6, the text's share of a Magic slide with text beside pictures (its width; its height
+ *   above them on a tall screen). Without it the text takes what it needs: at most 30% when there's
+ *   little of it, 40% for more, half for a lot, and on a tall screen its own height.
  * A Magic slide (kind 'text') lays itself out from what it has:
  *   text only → the title is the hero (the text sets smaller when there's a lot of it, and text with
  *   no title reads as a quote); pictures only → the grid takes the whole slide; a title and pictures
@@ -18,9 +21,11 @@
  * Island and home indicator (the page needs viewport-fit=cover; a box away from the edges has no insets).
  * The app sets --safe-top/right/bottom/left from the screen, where env() reads 0 inside its viewer.
  *   videos: [URL | null] beside images: the video or audio a picture was made from, played when it's opened
+ *   sites: [URL | null] beside images: the web address a picture of a page was taken from. The app lays the
+ *   live page over the picture; on the web (where most sites refuse to be framed) a click opens the address
  * A Magic slide's pictures can be tapped to see them full screen: in the app, the app shows the item
  * (the `fvPicture` message handler gets the picture's index); on the web, a viewer drawn here
- * (videos and audio play, ← → between pictures, Esc or × closes).
+ * (videos and audio play, ← → between pictures, Esc or × closes), and a website opens in a new tab.
  */
 (function () {
   const FONTS = {
@@ -79,7 +84,7 @@
   .fv .qrs.inline.many .code { width: 11cqmin; height: 11cqmin; padding: 1cqmin; }
   .fv .qrs.many span { max-width: 15cqmin; }
   .fv .cols { flex: 1; display: grid; grid-template-columns: 1fr; gap: 5cqmin; align-items: center; min-height: 0; }
-  .fv .cols.media-on { grid-template-columns: 1fr 1fr; }
+  .fv .cols.media-on { grid-template-columns: var(--fv-cols, 1fr 1fr); }
   .fv .copy { min-width: 0; }
   .fv .body { font-size: calc(3cqmin * var(--fv-body)); line-height: 1.45; text-wrap: pretty; }
   .fv .body p { margin: 0 0 1.6cqmin; } .fv .body ul, .fv .body ol { margin: 0 0 1.6cqmin; padding-left: 1.2em; }
@@ -96,18 +101,25 @@
   .fv.gallery h2 { margin: 0 0 2.6cqmin; font-size: calc(4.8cqmin * var(--fv-title)); }
   .fv.grid header, .fv.gallery header { margin-bottom: 2.4cqmin; }
   .fv.grid footer, .fv.gallery footer { margin-top: 2.4cqmin; }
-  .fv .media.fill { position: relative; flex: 1; height: auto; max-height: none; min-height: 0; grid-template-rows: 1fr; }
-  .fv .media.fill.n3, .fv .media.fill.n4 { grid-template-rows: 1fr 1fr; }
+  /* height: 0 with flex: 1 1 0 makes the grid's height definite (the slot left by the header and
+     footer), and minmax(0, …) lets a row shrink below a picture's own height: without both, on a
+     tall slide the rows outgrew the grid and the pictures painted over each other. */
+  .fv .media.fill { position: relative; flex: 1 1 0; height: 0; max-height: none; min-height: 0; grid-template-rows: minmax(0, 1fr); }
+  .fv .media.fill.n3, .fv .media.fill.n4 { grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
   .fv .media.fill > img { min-width: 0; }
   .fv .media.fill.n1 { display: flex; align-items: center; justify-content: center; }
-  .fv .media.fill.n1 img { width: auto; height: auto; max-width: 100%; max-height: 100%; }
+  .fv .media.fill.n1 img { width: auto; height: auto; max-width: 100%; max-height: 100%; align-self: center; justify-self: center; }
   .fv .media { display: grid; gap: 2cqmin; height: 100%; max-height: 70cqh; }
-  .fv .media.n2 { grid-template-columns: 1fr 1fr; } .fv .media.n3, .fv .media.n4 { grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; }
-  .fv .media img { width: 100%; height: 100%; object-fit: cover; border-radius: calc(var(--fv-radius) * 1cqmin); min-height: 0; }
-  .fv .media.n1 img { object-fit: contain; }
+  .fv .media.n2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .fv .media.n3, .fv .media.n4 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-auto-rows: minmax(0, 1fr); }
+  /* Stretched to the cell rather than height: 100% (a percentage a picture can't resolve in a sized
+     row, so it kept its own height and spilled over the next). */
+  .fv .media img { width: 100%; height: auto; align-self: stretch; justify-self: stretch; object-fit: cover; border-radius: calc(var(--fv-radius) * 1cqmin); min-height: 0; }
+  /* A lone picture keeps its own shape (the box is the picture, so its corners round like the others'). */
+  .fv .media.n1 img { object-fit: contain; width: auto; height: auto; max-width: 100%; max-height: 100%; align-self: center; justify-self: center; }
   .fv .media.n3 img:first-child { grid-row: span 2; }
   .fv.zoomable .media img { cursor: zoom-in; transition: transform .16s ease-out, filter .16s ease-out; -webkit-tap-highlight-color: transparent; }
   .fv.zoomable .media img:hover { filter: brightness(1.06); }
+  .fv.zoomable .media img[data-site] { cursor: pointer; }
   .fv.zoomable .media img:active { transform: scale(.97); }
   @media (prefers-reduced-motion: reduce) { .fv.zoomable .media img { transition: none; } .fv.zoomable .media img:active { transform: none; } }
   .fv-focus { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.94); display: flex; align-items: center; justify-content: center;
@@ -131,12 +143,12 @@
     padding: 6px 12px; border-radius: 99px; background: rgba(0,0,0,.5); }
   @media (prefers-reduced-motion: reduce) { .fv-focus, .fv-focus .item { transition: none; } }
   @container (max-aspect-ratio: 1/1) {
-    .fv .cols.media-on { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    .fv .cols.media-on { grid-template-columns: 1fr; grid-template-rows: var(--fv-rows, auto 1fr); }
     .fv h1 { font-size: calc(10cqmin * var(--fv-title)); }
     .fv footer { flex-direction: column; align-items: stretch; }
     .fv footer > .qrs { align-self: flex-end; }
-    .fv .media.fill.n2 { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
-    .fv .media.fill.n3 { grid-template-rows: 2fr 1fr; }
+    .fv .media.fill.n2 { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
+    .fv .media.fill.n3 { grid-template-rows: minmax(0, 2fr) minmax(0, 1fr); }
     .fv .media.fill.n3 img:first-child { grid-row: auto; grid-column: span 2; }
   }`;
 
@@ -213,7 +225,7 @@
 
     // A Magic slide's layout, from what it has.
     // Each picture keeps the video or audio behind it (a picture that couldn't be made is left out).
-    const shown = cover ? [] : (spec.images || []).map((src, i) => ({ src, video: (spec.videos || [])[i] || null })).filter((p) => p.src).slice(0, 4);
+    const shown = cover ? [] : (spec.images || []).map((src, i) => ({ src, video: (spec.videos || [])[i] || null, site: (spec.sites || [])[i] || null })).filter((p) => p.src).slice(0, 4);
     const images = shown.map((p) => p.src);
     const body = (spec.body || '').trim(), hasTitle = !!(spec.title || '').trim();
     const layout = cover ? '' : images.length ? (body ? 'split' : hasTitle ? 'gallery' : 'grid') : 'hero';
@@ -230,6 +242,14 @@
       '--fv-scrim': 'rgba(0,0,0,.72)', '--fv-scrim-top': 'rgba(0,0,0,.35)',
       '--fv-qr-bg': hasBg ? 'rgba(255,255,255,.96)' : (light ? 'rgba(0,0,0,.05)' : 'rgba(255,255,255,.96)'),
     };
+    if (layout === 'split') {
+      // The text's share beside the pictures: asked for, else from how much text there is.
+      const chars = body.length + (spec.title || '').length;
+      const asked = typeof spec.split === 'number' ? Math.min(Math.max(spec.split, 0.2), 0.7) : null;
+      const share = asked || (chars <= 160 && lines <= 4 ? 0.3 : chars <= 420 ? 0.4 : 0.5);
+      vars['--fv-cols'] = `minmax(0, ${share}fr) minmax(0, ${1 - share}fr)`;
+      if (asked) vars['--fv-rows'] = `minmax(0, ${share}fr) minmax(0, ${1 - share}fr)`;
+    }
     for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v);
 
     const urls = spec.qr === false ? [] : allURLs(spec.title, spec.subtitle, spec.body).slice(0, cover ? 1 : 4);
@@ -272,11 +292,16 @@
     if (pictures.length && spec.zoom !== false) {
       const app = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.fvPicture;
       const items = [...pictures].map((img, i) => ({ src: img.getAttribute('src'), video: shown[i] ? shown[i].video : null }));
-      pictures.forEach((img, i) => { if (items[i].video) img.dataset.video = items[i].video; });
+      pictures.forEach((img, i) => {
+        if (items[i].video) img.dataset.video = items[i].video;
+        if (shown[i] && shown[i].site && /^https?:\/\//i.test(shown[i].site)) { img.dataset.site = shown[i].site; img.title = shown[i].site.replace(/^https?:\/\//i, '').replace(/\/$/, ''); }
+      });
       root.classList.add('zoomable');
       pictures.forEach((img, i) => img.addEventListener('click', (e) => {
         e.stopPropagation();   // the web viewer's click-to-advance stays out of it
-        if (app) app.postMessage(i); else focus(items, i);
+        if (app) app.postMessage(i);
+        else if (img.dataset.site) window.open(img.dataset.site, '_blank', 'noopener');
+        else focus(items, i);
       }));
     }
     el.innerHTML = '';
@@ -376,5 +401,20 @@
     if (!playing && !v.paused) v.pause();
   }
 
-  window.FV = { render, firstURL, allURLs, fonts: FONTS, focusPicture, unfocus, driveFocused };
+  // Magic Move (the app): where each picture sits, so one shared by two slides can travel between them.
+  function rects() {
+    return [...document.querySelectorAll('.media img')].map((img) => {
+      const r = img.getBoundingClientRect();
+      const cs = getComputedStyle(img);
+      return { src: img.getAttribute('src'), x: r.left, y: r.top, w: r.width, h: r.height,
+               fit: cs.objectFit, radius: parseFloat(cs.borderRadius) || 0, site: img.dataset.site || null };
+    });
+  }
+  function setHidden(indexes, hidden) {
+    document.querySelectorAll('.media img').forEach((img, i) => {
+      if (indexes.includes(i)) img.style.visibility = hidden ? 'hidden' : '';
+    });
+  }
+
+  window.FV = { render, firstURL, allURLs, fonts: FONTS, focusPicture, unfocus, driveFocused, rects, setHidden };
 })();
