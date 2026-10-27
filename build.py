@@ -389,23 +389,6 @@ INDEX_BODY = f"""{ICONS}
 
 <section class="gallery">
   <div class="wrap">
-    <h2>Straight from the app</h2>
-    <p>Real screens on iPhone and iPad: the home screen, a PDF as a slide, night mode on a web page, and FreeView&nbsp;Pro.</p>
-    <div class="shots">
-      <div class="shotframe"><img src="shot-home.webp" width="612" height="1330" alt="The home screen: New Presentation, Library and Files, and three recent items" loading="lazy"></div>
-      <div class="shotframe"><img src="shot-pdf.webp" width="612" height="1330" alt="A PDF slide shown full screen on black" loading="lazy"></div>
-      <div class="shotframe"><img src="shot-night.webp" width="612" height="1330" alt="A Wikipedia article in night mode, deep red on black" loading="lazy"></div>
-      <div class="shotframe"><img src="shot-paywall.webp" width="612" height="1330" alt="FreeView Pro: yearly, lifetime or monthly, at the launch prices" loading="lazy"></div>
-    </div>
-    <div class="shots ipad">
-      <div class="tabframe"><img src="shot-ipad-home.webp" width="880" height="1173" alt="The FreeView home screen on iPad: New Presentation, Library and Files, and the recent presentations, pages and files" loading="lazy"></div>
-      <div class="tabframe"><img src="shot-ipad-pdf.webp" width="880" height="1173" alt="A PDF slide full screen on iPad" loading="lazy"></div>
-    </div>
-  </div>
-</section>
-
-<section class="gallery" style="padding-top:24px">
-  <div class="wrap">
     <h2>Free to use. Pro if you want it all.</h2>
     <p>Viewing, presenting, editing, custom slides and styles are free. Free keeps your three most recent presentations and shares one link at a time, for up to a week. FreeView Pro keeps every presentation and shares as many links as you like, for up to 90 days, with passwords, per-slide views and no FreeView mark.</p>
     <div class="price">
