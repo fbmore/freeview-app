@@ -13,8 +13,8 @@ import pathlib
 
 OUT = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else ".")
 YEAR = "2026"
-UPDATED = "17 October 2026"
-PRIVACY_UPDATED = "17 October 2026"
+UPDATED = "26 October 2026"
+PRIVACY_UPDATED = "26 October 2026"
 EMAIL = "hello@freeview.app"
 STORE = "https://apps.apple.com/app/id1526222244"
 
@@ -341,8 +341,8 @@ FEATURES = "\n".join([
             [("stack", "Keynote, PowerPoint, Word, PDFs, videos, photos, audio"), ("check", "3D models, Lottie animations, Markdown, tables and live web pages"),
              ("folder", "From Files, Photos, AirDrop, Mail or the camera, even a scan")],
             shot("shot-deck.webp", "Editing a presentation in FreeView: a cover, a product brief, photos, a Magic slide, a film, a 3D prototype and a table of preorders, in order")),
-    feature("Make it yours in seconds", "Add a cover with your logo, name, photo and contacts, and text slides for the bits in between. Any web address on a slide becomes a QR code. Pick a style or make one from your logo's colours.",
-            [("photo", "Any picture from the presentation as the cover"), ("check", "Saved styles you can copy to other presentations"),
+    feature("Make it yours in seconds", "Add a cover with your logo, name, photo and contacts, and Magic slides that lay themselves out, even with a live website or a file to download. Any web address on a slide becomes a QR code. Pick a style or make one from your logo's colours.",
+            [("photo", "Your logo from Photos, Files or the clipboard"), ("globe", "Live websites and files to download on a slide"),
              ("code", "A QR code for every link, automatically")],
             shot("shot-cover.webp", "A cover slide over a photo of the sea: title, logo, the presenter's photo, name and contacts"), flip=True),
     feature("Share one link, whatever the size", "Long films, big decks, dozens of photos: send a link, not attachments. Add a welcome message, choose how long it works, and update it after edits without changing the link.",
@@ -360,8 +360,8 @@ FEATURES = "\n".join([
             [("photo", "Crop, rotate, black and white, Reimagine"), ("play", "Trim, mute and pick the cover frame of videos"),
              ("hand", "Take photos, scan documents or record audio straight in")],
             shot("shot-edit.webp", "Editing a photo in FreeView: crop, rotate and black and white"), flip=True),
-    feature("Present anything, anywhere", "On your own screen everything opens full screen with nothing in the way. Hand over an iPad in kiosk mode, or switch to deep red night mode in the dark.",
-            [("lock", "Kiosk mode with a PIN"), ("moon", "Red night mode, pages and videos too"), ("airplay", "AirPlay and external displays")], MOCK_KIOSK),
+    feature("Present anything, anywhere", "On your own screen everything opens full screen with nothing in the way. Hand over an iPad in kiosk mode, let Autoplay run the slides on a loop, or switch to deep red night mode in the dark.",
+            [("lock", "Kiosk mode with a PIN, Autoplay on a loop"), ("moon", "Red night mode, pages and videos too"), ("airplay", "AirPlay and external displays")], MOCK_KIOSK),
     feature("Private by design", "No account, no ads, no tracking. Your files and history never leave your device unless you share them, and shared links end on their own.",
             [("eyeslash", "Private browsing keeps no cookies or history"), ("face", "Lock with Face ID or Touch ID"), ("check", "Stop any link whenever you like")], MOCK_PRIVATE, flip=True),
 ])
@@ -476,7 +476,7 @@ PRIVACY = f"""  <p class="muted">Last updated: {PRIVACY_UPDATED}</p>
   <h2>Shared presentations</h2>
   <p>When you use <strong>Share Presentation</strong>, FreeView uploads a copy of that presentation so it can be watched in a browser at freeview.app:</p>
   <ul>
-    <li><strong>What's uploaded</strong>: the presentation's title, your optional message, its slides as web-ready files (photos, PDF and document pages as pictures, videos, audio, 3D models, animations, tables), the text of your covers and text slides, only the profile details you chose to show on them (for example your name, photo, logo, email, phone, website or social profiles), and, if you include it, your commentary: the video and voice you recorded over the slides, with where each slide comes in.</li>
+    <li><strong>What's uploaded</strong>: the presentation's title, your optional message, its slides as web-ready files (photos, PDF and document pages as pictures, videos, audio, 3D models, animations, tables), the text of your covers and Magic slides, the web addresses of websites you put on a slide (with a picture of each page), any files you attach to a slide for download (as they are, under their own names), only the profile details you chose to show on them (for example your name, photo, logo, email, phone, website or social profiles), and, if you include it, your commentary: the video and voice you recorded over the slides, with where each slide comes in.</li>
     <li><strong>Where</strong>: the public database of FreeView's iCloud container (iCloud.com.fbmore.freeview), run by Apple. Each link has a long random address; there is no list or search of shared presentations, so it can only be found by someone you give the link to.</li>
     <li><strong>Who can see it</strong>: anyone who has the link, without signing in. Link previews in apps like Messages show its title, message and cover picture.</li>
     <li><strong>How long</strong>: until the link ends (after the time you choose) or you stop sharing it in the Shared Links tab. Ended links stop working right away, and their copies are deleted from iCloud within a day.</li>
@@ -485,8 +485,8 @@ PRIVACY = f"""  <p class="muted">Last updated: {PRIVACY_UPDATED}</p>
   </ul>
   <p>Share only what you have the right to share: anyone with the link can view and save what they see.</p>
 
-  <h2>Camera, microphone, photos and files</h2>
-  <p>The camera is used only when you take a photo or video, scan a document, or record a <strong>commentary</strong> (you on camera, talking over your slides); the microphone only when you record audio, a video's sound or a commentary. A commentary is kept with its presentation on your device. <strong>Save as Video</strong> adds a commentary to your Photos library only when you choose to. FreeView uses the system pickers for Photos and Files, so it only sees the items you choose. What you capture or pick stays on your device unless you share it.</p>
+  <h2>Camera, microphone, photos, files and clipboard</h2>
+  <p>The camera is used only when you take a photo or video, scan a document, or record a <strong>commentary</strong> (you on camera, talking over your slides); the microphone only when you record audio, a video's sound or a commentary. A commentary is kept with its presentation on your device. <strong>Save as Video</strong> adds a commentary to your Photos library only when you choose to. FreeView uses the system pickers for Photos and Files, so it only sees the items you choose. It reads the clipboard only when you choose <strong>Paste</strong> or press ⌘V (on Home, in Edit Presentation, or for a logo), never in the background. What you capture, pick or paste stays on your device unless you share it.</p>
 
   <h2>Screen recording and screenshots (Mac)</h2>
   <p><strong>Record Screen</strong> records only the display or window you choose in macOS's own picker, with the camera, the microphone and the Mac's sound if you turn them on. <strong>Take Screenshot</strong> captures only the area you select; it needs macOS's Screen Recording permission, which you grant once in System Settings (with it, Record Screen can also list your displays and windows to choose from). Recordings and screenshots become slides in your presentations and stay on that Mac unless you share them. FreeView's keyboard shortcuts react only to their own key combinations; FreeView doesn't see anything else you type.</p>
@@ -498,7 +498,7 @@ PRIVACY = f"""  <p class="muted">Last updated: {PRIVACY_UPDATED}</p>
   <p>FreeView offers actions to the Shortcuts app and Siri (open a presentation, next and previous slide, create a presentation or a link, and on a Mac start and stop a screen recording). To do that it gives Apple's frameworks on your device the titles, dates, covers and link addresses of your presentations and what the viewer is showing. This stays on your device under Apple's terms; nothing is sent to us. Nothing is listed while FreeView is locked with Face ID.</p>
 
   <h2>Face ID and Touch ID</h2>
-  <p>Used only if you turn on <strong>Lock with Face ID</strong>, to unlock FreeView. Your device handles it entirely; FreeView never receives face or fingerprint data.</p>
+  <p>Used only if you turn on <strong>Lock with Face ID</strong> (Touch ID on a Mac), to unlock FreeView. Your device handles it entirely; FreeView never receives face or fingerprint data.</p>
 
   <h2>Purchases</h2>
   <p>FreeView Pro is sold through the App Store. To unlock and restore it, FreeView uses <a href="https://www.revenuecat.com/privacy/">RevenueCat</a>, which receives an anonymous app user identifier and your App Store receipt (what you bought and when). It does not receive your name, email or Apple Account details. Payments are handled by Apple.</p>
@@ -513,7 +513,7 @@ PRIVACY = f"""  <p class="muted">Last updated: {PRIVACY_UPDATED}</p>
   </ul>
 
   <h2>Websites you visit</h2>
-  <p>Pages you open in FreeView, including web-page slides, load directly from their own servers and follow their own privacy policies.</p>
+  <p>Pages you open in FreeView, including web-page slides and websites on Magic slides (live only while their slide is on screen), load directly from their own servers and follow their own privacy policies. In a shared link, a website on a slide shows as a picture; it loads from its own server only when a viewer clicks it, in a new tab.</p>
 
   <h2>Children</h2>
   <p>FreeView is not directed at children and does not knowingly collect information from anyone.</p>
@@ -538,13 +538,13 @@ TERMS = f"""  <p class="muted">Last updated: {UPDATED}</p>
   <hr>
 
   <h2>The service</h2>
-  <p>FreeView shows web pages and files full screen (PDFs, videos, images, documents, HTML prototypes and presentations) and lets you make presentations with your own cover and text slides, edit their photos, videos and audio, record yourself presenting them, record your screen and take screenshots on a Mac, and share them as a link that plays in any browser. It is free to use, keeps your three most recent presentations and shares one link at a time; FreeView Pro keeps every presentation and shares more links, for longer, with passwords and per-slide views.</p>
+  <p>FreeView shows web pages and files full screen (PDFs, videos, images, documents, HTML prototypes and presentations) and lets you make presentations with your own cover and Magic slides (with websites and files to download if you like), edit their photos, videos and audio, record yourself presenting them, record your screen and take screenshots on a Mac, and share them as a link that plays in any browser. It is free to use, keeps your three most recent presentations and shares one link at a time; FreeView Pro keeps every presentation and shares more links, for longer, with passwords and per-slide views.</p>
 
   <h2>FreeView Pro and subscriptions</h2>
   <ul>
-    <li><strong>Plans:</strong> Monthly, $1.99 per month; Yearly, $9.99 per year, starting with a one-week free trial for eligible Apple Accounts; Lifetime, $19.99, a one-time purchase. Prices are in US dollars; the App Store shows local pricing.</li>
-    <li><strong>Payment:</strong> charged to your Apple Account at confirmation of purchase, or when the free week ends.</li>
-    <li><strong>Renewal:</strong> the yearly plan renews automatically unless cancelled at least 24 hours before the end of the current period. Your account is charged for renewal within 24 hours before the period ends.</li>
+    <li><strong>Plans:</strong> Monthly, $1.99 per month; Yearly, $9.99 per year, starting with a one-week free trial for eligible Apple Accounts; Lifetime, $19.99, a one-time purchase. Until 15 November 2026 (launch prices), eligible Apple Accounts get the first year of Yearly for $4.99 instead of the free week, and Lifetime is $9.99. Prices are in US dollars; the App Store shows local pricing.</li>
+    <li><strong>Payment:</strong> charged to your Apple Account at confirmation of purchase (a launch price for the first year is charged then, once), or when the free week ends.</li>
+    <li><strong>Renewal:</strong> the monthly and yearly plans renew automatically, at their regular price after any free week or launch price, unless cancelled at least 24 hours before the end of the current period. Your account is charged for renewal within 24 hours before the period ends.</li>
     <li><strong>Managing:</strong> cancel or change in Settings → Apple Account → Subscriptions. Cancelling stops the next renewal; Pro stays on until the period ends.</li>
     <li><strong>Free trial:</strong> any unused part of a free trial is forfeited when you purchase a subscription.</li>
     <li><strong>Refunds:</strong> handled by Apple at <a href="https://reportaproblem.apple.com">reportaproblem.apple.com</a>.</li>
@@ -612,14 +612,18 @@ SUPPORT = f"""  <div class="contact">
   <h2>Presentations and sharing</h2>
   <h3>Can FreeView open Keynote, PowerPoint and Word files?</h3>
   <p>Yes. Each slide or page becomes a still picture, so the presentation looks right on any screen and in shared links. Animations, builds, transitions and embedded video aren't kept, and fonts your device doesn't have are replaced with similar ones. Spreadsheets and CSV files show as a table.</p>
-  <h3>How do I add a cover or a text slide?</h3>
-  <p>In <strong>Edit Presentation</strong>, choose <strong>Add Cover Slide</strong> or <strong>Add Text Slide</strong>. A cover can use any picture from the presentation, Photos or the camera as its background, and show your logo, name, photo and the contacts you pick. Any web address in a slide's text shows as a QR code.</p>
+  <h3>How do I add a cover or a Magic slide?</h3>
+  <p>In <strong>Edit Presentation</strong>, choose <strong>Add Cover Slide</strong> or <strong>Add Magic Slide</strong>. A cover can use any picture from the presentation, Photos or the camera as its background, and show your logo, name, photo and the contacts you pick. Any web address in a slide's text shows as a QR code.</p>
   <h3>How do styles work?</h3>
-  <p>Tap <strong>Style…</strong> in Edit Presentation to pick a preset, colours, font and logo, or make a style from your logo's colours. Styles affect covers and text slides only. Save a style by name to use it again, or copy one from another presentation.</p>
+  <p>Tap <strong>Style…</strong> in Edit Presentation to pick a preset, colours, font and logo, or make a style from your logo's colours. Styles affect covers and Magic slides only. Save a style by name to use it again, or copy one from another presentation.</p>
+  <h3>Can a slide show a website or a file to download?</h3>
+  <p>Yes, on a Magic slide. Tap it in Edit Presentation, then under Media choose <strong>Add a Website</strong>, or <strong>Add from Files</strong> for a file to download, like a zip or a PDF. In the presentation the website is live while its slide is on screen; a file shows as a card with its name and size, and tapping it lets you save or send it. People who open your shared link see the website as a picture that opens it in a new tab, and download the file from its card.</p>
   <h3>Where do my name, logo and contacts come from?</h3>
-  <p>Settings → <strong>Profile and Contacts</strong>. Each slide chooses which of them to show, if any.</p>
+  <p>Settings → <strong>Profile and Contacts</strong>. Each slide chooses which of them to show, if any. <strong>Choose Logo…</strong> takes it from Photos, from Files (PNG, JPEG, HEIC, PDF or SVG, kept sharp and transparent) or from the clipboard with <strong>Paste</strong>, including SVG code copied from a design tool. A presentation can have a logo of its own in <strong>Style…</strong>.</p>
+  <h3>Can the slides move on by themselves?</h3>
+  <p>Yes. While presenting, open the round button's <strong>Slideshow</strong> menu and choose <strong>Autoplay</strong>; <strong>Each Slide For</strong> sets 3, 5, 10 or 20 seconds. Videos and audio play to the end before the next slide, the presentation starts over after the last one, and the screen stays on until you choose <strong>Stop Autoplay</strong>.</p>
   <h3>Can I edit photos and videos in a presentation?</h3>
-  <p>Tap a photo, video, audio clip or PDF in Edit Presentation (or a cover's background or a text slide's picture). Photos can be cropped, rotated, made black and white, or reimagined with Image Playground where available; videos trimmed, muted, rotated or given a cover frame; audio trimmed or re-recorded; PDF pages rotated, cropped or made black and white. <strong>Revert</strong> always brings back the original.</p>
+  <p>Tap a photo, video, audio clip or PDF in Edit Presentation (or a cover's background or a Magic slide's picture). Photos can be cropped, rotated, made black and white, or reimagined with Image Playground where available; videos trimmed, muted, rotated or given a cover frame; audio trimmed or re-recorded; PDF pages rotated, cropped or made black and white. <strong>Revert</strong> always brings back the original.</p>
   <h3>How do I share a presentation?</h3>
   <p>Touch and hold it in Recent and choose <strong>Share Presentation…</strong>. Pick how long the link works and add a message if you like; the link opens in any browser, ready to present. If you edit the presentation later, choose <strong>Update Shared Link…</strong>: the link stays the same.</p>
   <h3>How do I stop sharing?</h3>
@@ -636,8 +640,8 @@ SUPPORT = f"""  <div class="contact">
   <p>Force-quit FreeView (swipe it up in the app switcher) and reopen it; you'll land on the home screen. Then go to Settings, turn kiosk mode off and on again to set a new PIN.</p>
   <h3>Can people leave the app?</h3>
   <p>Kiosk mode controls what happens inside FreeView. To keep an iPhone or iPad locked to FreeView, also turn on Guided Access: Settings → Accessibility → Guided Access.</p>
-  <h3>FreeView on a Mac</h3>
-  <p>FreeView runs on Apple silicon Macs as an iPad app in a window. Kiosk mode hides the controls there, but macOS always lets people close or quit the window, so use it for presenting rather than unattended kiosks.</p>
+  <h3>Kiosk mode on a Mac?</h3>
+  <p>Kiosk mode hides the controls there too, but macOS always lets people close or quit the window, so use it for presenting rather than unattended kiosks.</p>
 
   <h2>Recording</h2>
   <h3>How do I record a commentary?</h3>
@@ -645,11 +649,21 @@ SUPPORT = f"""  <div class="contact">
   <h3>Can people watch my commentary?</h3>
   <p>Yes: turn on <strong>Include Commentary</strong> when you share the presentation. People who open the link can watch you present over the live slides, or browse the slides on their own. <strong>Save as Video</strong> makes a video of it for social posts, in the shape you choose.</p>
 
+  <h2>FreeView for Mac</h2>
+  <h3>Which Macs does FreeView run on?</h3>
+  <p>Any Mac with macOS 15.2 or later, Apple silicon or Intel. It's the same app as on iPhone and iPad, so FreeView Pro bought on one unlocks the others. Open files from the Finder or the Dock, drag them onto the window, or paste them with ⌘V.</p>
+  <h3>How do I record my screen?</h3>
+  <p>Choose <strong>Record Screen…</strong> from FreeView's mark in the menu bar (or press ⌃⇧⌘R, or Presentation → Record Screen…). Pick a display or a window in macOS's picker, turn the camera, microphone and the Mac's sound on or off, and press <strong>Start Recording</strong>. After a 3-2-1, FreeView steps out of the way; the menu bar shows the time, with Pause, Stop and Discard. The recording becomes a slide: of the presentation you're editing, or of a new one. Recordings are up to 10 minutes and stay on that Mac.</p>
+  <h3>How do I take a screenshot into a presentation?</h3>
+  <p>Press ⌃⇧⌘S in any app (or choose <strong>Take Screenshot…</strong> from FreeView's menu bar mark), drag over the area you want and press Capture or Return; each capture becomes a slide. The first time, macOS asks you to allow FreeView in System Settings → Privacy &amp; Security → Screen &amp; System Audio Recording, then to reopen FreeView. With that permission, Record Screen also lists your displays and windows to choose from.</p>
+  <h3>Can I change the keyboard shortcuts?</h3>
+  <p>Yes: FreeView → Settings → Keyboard Shortcuts. Choose Change… and type a new combination with ⌘, ⌃ or ⌥. They work in any app while FreeView is open.</p>
+
   <h2>Privacy and night mode</h2>
   <h3>Private browsing or "Don't remember my browsing"?</h3>
   <p>Private browsing keeps no cookies, logins or history once a page closes. "Don't remember my browsing" keeps you signed in to sites but adds nothing to history.</p>
-  <h3>Face ID isn't asking when I come back.</h3>
-  <p>Turn on <strong>Lock with Face ID</strong> in FreeView's Settings, and make sure FreeView is allowed in iOS Settings → Face ID &amp; Passcode → Other Apps.</p>
+  <h3>Face ID or Touch ID isn't asking when I come back.</h3>
+  <p>Turn on <strong>Lock with Face ID</strong> (<strong>Lock with Touch ID</strong> on a Mac) in FreeView's Settings, and on iPhone or iPad make sure FreeView is allowed in iOS Settings → Face ID &amp; Passcode → Other Apps.</p>
   <h3>Night mode looks too bright on a white page.</h3>
   <p>Turn on <strong>Darken web pages</strong> under Night mode in Settings.</p>
 
