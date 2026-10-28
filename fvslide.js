@@ -149,7 +149,7 @@
     .fv h1 { font-size: calc(10cqmin * var(--fv-title)); }
     .fv footer { flex-direction: column; align-items: stretch; }
     .fv footer > .qrs { align-self: flex-end; }
-    .fv .media.fill.n2 { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
+    .fv .media.n2, .fv .media.fill.n2 { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
     .fv .media.fill.n3 { grid-template-rows: minmax(0, 2fr) minmax(0, 1fr); }
     .fv .media.fill.n3 img:first-child { grid-row: auto; grid-column: span 2; }
   }`;
