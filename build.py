@@ -371,8 +371,8 @@ INDEX_BODY = f"""{ICONS}
   <img class="logo" src="logo.png" alt="FreeView" width="116" height="116">
   <h1>FreeView</h1>
   <p class="tag"><strong>Easy to build. Easier to share.</strong> Drop in any mix of files for a presentation, then send one link that plays on any screen.</p>
-  <video class="herovid" src="hero.mp4?v=7" poster="hero-poster.webp?v=7" width="1280" height="720" autoplay muted loop playsinline preload="auto"
-    aria-label="A 30-second tour: a pile of files (a deck, a PDF, a film, photos, a 3D model, a spreadsheet, a voice note) drops into FreeView and becomes a presentation; a branded cover is added in one tap; it is sent as one link, up to 2 GB with Pro; and it plays on a laptop, tablet, phone, or a TV through AirPlay, with no app or account. Easy to build, easier to share."></video>
+  <video class="herovid" src="hero.mp4?v=8" poster="hero-poster.webp?v=8" width="1280" height="720" autoplay muted loop playsinline preload="auto"
+    aria-label="A 30-second tour of FreeView on iPad and Mac: a restaurant menu playing on its own with Autoplay; the slide editor with every slide down the side; a Magic slide with a live website and a file to download; a 3D model presented full screen; a commentary talking over the slides; one link shared to any browser; and, on the Mac, recording the screen and taking a screenshot straight into the slides."></video>
   <a class="appstore heroBadge" href="{STORE}" target="_blank" rel="noopener" aria-label="Download FreeView on the App Store">
     <img src="appstore-badge.svg" alt="Download on the App Store">
   </a>
