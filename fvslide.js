@@ -23,6 +23,8 @@
  *   videos: [URL | null] beside images: the video or audio a picture was made from, played when it's opened
  *   downloads: [{ name, size, href } | null] beside images: a file to download (a zip…) whose card is the
  *   picture. The app takes the click to share it; on the web a click downloads it.
+ *   fits: ['contain' | 'cover' | null] beside images: 'contain' fits that picture in its cell, on black
+ *   (a live source set to Fit), instead of filling it.
  *   sites: [URL | null] beside images: the web address a picture of a page was taken from. The app lays the
  *   live page over the picture; on the web (where most sites refuse to be framed) a click opens the address
  * A Magic slide's pictures can be tapped to see them full screen: in the app, the app shows the item
@@ -291,6 +293,10 @@
     root.querySelectorAll('.body a').forEach((a) => { a.target = '_blank'; a.rel = 'noopener'; });
     if (!cover && urls.length) placeQR(root, urls);
     const pictures = root.querySelectorAll('.media img');
+    // spec.fits[i] 'contain': that picture fits its cell (on black) instead of filling it (a live source set to Fit).
+    pictures.forEach((img, i) => {
+      if (shown[i] && (spec.fits || [])[i] === 'contain') { img.style.objectFit = 'contain'; img.style.backgroundColor = '#000'; }
+    });
     if (pictures.length && spec.zoom !== false) {
       const app = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.fvPicture;
       const items = [...pictures].map((img, i) => ({ src: img.getAttribute('src'), video: shown[i] ? shown[i].video : null }));
