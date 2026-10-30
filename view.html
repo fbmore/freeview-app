@@ -14,7 +14,7 @@
   The shared-presentation viewer. https://freeview.app/v/<id> (the Worker in freeview-views) renders the
   link preview and forwards here with the id in the hash. The deck comes from the Worker's /set/<id>
   (a CloudKit SharedSet record): items are assets, slides say which item or web address each slide shows,
-  transition matches the app's setting. Made for presenting: no download, no print.
+  transition matches the app's setting, and it plays by itself when it was shared with Autoplay. Made for presenting: no download, no print.
 -->
 <style>
   :root {
@@ -398,6 +398,8 @@
 
   let slides = [];      // { kind: 'image'|'video'|'web', src, name }
   let index = 0, busy = false, queued = null, started = false, soundOn = false;
+  // Autoplay (set when the link was shared): seconds a slide stays; a video or audio slide plays to its end.
+  let autoSecs = 0, autoTimer = null;
   let nodes = [];
   let tour = null, tourOn = false;   // the commentary (presenter video + marks + layout), and whether it's playing the slides
 
@@ -517,6 +519,7 @@
     const names = val(f.itemNames) || [];
     window.__fvItems = items; window.__fvNames = names;
     let opts = {}; try { opts = JSON.parse(val(f.options) || '{}'); } catch {}
+    autoSecs = Number(opts.autoplay) > 0 ? Number(opts.autoplay) : 0;
     $('#mark').hidden = !opts.mark;
     const order = val(f.slides) || items.map((_, i) => 'a:' + i);
     for (const s of order) {
@@ -890,6 +893,7 @@
       if (!open.hidden) { open.href = slides[n].src; open.querySelector('span').textContent = slides[n].name; }
       counter.textContent = `${n + 1} / ${slides.length}`;
       if (started) slideSeen(n);
+      scheduleAuto();
       counter.hidden = slides.length < 2;
       $('#prev').disabled = n === 0;
       $('#next').disabled = n === slides.length - 1;
@@ -913,6 +917,18 @@
       swap();
     }
     wake();
+  }
+  // The next slide after autoSecs (or a video's or clip's length, if longer), round to the first
+  // after the last, as the app's Autoplay goes. A commentary drives the slides itself.
+  function scheduleAuto() {
+    clearTimeout(autoTimer);
+    if (!autoSecs || !started || tourOn) return;
+    const at = index;
+    const advance = () => { if (index === at && !tourOn) go(at >= slides.length - 1 ? 0 : at + 1); };
+    const m = nodes[at] && nodes[at].querySelector('video, audio');
+    const wait = (d) => { clearTimeout(autoTimer); autoTimer = setTimeout(advance, Math.max(autoSecs, isFinite(d) && d > 0 ? d : 0) * 1000); };
+    wait(m ? m.duration : 0);
+    if (m && !(m.duration > 0)) m.addEventListener('loadedmetadata', () => { if (index === at) wait(m.duration); }, { once: true });
   }
   const target = () => (queued !== null ? queued : index);
   const next = () => go(Math.min(target() + 1, slides.length - 1));
@@ -941,6 +957,7 @@
     fullscreen(true);
     const v = nodes[index].querySelector('video, audio');
     if (v) v.play().catch(() => {});
+    scheduleAuto();
     wake();
   }
   $('#present').addEventListener('click', () => (tour ? beginTour() : begin()));
