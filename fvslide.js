@@ -27,6 +27,9 @@
  *   (a live source set to Fit), instead of filling it.
  *   sites: [URL | null] beside images: the web address a picture of a page was taken from. The app lays the
  *   live page over the picture; on the web (where most sites refuse to be framed) a click opens the address
+ *   syncs: true with videos (a shared link's Sync Media slide): the videos play in their cells, together,
+ *   as one (a click on one plays or pauses all), and begin again together once the longest has ended.
+ *   element.fvSync then has restart(), play(), pause(), toggle() → playing, setMuted(m), drive(t, playing).
  * A Magic slide's pictures can be tapped to see them full screen: in the app, the app shows the item
  * (the `fvPicture` message handler gets the picture's index); on the web, a viewer drawn here
  * (videos and audio play, ← → between pictures, Esc or × closes), and a website opens in a new tab.
@@ -321,7 +324,85 @@
     }
     el.innerHTML = '';
     el.appendChild(root);
+    el.fvSync = spec.syncs && !cover ? syncMedia(root, shown, spec.fits || []) : null;
     return root;
+  }
+
+  // Sync Media on the web: each video over its picture in the grid, all on one clock. The longest
+  // leads; the others follow it (put right when they drift), and end where they end until it does.
+  function syncMedia(root, shown, fits) {
+    const pictures = [...root.querySelectorAll('.media img')];
+    const grid = pictures.length ? pictures[0].parentElement : null;
+    const items = [];
+    pictures.forEach((img, i) => {
+      const src = shown[i] && shown[i].video;
+      if (!src || !grid) return;
+      const v = document.createElement('video');
+      v.className = 'fv-sync'; v.playsInline = true; v.preload = 'auto'; v.poster = img.src; v.src = src;
+      v.setAttribute('aria-label', 'Video, in sync with the others on the slide');
+      const cs = getComputedStyle(img);
+      Object.assign(v.style, { position: 'absolute', objectFit: fits[i] === 'contain' ? 'contain' : cs.objectFit || 'cover',
+                               background: fits[i] === 'contain' ? '#000' : 'transparent', borderRadius: cs.borderRadius, cursor: 'pointer' });
+      // Audio has no picture: its card stays, the clip plays unseen.
+      v.addEventListener('loadedmetadata', () => { if (!v.videoWidth) v.style.opacity = '0'; });
+      v.addEventListener('click', (e) => { e.stopPropagation(); sync.toggle(); });
+      grid.appendChild(v);
+      items.push([img, v]);
+    });
+    if (!items.length) return null;
+    grid.style.position = 'relative';
+    const place = () => items.forEach(([img, v]) => Object.assign(v.style, {
+      left: img.offsetLeft + 'px', top: img.offsetTop + 'px', width: img.offsetWidth + 'px', height: img.offsetHeight + 'px' }));
+    place();
+    if (window.ResizeObserver) new ResizeObserver(place).observe(grid);
+    pictures.forEach((img) => img.addEventListener('load', place));
+    const videos = items.map(([, v]) => v);
+    const length = (v) => (isFinite(v.duration) ? v.duration : 0);
+    const lead = () => videos.reduce((a, b) => (length(b) > length(a) ? b : a));
+    let playing = false, generation = 0;
+    const ready = (v) => (v.readyState >= 3 ? Promise.resolve() : new Promise((ok) => {
+      v.addEventListener('canplay', ok, { once: true }); setTimeout(ok, 4000);
+    }));
+    const at = (t) => videos.forEach((v) => { const d = length(v); v.currentTime = d ? Math.min(t, Math.max(0, d - 0.05)) : t; });
+    const sync = {
+      restart() {
+        const mine = ++generation;
+        playing = true;
+        videos.forEach((v) => v.pause());
+        at(0);
+        Promise.all(videos.map(ready)).then(() => { if (mine === generation && playing) sync.play(); });
+      },
+      play() {
+        playing = true;
+        const t = lead().currentTime;
+        videos.forEach((v) => { if (t < length(v) || v === lead()) v.play().catch(() => {}); });
+      },
+      pause() { playing = false; generation++; videos.forEach((v) => v.pause()); },
+      toggle() { if (playing) sync.pause(); else sync.play(); return playing; },
+      setMuted(m) { videos.forEach((v) => { v.muted = m; }); },
+      get playing() { return playing; },
+      // A replay's moment (seconds in, looping as they do) and whether it plays.
+      drive(t, on) {
+        const d = length(lead()), want = d ? t % d : t;
+        if (Math.abs(lead().currentTime - want) > 0.35) at(want);
+        if (on && !playing) sync.play();
+        if (!on && playing) sync.pause();
+      },
+    };
+    // The others follow the leader; once it ends, all begin again together.
+    videos.forEach((v) => v.addEventListener('ended', () => {
+      if (v === lead() && playing) sync.restart();
+    }));
+    setInterval(() => {
+      if (!playing || !root.isConnected) return;
+      const l = lead(), t = l.currentTime;
+      for (const v of videos) {
+        if (v === l || t >= length(v)) continue;
+        if (Math.abs(v.currentTime - t) > 0.25) v.currentTime = t;
+        if (v.paused) v.play().catch(() => {});
+      }
+    }, 1000);
+    return sync;
   }
 
   // Full screen on the web: one picture (or its video) at a time over everything, until closed.

@@ -667,7 +667,7 @@
     fflate: 'https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js',
     modelViewer: 'https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js',
     qrcode: 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js',
-    fvslide: '/fvslide.js?v=17',   // the app's custom-slide renderer (FreeView/Support/Web/fvslide.js)
+    fvslide: '/fvslide.js?v=18',   // the app's custom-slide renderer (FreeView/Support/Web/fvslide.js)
   };
   // <model-viewer> is an ES module.
   function loadModule(url) {
@@ -712,6 +712,8 @@
       return v;
     };
     FV.render(el, resolve(spec));
+    // Drawn after the slide came on: its synced videos start now.
+    if (el.fvSync && started && el.classList.contains('on')) { el.fvSync.setMuted(tourOn || !soundOn); if (!tourOn) el.fvSync.restart(); }
     el.classList.add('ready');
     el.querySelectorAll('a').forEach((a) => a.addEventListener('click', (e) => e.stopPropagation()));
   }
@@ -882,7 +884,9 @@
           el.classList.toggle('before', i < n);
         }
         el.classList.toggle('on', i === n);
-        const v = el.querySelector('video, audio');
+        // Sync Media: the slide's videos start together (the replay drives them in a tour).
+        if (el.fvSync) { if (i === n && started) { el.fvSync.setMuted(tourOn || !soundOn); if (!tourOn) el.fvSync.restart(); } else el.fvSync.pause(); }
+        const v = el.fvSync ? null : el.querySelector('video, audio');
         if (v) { if (i === n && started) { if (!tourOn) v.currentTime = 0; v.muted = tourOn || !soundOn; v.play().catch(() => {}); } else v.pause(); }
         if (el.lottie) { if (i === n) el.lottie.goToAndPlay(0, true); else el.lottie.pause(); }
       });
@@ -955,7 +959,9 @@
     $('#welcome').classList.add('gone');
     setTimeout(() => { $('#cover').hidden = true; $('#welcome').hidden = true; }, 420);
     fullscreen(true);
-    const v = nodes[index].querySelector('video, audio');
+    const sync = nodes[index].fvSync;
+    if (sync) { sync.setMuted(!soundOn); sync.restart(); }
+    const v = sync ? null : nodes[index].querySelector('video, audio');
     if (v) v.play().catch(() => {});
     scheduleAuto();
     wake();
@@ -975,7 +981,7 @@
   // with the rest), so it's clear there's sound to turn back on.
   function markSound() {
     const s = slides[index];
-    document.body.classList.toggle('sound-off', !soundOn && !!s && (s.kind === 'video' || s.kind === 'audio'));
+    document.body.classList.toggle('sound-off', !soundOn && !!s && (s.kind === 'video' || s.kind === 'audio' || !!(nodes[index] && nodes[index].fvSync)));
   }
 
   function updateSound() {
@@ -1006,6 +1012,8 @@
       else if (k === 'f') fullscreen(!(document.fullscreenElement || document.webkitFullscreenElement));
       return;
     }
+    // Space on a Sync Media slide plays or pauses its videos, as in the app.
+    if (k === ' ' && started && nodes[index] && nodes[index].fvSync) { e.preventDefault(); nodes[index].fvSync.toggle(); return; }
     if (['ArrowRight', 'ArrowDown', 'PageDown', ' '].includes(k)) { e.preventDefault(); begin(); next(); }
     else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(k)) { e.preventDefault(); prev(); }
     else if (k === 'Home') go(0);
@@ -1200,6 +1208,19 @@
   function replay(n, t) {
     const el = nodes[n], s = slides[n];
     if (!el || !s) return;
+    if (el.fvSync) {
+      // Synced videos: as recorded (their play and pause), or, in a commentary made before that was
+      // recorded, from the moment the slide came on.
+      const pair = lastOf('video', n, t);
+      if (pair) {
+        const [pos, playing] = pair.last.v;
+        el.fvSync.drive(pos + (playing ? t - pair.last.t : 0), playing && !cam.paused);
+      } else {
+        const m = tour.marks.filter((x) => x.time <= t + 0.001).pop();
+        el.fvSync.drive(t - (m && m.slide === n ? m.time : 0), !cam.paused);
+      }
+      return;
+    }
     if (s.kind === 'video') {
       const v = el.querySelector('video:not(.clip)'), pair = lastOf('video', n, t);
       if (v && pair) {
