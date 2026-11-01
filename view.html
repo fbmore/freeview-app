@@ -949,8 +949,13 @@
       sid = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36);
       try { sessionStorage.setItem('fv-visit-' + id, sid); } catch {}
     }
-    const seconds = [];
-    let current = -1, since = 0, began = 0;
+    // Kept for the tab's session too, so a reload adds to this viewing instead of starting it again.
+    let seconds = [], began = 0;
+    try {
+      seconds = JSON.parse(sessionStorage.getItem('fv-visit-t-' + id) || '[]');
+      began = Number(sessionStorage.getItem('fv-visit-b-' + id)) || 0;
+    } catch {}
+    let current = -1, since = 0;
     const settle = () => {
       if (current >= 0 && since) seconds[current] = (seconds[current] || 0) + (performance.now() - since) / 1000;
       since = document.visibilityState === 'visible' ? performance.now() : 0;
@@ -959,6 +964,7 @@
       if (!began) return;
       settle();
       const t = Array.from({ length: slides.length }, (_, i) => (seconds[i] == null ? null : Math.round(seconds[i] * 10) / 10));
+      try { sessionStorage.setItem('fv-visit-t-' + id, JSON.stringify(seconds)); sessionStorage.setItem('fv-visit-b-' + id, String(began)); } catch {}
       const body = JSON.stringify({ sid, start: began, t });
       const to = `${API}/visit/${encodeURIComponent(id)}`;
       if (!(navigator.sendBeacon && navigator.sendBeacon(to, body))) fetch(to, { method: 'POST', body, keepalive: true }).catch(() => {});
