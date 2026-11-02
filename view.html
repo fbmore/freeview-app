@@ -713,7 +713,7 @@
     };
     FV.render(el, resolve(spec));
     // Drawn after the slide came on: its synced videos start now.
-    if (el.fvSync && started && el.classList.contains('on')) { el.fvSync.setMuted(tourOn || !soundOn); if (!tourOn) el.fvSync.restart(); }
+    if (el.fvSync && started && el.classList.contains('on')) { el.fvSync.setMuted(!soundOn); if (!tourOn) el.fvSync.restart(); }
     el.classList.add('ready');
     el.querySelectorAll('a').forEach((a) => a.addEventListener('click', (e) => e.stopPropagation()));
   }
@@ -885,7 +885,8 @@
         }
         el.classList.toggle('on', i === n);
         // Sync Media: the slide's videos start together (the replay drives them in a tour).
-        if (el.fvSync) { if (i === n && started) { el.fvSync.setMuted(tourOn || !soundOn); if (!tourOn) el.fvSync.restart(); } else el.fvSync.pause(); }
+        // Each synced video's own sound (on or off in the app), with the commentary too.
+        if (el.fvSync) { if (i === n && started) { el.fvSync.setMuted(!soundOn); if (!tourOn) el.fvSync.restart(); } else el.fvSync.pause(); }
         const v = el.fvSync ? null : el.querySelector('video, audio');
         if (v) { if (i === n && started) { if (!tourOn) v.currentTime = 0; v.muted = tourOn || !soundOn; v.play().catch(() => {}); } else v.pause(); }
         if (el.lottie) { if (i === n) el.lottie.goToAndPlay(0, true); else el.lottie.pause(); }

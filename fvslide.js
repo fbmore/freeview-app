@@ -30,6 +30,8 @@
  *   syncs: true with videos (a shared link's Sync Media slide): the videos play in their cells, together,
  *   as one (a click on one plays or pauses all), and begin again together once the longest has ended.
  *   element.fvSync then has restart(), play(), pause(), toggle() → playing, setMuted(m), drive(t, playing).
+ *   silent: [true | null] beside images: that video's sound is off (each recorded source's sound is in its
+ *   own video, turned on or off in the app); setMuted leaves those muted.
  * A Magic slide's pictures can be tapped to see them full screen: in the app, the app shows the item
  * (the `fvPicture` message handler gets the picture's index); on the web, a viewer drawn here
  * (videos and audio play, ← → between pictures, Esc or × closes), and a website opens in a new tab.
@@ -232,7 +234,7 @@
 
     // A Magic slide's layout, from what it has.
     // Each picture keeps the video or audio behind it (a picture that couldn't be made is left out).
-    const shown = cover ? [] : (spec.images || []).map((src, i) => ({ src, video: (spec.videos || [])[i] || null, site: (spec.sites || [])[i] || null, download: (spec.downloads || [])[i] || null })).filter((p) => p.src).slice(0, 4);
+    const shown = cover ? [] : (spec.images || []).map((src, i) => ({ src, video: (spec.videos || [])[i] || null, silent: !!(spec.silent || [])[i], site: (spec.sites || [])[i] || null, download: (spec.downloads || [])[i] || null })).filter((p) => p.src).slice(0, 4);
     const images = shown.map((p) => p.src);
     const body = (spec.body || '').trim(), hasTitle = !!(spec.title || '').trim();
     const layout = cover ? '' : images.length ? (body ? 'split' : hasTitle ? 'gallery' : 'grid') : 'hero';
@@ -338,6 +340,7 @@
       const src = shown[i] && shown[i].video;
       if (!src || !grid) return;
       const v = document.createElement('video');
+      v.fvSilent = !!shown[i].silent; v.muted = v.fvSilent;
       v.className = 'fv-sync'; v.playsInline = true; v.preload = 'auto'; v.poster = img.src; v.src = src;
       v.setAttribute('aria-label', 'Video, in sync with the others on the slide');
       const cs = getComputedStyle(img);
@@ -379,7 +382,7 @@
       },
       pause() { playing = false; generation++; videos.forEach((v) => v.pause()); },
       toggle() { if (playing) sync.pause(); else sync.play(); return playing; },
-      setMuted(m) { videos.forEach((v) => { v.muted = m; }); },
+      setMuted(m) { videos.forEach((v) => { v.muted = m || v.fvSilent; }); },
       get playing() { return playing; },
       // A replay's moment (seconds in, looping as they do) and whether it plays.
       drive(t, on) {
