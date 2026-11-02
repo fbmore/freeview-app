@@ -1143,8 +1143,9 @@
   let override = null;          // a layout chosen here: a template id, 'recorded', or null for the creator's choice
   let appliedTemplate = null, markShown = -1, raf = 0, scrubbing = false, tourStarted = false;
   // Waiting on a slide before the commentary's first (a screen recording's cover): the presenter still
-  // on their first frame, the slides the viewer's own until they reach it or press Play.
-  let holding = false;
+  // on their first frame for a moment (or until the viewer moves on or presses Play), then it plays.
+  let holding = false, holdTimer = 0;
+  const HOLD_SECONDS = 3;
   function layoutAt(t) {
     const L = override === 'recorded' ? tour.recordedLayout : override ? null : tour.layout;
     if (!L) return override;
@@ -1230,7 +1231,7 @@
     menu.innerHTML = choices.map(([id, name, icon], k) => `${k === 1 ? '<hr>' : ''}<button role="menuitemradio" data-id="${id}" aria-checked="${on(id)}" class="${on(id) ? 'on' : ''}">${icon}${name}${TICK}</button>`).join('');
     menu.querySelectorAll('button').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); override = b.dataset.id; applyLayout(layoutAt(cam.currentTime || 0), true); menu.classList.remove('open'); $('#layoutbtn').setAttribute('aria-expanded', 'false'); }));
   }
-  function release() { holding = false; markShown = -1; cam.play().catch(() => {}); }
+  function release() { clearTimeout(holdTimer); holding = false; markShown = -1; cam.play().catch(() => {}); }
   // While holding: back and forth through the slides before the commentary's, which starts on reaching it.
   function holdStep(dir) { const n = index + dir; if (n >= tour.marks[0].slide) release(); else if (n >= 0) go(n); }
   function togglePlay() { if (!tourOn) return; if (holding) return release(); if (cam.ended) { seekTo(0); cam.play().catch(() => {}); } else if (cam.paused) cam.play().catch(() => {}); else cam.pause(); }
@@ -1362,14 +1363,17 @@
     cam.muted = false;
     // Opened on a slide before the commentary's: the presenter waits there, still, until the viewer moves on.
     holding = index < tour.marks[0].slide;
-    if (holding) { cam.pause(); document.body.classList.add('paused'); } else cam.play().catch(() => {});
+    if (holding) {
+      cam.pause(); document.body.classList.add('paused');
+      holdTimer = setTimeout(() => { if (holding && tourOn) release(); }, HOLD_SECONDS * 1000);
+    } else cam.play().catch(() => {});
     tick0();
     event('tourStart');
   }
   function leaveTour() {
     if (!tourOn) return;
     tourOn = false;
-    holding = false;
+    holding = false; clearTimeout(holdTimer);
     cancelAnimationFrame(raf);
     cam.pause();
     $('#layouts').classList.remove('open');
