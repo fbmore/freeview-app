@@ -55,11 +55,11 @@ footer a{color:var(--muted)}
   <img src="logo.png" alt="FreeView" width="52" height="52" style="border-radius:12px;display:block;margin:12px 0 4px;outline:1px solid rgba(255,255,255,.1);outline-offset:-1px">
   <div class="kicker">FreeView</div>
   <h1>Privacy Policy</h1>
-  <p class="muted">Last updated: 1 November 2026</p>
+  <p class="muted">Last updated: 2 November 2026</p>
 
-  <p class="lead">FreeView shows web pages and files full screen, and it keeps what you open on your device. It has no accounts and no advertising, and it doesn't track you. The only things that leave your device are presentations you choose to share as a link (with anonymous counts of how they're watched, which only you see), and the anonymous record of a FreeView Pro purchase.</p>
+  <p class="lead">FreeView shows web pages and files full screen, and it keeps what you open on your device. It has no accounts and no advertising, and it doesn't track you. The only things that leave your device are presentations you choose to share as a link (with anonymous counts of how they're watched, which only you see), and the anonymous record of a FreeView Pro purchase. On a Mac, an AI app you connect can read your presentations, but only if you turn that on.</p>
 
-  <p><span class="pill">In short</span>&nbsp; Your files and history never leave your device unless you share them. When you share a presentation, a copy of it goes to iCloud for as long as the link works, and anyone with the link can watch it. The only other thing that leaves your device is the anonymous record of a FreeView Pro purchase.</p>
+  <p><span class="pill">In short</span>&nbsp; Your files and history never leave your device unless you share them. When you share a presentation, a copy of it goes to iCloud for as long as the link works, and anyone with the link can watch it. The only other thing that leaves your device is the anonymous record of a FreeView Pro purchase (and, if you turn on AI Assistants on a Mac, what the AI apps you connect read).</p>
 
   <hr>
 
@@ -82,6 +82,7 @@ footer a{color:var(--muted)}
     <li><strong>How long</strong>: until the link ends (after the time you choose) or you stop sharing it in the Shared Links tab. Ended links stop working right away, and their copies are deleted from iCloud within a day.</li>
     <li><strong>Views</strong>: each opening of a link adds one to a count for that link, and each slide shown adds one to a count for that slide, so you can see how often it was watched and which slides were seen; a link with a commentary also counts how often the commentary was started and played to the end.</li>
     <li><strong>Each viewing</strong>: so you can see how far each person got, every viewing of a link is also kept as an anonymous record: when it started and ended, how many seconds were spent on each slide, the kind of device (phone, tablet or computer), the browser's family (such as Safari or Chrome) and the country it was opened from. The viewing is told apart by a random number made for that visit alone, kept in the browser tab only while it's open; it is never a cookie and is never linked to other links or visits. No name, IP address, precise location or other device detail is stored.</li>
+    <li><strong>Your link key</strong>: so that only you can read a link's viewings, the device that first opens its stats in FreeView makes a random key, kept in that device's Keychain, and sends it when it asks for them. The server keeps only a scrambled form (a hash) of it, to recognize that device next time. It isn't your name, your Apple Account or any identifier of your device, and it isn't shared with other apps or used for anything else.</li>
     <li><strong>Where it's kept</strong>: the counts and viewings are kept on Cloudflare, only for links you shared, and only you see them, in FreeView. They are deleted as soon as you stop sharing or remove the link, and within a day after it ends, with its other copies.</li>
     <li><strong>Viewer libraries</strong>: the web viewer loads open-source code (for Markdown, tables, Lottie animations, 3D models and QR codes) from cdnjs and jsDelivr, which, like any website, see the viewer's IP address when serving it.</li>
   </ul>
@@ -90,8 +91,18 @@ footer a{color:var(--muted)}
   <h2>Camera, microphone, photos, files and clipboard</h2>
   <p>The camera is used only when you take a photo or video, scan a document, or record a <strong>commentary</strong> (you on camera, talking over your slides); the microphone only when you record audio, a video's sound or a commentary. A commentary is kept with its presentation on your device. <strong>Save as Video</strong> adds a commentary to your Photos library only when you choose to. FreeView uses the system pickers for Photos and Files, so it only sees the items you choose. It reads the clipboard only when you choose <strong>Paste</strong> or press ⌘V (on Home, in Edit Presentation, or for a logo), never in the background. What you capture, pick or paste stays on your device unless you share it.</p>
 
+  <h2>Your iPhone or iPad with your Mac</h2>
+  <p>You can pair an iPhone or iPad with FreeView on your Mac (Control Center › Connect iPhone…), by scanning a QR code or typing the code the Mac shows. After that, the two find each other on your local network whenever FreeView is open, and the iPhone or iPad can be Control Center's remote (the stage, the slides, the layouts and your notes) or its camera. iOS asks once for permission to use the local network, and the camera is used only while you choose <strong>Use as Mac Camera</strong>. Everything goes directly between your devices over your own network, encrypted with a key made when you paired them; nothing passes through us. Unpairing, or deleting the app, ends it.</p>
+
+  <h2>Control Center (Mac)</h2>
+  <p>Control Center makes a stage of you and your slides, for video calls and recordings. It uses the camera (your Mac's, or a paired iPhone's) and the microphone only while it's open, and what it shows reaches a call only if you share it there. <strong>Record Stage</strong> saves a video of it on your Mac. Your notes, in the strip under your camera, are left out of screen shares and recordings.</p>
+
   <h2>Screen recording and screenshots (Mac)</h2>
   <p><strong>Record Screen</strong> records only the displays or windows you choose (up to four at once), in FreeView's Record Screen window or macOS's own picker, with the camera, the microphone and the Mac's sound if you turn them on. <strong>Take Screenshot</strong> captures only the area you select; it needs macOS's Screen Recording permission, which you grant once in System Settings (with it, Record Screen can also list your displays and windows to choose from). Recordings and screenshots become slides in your presentations and stay on that Mac unless you share them. FreeView's keyboard shortcuts react only to their own key combinations; FreeView doesn't see anything else you type.</p>
+  <p><strong>Live slides</strong> show a display, a window or an iPhone plugged in with a cable, live, while you present on that Mac. Displays and windows need the same Screen Recording permission; an iPhone on a cable is shown through a small helper inside FreeView, with macOS's camera and microphone permission for it. What a live slide shows isn't kept unless you choose <strong>Record Slide</strong>, which saves a video of it in the presentation.</p>
+
+  <h2>AI assistants (Mac)</h2>
+  <p>If you turn on <strong>AI Assistants</strong> in Settings, FreeView runs a small server on your Mac, reachable only from that Mac and only with a key FreeView makes, so that AI apps you connect (such as Claude) can find, open, present and edit your presentations. An assistant reads what it asks for, such as a presentation's titles, slide text or slide pictures; what it reads is then handled by that AI app under its own privacy terms, not ours. It's off until you turn it on, and turning it off stops the server.</p>
 
   <h2>Reimagine</h2>
   <p>On devices with Apple Intelligence, <strong>Reimagine</strong> uses Apple's Image Playground to make a new picture from a photo. Apple processes it on your device or with Private Cloud Compute, under Apple's privacy terms; FreeView sends nothing to us.</p>
