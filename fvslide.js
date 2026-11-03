@@ -126,6 +126,11 @@
   /* A lone picture keeps its own shape (the box is the picture, so its corners round like the others'). */
   .fv .media.n1 img { object-fit: contain; width: auto; height: auto; max-width: 100%; max-height: 100%; align-self: center; justify-self: center; }
   .fv .media.n3 img:first-child { grid-row: span 2; }
+  /* Edge to edge: one item and no text (a photo, video or website that became a Magic slide), the
+     whole slide on black, as the item was on its own. */
+  .fv.edge { padding: 0; background: #000; }
+  .fv.edge .media { position: absolute; inset: 0; display: block; height: auto; max-height: none; gap: 0; }
+  .fv.edge .media img { display: block; width: 100%; height: 100%; object-fit: contain; border-radius: 0; }
   .fv.zoomable .media img { cursor: zoom-in; transition: transform .16s ease-out, filter .16s ease-out; -webkit-tap-highlight-color: transparent; }
   .fv.zoomable .media img:hover { filter: brightness(1.06); }
   .fv.zoomable .media img[data-site], .fv.zoomable .media img[data-download] { cursor: pointer; }
@@ -237,7 +242,8 @@
     const shown = cover ? [] : (spec.images || []).map((src, i) => ({ src, video: (spec.videos || [])[i] || null, silent: !!(spec.silent || [])[i], site: (spec.sites || [])[i] || null, download: (spec.downloads || [])[i] || null })).filter((p) => p.src).slice(0, 4);
     const images = shown.map((p) => p.src);
     const body = (spec.body || '').trim(), hasTitle = !!(spec.title || '').trim();
-    const layout = cover ? '' : images.length ? (body ? 'split' : hasTitle ? 'gallery' : 'grid') : 'hero';
+    const edge = !cover && !!spec.edge && images.length === 1 && !body && !hasTitle;
+    const layout = cover ? '' : edge ? 'edge' : images.length ? (body ? 'split' : hasTitle ? 'gallery' : 'grid') : 'hero';
     const lines = body.split('\n').filter((l) => l.trim()).length;
     const dense = layout === 'hero' && hasTitle && (body.length > 260 || lines > 5);
     const quote = layout === 'hero' && !hasTitle && body && body.length <= 160 && lines <= 3;
@@ -283,6 +289,8 @@
       root.innerHTML = `<header>${logo}</header>
         <main>${hasTitle ? `<div class="accent"></div><h1>${esc(spec.title)}</h1>` : ''}${body ? `<div class="body">${markdown(spec.body)}</div>` : ''}</main>
         ${(who !== '<div></div>' || qr) ? `<footer>${who}${qr}</footer>` : ''}`;
+    } else if (layout === 'edge') {
+      root.innerHTML = `<div class="media n1"><img src="${esc(images[0])}" alt=""></div>`;
     } else if (layout !== 'split') {
       root.innerHTML = `${logo ? `<header>${logo}</header>` : ''}${hasTitle ? `<h2>${esc(spec.title)}</h2>` : ''}
         <div class="media fill n${images.length}">${images.map((u) => `<img src="${esc(u)}" alt="">`).join('')}</div>
@@ -302,7 +310,8 @@
     pictures.forEach((img, i) => {
       if (shown[i] && (spec.fits || [])[i] === 'contain') { img.style.objectFit = 'contain'; img.style.backgroundColor = '#000'; }
     });
-    if (pictures.length && spec.zoom !== false) {
+    // A photo edge to edge is already as large as it gets: nothing to open (a click moves on, on the web).
+    if (pictures.length && spec.zoom !== false && !(edge && spec.edge === 'still')) {
       const app = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.fvPicture;
       const items = [...pictures].map((img, i) => ({ src: img.getAttribute('src'), video: shown[i] ? shown[i].video : null }));
       pictures.forEach((img, i) => {
@@ -394,7 +403,9 @@
     };
     // The others follow the leader; once it ends, all begin again together.
     videos.forEach((v) => v.addEventListener('ended', () => {
-      if (v === lead() && playing) sync.restart();
+      // A video on its own plays once and stays on its last frame, as a video slide does.
+      if (v === lead() && playing && videos.length > 1) sync.restart();
+      else if (v === lead()) playing = false;
     }));
     setInterval(() => {
       if (!playing || !root.isConnected) return;
