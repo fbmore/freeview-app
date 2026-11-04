@@ -131,6 +131,9 @@
   .fv.edge { padding: 0; background: #000; }
   .fv.edge .media { position: absolute; inset: 0; display: block; height: auto; max-height: none; gap: 0; }
   .fv.edge .media img { display: block; width: 100%; height: 100%; object-fit: contain; border-radius: 0; }
+  /* The whole slide is the item: no hover glow or press shrink on something this large. */
+  .fv.edge.zoomable .media img:hover { filter: none; }
+  .fv.edge.zoomable .media img:active { transform: none; }
   .fv.zoomable .media img { cursor: zoom-in; transition: transform .16s ease-out, filter .16s ease-out; -webkit-tap-highlight-color: transparent; }
   .fv.zoomable .media img:hover { filter: brightness(1.06); }
   .fv.zoomable .media img[data-site], .fv.zoomable .media img[data-download] { cursor: pointer; }
