@@ -45,6 +45,9 @@ HEAD = """<!DOCTYPE html>
 <link rel="icon" type="image/png" href="/logo.png">
 <link rel="apple-touch-icon" href="/logo.png">
 <style>{css}</style>
+<!-- Foliàire Studio site analytics (marketing pages only, never view.html). Set the site ID from foliairestudio.com/external-sites; empty sends nothing. -->
+<script>window.FOLIAIRE_SITE_ID = '';</script>
+<script async src="https://foliairestudio.com/analytics/foliaire.js"></script>
 </head>
 <body>
 """
@@ -693,6 +696,9 @@ NOT_FOUND = """<!DOCTYPE html>
     display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center}
   a{color:#fff}
 </style>
+<!-- Foliàire Studio site analytics (marketing pages only, never view.html). Set the site ID from foliairestudio.com/external-sites; empty sends nothing. -->
+<script>window.FOLIAIRE_SITE_ID = '';</script>
+<script async src="https://foliairestudio.com/analytics/foliaire.js"></script>
 </head>
 <body>
 <p>Page not found. <a href="/">FreeView</a></p>
