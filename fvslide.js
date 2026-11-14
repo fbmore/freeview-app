@@ -7,6 +7,7 @@
  *   logo: URL, person: { name, role, photo: URL }, contacts: [{ label, value, href }]
  *   qr: false to turn off the QR codes made from the web addresses in the text (a cover shows the first;
  *   a Magic slide up to four, side by side)
+ *   buttons: [{ label, url }] buttons under the text (above any QR codes), each opening its address
  *   theme: { mode, background, foreground, accent, font, align, titleScale, bodyScale, radius }
  *   align: 'left' | 'center' to override the theme's alignment for this slide
  *   split: 0.3–0.6, the text's share of a Magic slide with text beside pictures (its width; its height
@@ -92,6 +93,14 @@
   .fv .body > .qrs.inline { margin-top: 1.6cqmin; }
   .fv .qrs.inline.many .code { width: 11cqmin; height: 11cqmin; padding: 1cqmin; }
   .fv .qrs.many span { max-width: 15cqmin; }
+  /* Buttons: pills in the text's colour, their labels in the background's. */
+  .fv .buttons { flex: none; display: flex; flex-wrap: wrap; gap: 1.6cqmin; margin: 2cqmin 0 .4cqmin; justify-content: var(--fv-justify); }
+  .fv .buttons a[href] { max-width: 40cqmin; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 1.5cqmin 3.4cqmin; border-radius: 999px;
+    background: var(--fv-fg); color: var(--fv-button-ink); text-decoration: none; font-size: calc(2.8cqmin * var(--fv-body)); font-weight: 600;
+    box-shadow: 0 .2cqmin .6cqmin rgba(0,0,0,.18); cursor: pointer; transition: transform .16s ease-out, opacity .16s ease-out; -webkit-tap-highlight-color: transparent; }
+  .fv .buttons a[href]:hover { opacity: .88; }
+  .fv .buttons a[href]:active { transform: scale(.97); }
+  @media (prefers-reduced-motion: reduce) { .fv .buttons a { transition: none; } .fv .buttons a:active { transform: none; } }
   .fv .cols { flex: 1; display: grid; grid-template-columns: 1fr; gap: 5cqmin; align-items: center; min-height: 0; }
   .fv .cols.media-on { grid-template-columns: var(--fv-cols, 1fr 1fr); }
   .fv .copy { min-width: 0; }
@@ -137,6 +146,9 @@
   .fv.zoomable .media img { cursor: zoom-in; transition: transform .16s ease-out, filter .16s ease-out; -webkit-tap-highlight-color: transparent; }
   .fv.zoomable .media img:hover { filter: brightness(1.06); }
   .fv.zoomable .media img[data-site], .fv.zoomable .media img[data-download] { cursor: pointer; }
+  /* A file to download: its card (symbol, whole name, size) is never cropped, whatever the cell's
+     shape; the cell around it takes the card's own colour, so it still reads as one card. */
+  .fv .media img.download { object-fit: contain; background-color: #1c1c1c; }
   .fv.zoomable .media img:active { transform: scale(.97); }
   @media (prefers-reduced-motion: reduce) { .fv.zoomable .media img { transition: none; } .fv.zoomable .media img:active { transform: none; } }
   .fv-focus { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.94); display: flex; align-items: center; justify-content: center;
@@ -229,7 +241,7 @@
     qrs.classList.add('inline');
     if (target.classList.contains('body')) target.appendChild(qrs); else target.after(qrs);
     const footer = root.querySelector('footer');
-    if (footer && !footer.querySelector('.who, .qr')) footer.remove();
+    if (footer && !footer.querySelector('.who, .qr, .buttons')) footer.remove();
   }
 
   function render(el, spec) {
@@ -258,6 +270,7 @@
       '--fv-align': center ? 'center' : 'left', '--fv-justify': center ? 'center' : 'flex-start', '--fv-items': center ? 'center' : 'flex-start',
       '--fv-title': t.titleScale, '--fv-body': t.bodyScale, '--fv-radius': t.radius,
       '--fv-scrim': 'rgba(0,0,0,.72)', '--fv-scrim-top': 'rgba(0,0,0,.35)',
+      '--fv-button-ink': hasBg ? '#000000' : t.background,
       '--fv-qr-bg': hasBg ? 'rgba(255,255,255,.96)' : (light ? 'rgba(0,0,0,.05)' : 'rgba(255,255,255,.96)'),
     };
     if (layout === 'split') {
@@ -307,10 +320,25 @@
         ${(who !== '<div></div>' || qr) ? `<footer>${who}${qr}</footer>` : ''}`;
     }
     root.querySelectorAll('.body a').forEach((a) => { a.target = '_blank'; a.rel = 'noopener'; });
+    // Buttons under the text (before the QR codes are placed, so they come after them); on a slide
+    // with no text, in the footer.
+    const buttons = (spec.buttons || []).filter((b) => b && /^(https?:|mailto:|tel:)/i.test(b.url || ''));
+    if (buttons.length && layout !== 'edge') {
+      const row = document.createElement('div');
+      row.className = 'buttons';
+      row.innerHTML = buttons.map((b) => `<a href="${esc(b.url)}" target="_blank" rel="noopener">${esc(b.label || b.url)}</a>`).join('');
+      const text = root.querySelector('.body') || [...root.querySelectorAll('h1, .sub')].pop();
+      const footer = root.querySelector('footer');
+      if (text && text.classList.contains('body')) text.appendChild(row);
+      else if (text) text.after(row);
+      else if (footer) footer.prepend(row);
+      else { const f = document.createElement('footer'); f.appendChild(row); root.appendChild(f); }
+    }
     if (!cover && urls.length) placeQR(root, urls);
     const pictures = root.querySelectorAll('.media img');
     // spec.fits[i] 'contain': that picture fits its cell (on black) instead of filling it (a live source set to Fit).
     pictures.forEach((img, i) => {
+      if (shown[i] && shown[i].download) img.classList.add('download');
       if (shown[i] && (spec.fits || [])[i] === 'contain') { img.style.objectFit = 'contain'; img.style.backgroundColor = '#000'; }
     });
     // A photo edge to edge is already as large as it gets: nothing to open (a click moves on, on the web).
