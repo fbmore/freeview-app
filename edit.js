@@ -350,8 +350,8 @@
     const sender = o.showSender ? await addSender(x, store.deckOf(visit).folder) : null;
     const total = x.items.reduce((n, it) => n + it.blob.size, 0) + (x.commentaryVideo ? x.commentaryVideo.size : 0);
     if (total >= (isPro ? 2e9 : 250e6)) throw new Error(isPro ? T('It comes to {size}, more than a link can carry (2 GB).', { size: mb(total) }) : T('It comes to {size}. Free links carry up to 250 MB; Pro up to 2 GB.', { size: mb(total) }));
-    // Free: one live link, so the current one ends as the new one starts.
-    if (!isPro) for (const old of liveLinks()) await stopLink(old).catch(() => {});
+    // Free: one live link. The web never ends a link on its own (Pro may only be unknown here): the person ends it.
+    if (!isPro && liveLinks().length) throw new Error(T('Free shares one link at a time. End your current link in Shared Links first.'));
 
     const options = { mark: !isPro };
     if (sender) options.sender = sender;
@@ -439,7 +439,7 @@
     const last = allLinks().filter((l) => l.visitID === visit.id).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
     const auto = last ? last.autoplay || 0 : 0;
     const days = 7;
-    const freeNote = !isPro && liveLinks().length ? T('Free shares one link at a time, for up to a week and 250 MB. Creating this one ends your current link. Pro shares as many as you like, for up to 90 days, up to 2 GB each, with passwords and per-slide views.')
+    const freeNote = !isPro && liveLinks().length ? T('Free shares one link at a time, for up to a week and 250 MB. To share this one, first end your current link in Shared Links. Pro shares as many as you like, for up to 90 days, up to 2 GB each, with passwords and per-slide views.')
       : fresh ? T('A separate link with its own end date and view count. Your current link keeps working until it ends.')
       : T('PDF pages become images; videos go up as they are. Everything is uploaded to iCloud for as long as the link works.');
     $('h2', d).textContent = fresh ? T('New Link') : T('Share Presentation');
@@ -475,7 +475,14 @@
     if ($('#sh-pwpro')) $('#sh-pwpro').onclick = showPaywall;
     $('[data-cancel]', body).onclick = () => d.close();
     const create = $('[data-create]', body);
-    $('#sh-title').oninput = () => { create.disabled = !$('#sh-title').value.trim(); };
+    if (!isPro && liveLinks().length) {
+      // One link at a time on Free: end the current one first, in Shared Links.
+      create.disabled = true;
+      const go = document.createElement('button'); go.type = 'button'; go.className = 'btn'; go.textContent = T('Open Shared Links');
+      go.onclick = () => { d.close(); goTab('links'); };
+      create.before(go);
+    }
+    $('#sh-title').oninput = () => { create.disabled = !$('#sh-title').value.trim() || (!isPro && liveLinks().length > 0); };
     create.onclick = async () => {
       const o = { title: $('#sh-title').value.trim(), message: $('#sh-message').value.trim(), showSender: swOn('sender'), commentary: swOn('commentary'),
         password: $('#sh-password') ? $('#sh-password').value : '', autoplay: swOn('autoplay') ? +$('#sh-seconds').value : 0, days: +$('#sh-days').value };
