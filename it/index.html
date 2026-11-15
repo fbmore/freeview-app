@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FreeView — File di ogni tipo, una presentazione, un link</title>
+<meta name="description" content="Facile da creare, ancora più facile da condividere: trasforma file Keynote, PDF, video, foto, modelli 3D e altro in una presentazione su iPhone, iPad e Mac, e invia un link che si apre su qualsiasi schermo, qualunque sia la dimensione.">
+<meta name="color-scheme" content="dark">
+<link rel="canonical" href="https://freeview.app/it/">
+<link rel="alternate" hreflang="en" href="https://freeview.app/">
+<link rel="alternate" hreflang="es" href="https://freeview.app/es/">
+<link rel="alternate" hreflang="fr" href="https://freeview.app/fr/">
+<link rel="alternate" hreflang="it" href="https://freeview.app/it/">
+<link rel="alternate" hreflang="pt-BR" href="https://freeview.app/pt-br/">
+<link rel="alternate" hreflang="x-default" href="https://freeview.app/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FreeView">
+<meta property="og:title" content="FreeView — File di ogni tipo, una presentazione, un link">
+<meta property="og:description" content="Facile da creare, ancora più facile da condividere: trasforma file Keynote, PDF, video, foto, modelli 3D e altro in una presentazione su iPhone, iPad e Mac, e invia un link che si apre su qualsiasi schermo, qualunque sia la dimensione.">
+<meta property="og:url" content="https://freeview.app/it/">
+<meta property="og:locale" content="it_IT">
+<meta property="og:image" content="https://freeview.app/og.jpg">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="720">
+<meta property="og:image:alt" content="Una presentazione FreeView che si apre su un portatile, un tablet, un telefono e una TV da un unico link.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="FreeView — File di ogni tipo, una presentazione, un link">
+<meta name="twitter:description" content="Facile da creare, ancora più facile da condividere: trasforma file Keynote, PDF, video, foto, modelli 3D e altro in una presentazione su iPhone, iPad e Mac, e invia un link che si apre su qualsiasi schermo, qualunque sia la dimensione.">
+<meta name="twitter:image" content="https://freeview.app/og.jpg">
+<link rel="icon" type="image/png" href="/logo.png">
+<link rel="apple-touch-icon" href="/logo.png">
+<style>
+:root{--ink:#fff;--muted:rgba(255,255,255,.5);--muted2:rgba(255,255,255,.7);--canvas:#000;
+  --surface:rgba(255,255,255,.06);--surface2:rgba(255,255,255,.09);--line:rgba(255,255,255,.1);--red:#ff2d1f}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body{margin:0;background:var(--canvas);color:var(--ink);
+  font-family:ui-rounded,"SF Pro Rounded",-apple-system,system-ui,"Segoe UI",Roboto,sans-serif;line-height:1.5;overflow-x:hidden}
+a{color:var(--ink);text-decoration:none}
+.wrap{max-width:1040px;margin:0 auto;padding:0 24px}
+svg{display:block}
+h1,h2{text-wrap:balance}p,li{text-wrap:pretty}
+
+/* hero */
+header.hero{text-align:center;padding:96px 24px 72px;background:radial-gradient(52% 40% at 50% 8%,rgba(255,255,255,.05),transparent 70%)}
+/* The app icon itself, the same artwork as the iPhone, iPad and Mac icon. */
+.logo{display:block;width:116px;height:116px;margin:0 auto 26px;border-radius:26px;background:#000;box-shadow:0 0 0 1px var(--line),0 24px 60px rgba(0,0,0,.8)}
+h1{font-size:clamp(38px,7vw,64px);font-weight:300;letter-spacing:-.02em;margin:0 0 14px}
+.tag{font-size:clamp(16px,2.3vw,20px);color:var(--muted2);font-weight:300;max-width:560px;margin:0 auto 30px}
+.tag strong{display:block;font-weight:600;color:var(--ink,#fff);font-size:1.25em;letter-spacing:-.01em;margin-bottom:6px;text-wrap:balance}
+.herovid{display:block;width:min(1040px,100%);aspect-ratio:16/9;height:auto;margin:8px auto 0;background:#000}
+.appstore{display:inline-block;margin:0 auto}
+.appstore img{height:56px;width:auto;display:block}
+.heroBadge{margin:36px auto 12px}
+.storenote{margin:0 auto 24px;font-size:13px;font-weight:300;color:var(--muted)}
+.ctarow{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.cta{display:inline-flex;gap:8px;align-items:center;background:#fff;color:#000;font-weight:600;padding:13px 24px;border-radius:16px;font-size:16px;
+  transition-property:scale;transition-duration:120ms;transition-timing-function:ease-out}
+.cta:active{scale:.96}
+.cta.ghost{background:var(--surface);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+
+/* feature rows */
+section.feat{padding:60px 0;border-top:1px solid var(--line)}
+.feat .wrap{display:grid;grid-template-columns:1fr 300px;gap:56px;align-items:center}
+.feat.flip .wrap{grid-template-columns:300px 1fr}
+.feat.flip .copy{order:2}
+.feat h2{font-size:clamp(26px,3.6vw,34px);font-weight:600;letter-spacing:-.01em;margin:0 0 14px;line-height:1.12}
+.feat p{color:var(--muted2);font-size:17px;font-weight:300;margin:0 0 18px}
+.bul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:10px}
+.bul li{display:flex;gap:11px;align-items:center;color:var(--muted2);font-size:15px}
+.bul li svg{width:17px;height:17px;flex:0 0 auto;opacity:.85;color:#fff}
+@media(max-width:760px){
+  .feat .wrap,.feat.flip .wrap{grid-template-columns:1fr;gap:30px;justify-items:center}
+  .feat.flip .copy{order:0}.feat .copy{text-align:center}
+  .feat .bul{align-items:flex-start;text-align:left;max-width:360px;margin-left:auto;margin-right:auto}
+}
+
+/* phone */
+.phone{width:288px;height:600px;border-radius:44px;background:#050505;box-shadow:0 0 0 1px var(--line),0 30px 80px rgba(0,0,0,.7),inset 0 0 0 5px #000;
+  padding:14px;position:relative}
+.phone .notch{position:absolute;top:14px;left:50%;transform:translateX(-50%);width:104px;height:24px;background:#000;border-radius:99px;z-index:5}
+.screen{width:100%;height:100%;border-radius:30px;background:#000;overflow:hidden;position:relative;display:flex;flex-direction:column}
+.screen .st{display:flex;justify-content:space-between;align-items:center;padding:15px 22px 4px;font-size:12px;color:#fff;font-weight:600}
+.screen .st svg{width:34px;height:12px;opacity:.9}
+.screen .body{flex:1;display:flex;flex-direction:column;align-items:center;padding:26px 20px 22px;text-align:center}
+.mini-mark{display:flex;gap:6px;align-items:center;font-weight:700;font-size:19px;letter-spacing:-.01em;margin-top:18px}
+.mini-mark img{width:20px;height:20px;border-radius:4.5px;outline:1px solid rgba(255,255,255,.1);outline-offset:-1px}
+.mini-sub{font-size:11px;color:var(--muted);margin-top:4px}
+.corner{position:absolute;right:12px;bottom:12px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.14);
+  display:flex;align-items:center;justify-content:center;gap:2.5px}
+.corner i{width:3px;height:3px;border-radius:50%;background:#fff}
+
+/* 1 · open anything: an address being typed, then the kinds of things FreeView opens */
+.field{width:100%;margin-top:22px;height:40px;border-radius:12px;background:var(--surface2);display:flex;align-items:center;padding:0 12px;
+  font-size:13px;color:#fff;text-align:left;overflow:hidden;white-space:nowrap}
+.field .typed{display:inline-block;overflow:hidden;max-width:0;animation:type 6s steps(12,end) infinite;vertical-align:bottom}
+.field .caret{display:inline-block;width:1.5px;height:15px;background:#fff;margin-left:1px;animation:caret 1s step-end infinite}
+@keyframes type{0%,8%{max-width:0}40%,100%{max-width:8em}}   /* past the text width: the caret lands right after the last letter */
+@keyframes caret{50%{opacity:0}}
+.kinds{display:flex;flex-direction:column;gap:9px;margin-top:20px;width:100%}
+.kinds .row{display:flex;align-items:center;gap:12px;text-align:left;font-size:14px;color:#fff;background:var(--surface);
+  border-radius:13px;padding:11px 13px;opacity:0;transform:translateY(10px);animation:up 6s ease-out infinite}
+.kinds .row svg{width:19px;height:19px;opacity:.92;color:#fff}
+.kinds .row:nth-child(1){animation-delay:.1s}.kinds .row:nth-child(2){animation-delay:.25s}.kinds .row:nth-child(3){animation-delay:.4s}
+.kinds .row:nth-child(4){animation-delay:.55s}.kinds .row:nth-child(5){animation-delay:.7s}
+@keyframes up{0%{opacity:0;transform:translateY(10px)}12%,92%{opacity:1;transform:none}100%{opacity:0}}
+
+/* 2 · PDFs become slides: pages glide by, the counter follows */
+.slides{position:absolute;inset:0;display:flex;align-items:center;overflow:hidden}
+.track{display:flex;flex:none;width:400%;animation:swipe 10s cubic-bezier(.65,0,.35,1) infinite}
+.slide{width:25%;padding:0 10px}
+.pg{aspect-ratio:16/10;border-radius:6px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;text-align:left;position:relative;overflow:hidden;color:#fff}
+.pg .k{font-size:6px;letter-spacing:1.5px;text-transform:uppercase;opacity:.6}
+.pg b{font-size:19px;line-height:1.02;letter-spacing:-.5px}
+.pg.a{background:#0f172a}.pg.a::after{content:"";position:absolute;right:-30px;top:-30px;width:110px;height:110px;border-radius:50%;
+  background:radial-gradient(circle at 30% 30%,#f97316,#db2777 55%,#7c3aed)}
+.pg.b{background:#f4f1ea;color:#111}
+.pg.c{background:#161616}.pg.c .bars{display:flex;align-items:flex-end;gap:6px;height:60px}.pg.c .bars i{flex:1;background:#c2410c;border-radius:3px 3px 0 0}
+.pg.d{background:#052e2b}
+@keyframes swipe{0%,20%{transform:translateX(0)}25%,45%{transform:translateX(-25%)}50%,70%{transform:translateX(-50%)}75%,95%{transform:translateX(-75%)}100%{transform:translateX(0)}}
+.counter{position:absolute;left:50%;bottom:44px;transform:translateX(-50%);font-size:11px;font-weight:600;color:#fff;background:rgba(0,0,0,.55);
+  border-radius:99px;padding:4px 10px;font-variant-numeric:tabular-nums;box-shadow:0 0 0 1px var(--line)}
+.counter .n{display:inline-grid;width:1ch}
+.counter .n b{grid-area:1/1;font-weight:600;opacity:0;animation:n1 10s step-end infinite}
+.counter .n b:nth-child(2){animation-name:n2}.counter .n b:nth-child(3){animation-name:n3}.counter .n b:nth-child(4){animation-name:n4}
+@keyframes n1{0%{opacity:1}25%{opacity:0}}
+@keyframes n2{0%{opacity:0}25%{opacity:1}50%{opacity:0}}
+@keyframes n3{0%{opacity:0}50%{opacity:1}75%{opacity:0}}
+@keyframes n4{0%{opacity:0}75%{opacity:1}}
+
+/* 3 · instant presentations: three items fan out, then line up as slides */
+.deckstage{position:relative;flex:1;width:100%;margin-top:10px}
+.card{position:absolute;left:50%;top:44%;width:150px;height:100px;margin:-50px 0 0 -75px;border-radius:12px;box-shadow:0 14px 30px rgba(0,0,0,.6),0 0 0 1px var(--line);
+  display:flex;align-items:center;justify-content:center;color:#fff}
+.card svg{width:30px;height:30px}
+.card.p{background:linear-gradient(135deg,#7c3aed,#db2777);animation:fanA 7s cubic-bezier(.65,0,.35,1) infinite}
+.card.d{background:#f4f1ea;color:#111;animation:fanB 7s cubic-bezier(.65,0,.35,1) infinite}
+.card.v{background:#1d4ed8;animation:fanC 7s cubic-bezier(.65,0,.35,1) infinite}
+@keyframes fanA{0%,15%{transform:rotate(-10deg) translate(-14px,6px)}45%,85%{transform:translate(0,-120px) scale(.86)}100%{transform:rotate(-10deg) translate(-14px,6px)}}
+@keyframes fanB{0%,15%{transform:rotate(0)}45%,85%{transform:translate(0,0) scale(.86)}100%{transform:rotate(0)}}
+@keyframes fanC{0%,15%{transform:rotate(10deg) translate(14px,6px)}45%,85%{transform:translate(0,120px) scale(.86)}100%{transform:rotate(10deg) translate(14px,6px)}}
+.deckdots{display:flex;gap:6px;justify-content:center;margin-bottom:6px;opacity:0;animation:show 7s ease-out infinite}
+.deckdots i{width:6px;height:6px;border-radius:99px;background:rgba(255,255,255,.3)}.deckdots i:first-child{width:18px;background:#fff}
+@keyframes show{0%,40%{opacity:0}50%,85%{opacity:1}100%{opacity:0}}
+.pick{font-size:11.5px;color:var(--muted2);background:var(--surface);border-radius:99px;padding:5px 11px;margin-top:4px}
+
+/* 4 · kiosk: nothing on screen, then the PIN pad after a three-finger press */
+.kiosk{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.kiosk .pg{width:86%}
+.fingers{position:absolute;top:36%;left:50%;transform:translateX(-50%);display:flex;gap:16px;opacity:0;animation:press 8s ease-out infinite}
+.fingers i{width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.35);box-shadow:0 0 0 6px rgba(255,255,255,.12)}
+@keyframes press{0%,20%{opacity:0;transform:translateX(-50%) scale(1.2)}28%,40%{opacity:1;transform:translateX(-50%) scale(1)}46%,100%{opacity:0}}
+.pin{position:absolute;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  opacity:0;animation:pinIn 8s ease-out infinite}
+@keyframes pinIn{0%,42%{opacity:0}48%,92%{opacity:1}100%{opacity:0}}
+.pin .t{font-size:14px;font-weight:600}
+.pin .dots4{display:flex;gap:14px}
+.pin .dots4 i{width:11px;height:11px;border-radius:50%;box-shadow:inset 0 0 0 1.5px #fff}
+.pin .dots4 i:nth-child(1){animation:fill1 8s step-end infinite}.pin .dots4 i:nth-child(2){animation:fill2 8s step-end infinite}
+.pin .dots4 i:nth-child(3){animation:fill3 8s step-end infinite}.pin .dots4 i:nth-child(4){animation:fill4 8s step-end infinite}
+@keyframes fill1{0%{background:none}58%{background:#fff}96%{background:none}}
+@keyframes fill2{0%{background:none}64%{background:#fff}96%{background:none}}
+@keyframes fill3{0%{background:none}70%{background:#fff}96%{background:none}}
+@keyframes fill4{0%{background:none}76%{background:#fff}96%{background:none}}
+.pad{display:grid;grid-template-columns:repeat(3,44px);gap:10px}
+.pad i{width:44px;height:44px;border-radius:50%;background:var(--surface2);font-style:normal;display:flex;align-items:center;justify-content:center;font-size:16px}
+
+/* 5 · night mode: a page turns deep red on black */
+.night{position:absolute;inset:0;padding:54px 20px 20px;text-align:left;background:#fff;color:#111;animation:nightBg 7s ease-in-out infinite}
+.night .h{font-size:22px;font-weight:700;letter-spacing:-.4px;margin:6px 0 8px}
+.night .ln{height:7px;border-radius:4px;background:currentColor;opacity:.22;margin:8px 0}
+.night .img{height:110px;border-radius:10px;margin:14px 0;background:linear-gradient(160deg,#16a34a,#0ea5e9 60%,#1e1b4b);animation:nightImg 7s ease-in-out infinite}
+@keyframes nightBg{0%,30%{background:#fff;color:#111}50%,85%{background:#000;color:var(--red)}100%{background:#fff;color:#111}}
+@keyframes nightImg{0%,30%{filter:none}50%,85%{filter:grayscale(1) brightness(.75) sepia(1) hue-rotate(-50deg) saturate(9)}100%{filter:none}}
+.moonchip{position:absolute;right:14px;top:50px;font-size:10.5px;font-weight:600;border-radius:99px;padding:4px 9px;background:rgba(255,45,31,.12);color:var(--red);
+  opacity:0;animation:show2 7s ease-in-out infinite}
+@keyframes show2{0%,35%{opacity:0}50%,85%{opacity:1}100%{opacity:0}}
+
+/* 6 · private: recent items, with the private-browsing chip */
+.hist{width:100%;margin-top:20px;border-radius:14px;background:var(--surface);overflow:hidden;text-align:left}
+.hist .r{display:flex;align-items:center;gap:11px;padding:11px 12px;box-shadow:inset 0 -1px 0 var(--line)}
+.hist .r:last-child{box-shadow:none}
+.hist .r svg{width:16px;height:16px;opacity:.6;color:#fff}
+.hist .r b{display:block;font-size:12.5px;font-weight:600}.hist .r span{display:block;font-size:10.5px;color:var(--muted)}
+.hist .r.lockrow{font-size:12px;justify-content:space-between}.hist .r.lockrow b{font-size:12px}
+.chipp{display:inline-flex;gap:5px;align-items:center;font-size:11px;color:var(--muted2);align-self:flex-start;margin:4px 0 0 2px}
+.chipp svg{width:13px;height:13px}
+
+/* real screenshot gallery */
+.gallery{padding:70px 0;border-top:1px solid var(--line);text-align:center}
+.gallery h2{font-size:clamp(26px,3.6vw,34px);font-weight:600;margin:0 0 6px}
+.gallery p{color:var(--muted2);font-weight:300;max-width:600px;margin:0 auto 8px}
+.shots{display:flex;gap:22px;justify-content:center;flex-wrap:wrap;margin-top:36px}
+.featshot{width:260px!important;justify-self:center}
+.shotframe{width:min(220px,calc(50% - 11px));border-radius:34px;box-shadow:0 0 0 1px var(--line),0 24px 60px rgba(0,0,0,.6);background:#000;padding:8px}
+.shotframe img{width:100%;height:auto;display:block;border-radius:26px;outline:1px solid rgba(255,255,255,.1);outline-offset:-1px}
+.shots.ipad{margin-top:22px}
+.tabframe{width:min(440px,100%);border-radius:30px;box-shadow:0 0 0 1px var(--line),0 24px 60px rgba(0,0,0,.6);background:#000;padding:10px}
+.tabframe img{width:100%;height:auto;display:block;border-radius:20px;outline:1px solid rgba(255,255,255,.1);outline-offset:-1px}
+
+/* pricing */
+.price{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:34px}
+.price .cardp{background:var(--surface);box-shadow:inset 0 0 0 1px var(--line);border-radius:18px;padding:18px 26px;min-width:170px}
+.price .cardp.best{box-shadow:inset 0 0 0 1px rgba(255,255,255,.4)}
+.price .amt{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
+.price .per{color:var(--muted);font-size:13px;font-weight:300;margin-top:2px}
+
+footer{padding:52px 24px 68px;text-align:center;color:var(--muted);border-top:1px solid var(--line);font-size:14px;font-weight:300}
+footer a{color:var(--muted2);display:inline-block;padding:12px 10px}
+
+@media (prefers-reduced-motion: reduce){*{animation:none!important}
+  .kinds .row{opacity:1!important;transform:none!important}.deckdots{opacity:1}.fingers,.pin{display:none}
+  .field .typed{max-width:none}.counter .n b:first-child{opacity:1}}
+</style>
+<!-- Foliàire Studio site analytics (marketing pages only, never view.html). -->
+<script>window.FOLIAIRE_SITE_ID = 'f3be838f340d7da19b511f4a';</script>
+<script async src="https://foliairestudio.com/analytics/foliaire.js"></script>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <g id="i-globe"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.6 3.9 5.6 3.9 9s-1.3 6.4-3.9 9c-2.6-2.6-3.9-5.6-3.9-9S9.4 5.6 12 3z"/></g>
+  <g id="i-doc"><path d="M7 3h7l4 4v14H7z" stroke-linejoin="round"/><path d="M14 3v4h4M10 12h5M10 16h5" stroke-linecap="round"/></g>
+  <g id="i-play"><rect x="3" y="5" width="18" height="14" rx="2.4"/><path d="M10 9l5 3-5 3z" stroke-linejoin="round"/></g>
+  <g id="i-photo"><rect x="3" y="5" width="18" height="14" rx="2.4"/><circle cx="8.5" cy="10" r="1.6"/><path d="M5 18l4.5-4.5L13 17l3-3 3 3"/></g>
+  <g id="i-code"><path d="M9 7l-5 5 5 5M15 7l5 5-5 5" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g id="i-stack"><rect x="4" y="8" width="16" height="12" rx="2.2"/><path d="M6.5 5h11M9 2.5h6" stroke-linecap="round"/></g>
+  <g id="i-lock"><rect x="5" y="10.5" width="14" height="10" rx="2.4"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></g>
+  <g id="i-moon"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z" stroke-linejoin="round"/></g>
+  <g id="i-eyeslash"><path d="M3 12s3.2-6 9-6c2 0 3.7.7 5 1.7M21 12s-3.2 6-9 6c-2 0-3.7-.7-5-1.7" stroke-linecap="round"/><path d="M4 20L20 4" stroke-linecap="round"/></g>
+  <g id="i-face"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M9 9v1.5M15 9v1.5M12 9v4h-1M9.5 16c1.5 1 3.5 1 5 0" stroke-linecap="round"/></g>
+  <g id="i-keys"><rect x="2.5" y="6" width="19" height="12" rx="2.4"/><path d="M6 10h1M10 10h1M14 10h1M18 10h0M7 14h10" stroke-linecap="round"/></g>
+  <g id="i-check"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g id="i-airplay"><path d="M7 17H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" stroke-linecap="round"/><path d="M12 15l5 6H7z" stroke-linejoin="round"/></g>
+  <g id="i-hand"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12M11 11V4.5a1.5 1.5 0 0 1 3 0V12M14 11.5V6a1.5 1.5 0 0 1 3 0v8c0 4-2.5 7-6 7-2.4 0-4-1.2-5.2-3.2L4 14.5a1.5 1.5 0 0 1 2.4-1.7L8 14.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g id="i-clock"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2" stroke-linecap="round"/></g>
+  <g id="i-folder"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke-linejoin="round"/></g>
+</defs></svg>
+<header class="hero">
+  <img class="logo" src="/logo.png" alt="FreeView" width="116" height="116">
+  <h1>FreeView</h1>
+  <p class="tag"><strong>Facile da creare. Ancora più facile da condividere.</strong> Metti insieme file di ogni tipo in una presentazione, poi invia un link che si apre su qualsiasi schermo.</p>
+  <video class="herovid" src="/hero.mp4?v=9" poster="/hero-poster.webp?v=9" width="1280" height="720" autoplay muted loop playsinline preload="auto"
+    aria-label="Un tour di 30 secondi di FreeView su iPad e Mac: il menu di un ristorante che scorre da solo con la riproduzione automatica; l'editor delle slide con tutte le slide sul lato; una slide magica con un sito web dal vivo e un file da scaricare; un modello 3D presentato a tutto schermo; un commento che parla sopra le slide; un link condiviso che si apre in qualsiasi browser; e, sul Mac, la registrazione dello schermo e uno screenshot che finiscono direttamente nelle slide."></video>
+  <a class="appstore heroBadge" href="https://apps.apple.com/app/id1526222244" target="_blank" rel="noopener" aria-label="Scarica FreeView sull'App Store">
+    <img src="/appstore-badge.svg" alt="Scarica sull'App Store">
+  </a>
+  <p class="storenote">Per iPhone, iPad e Mac · Gratis per iniziare</p>
+  <div class="ctarow">
+    <a class="cta" href="#tour">Guarda il tour</a>
+    <a class="cta ghost" href="/it/support.html">Supporto</a>
+  </div>
+</header>
+
+<script>if(matchMedia('(prefers-reduced-motion: reduce)').matches){var v=document.querySelector('.herovid');v.removeAttribute('autoplay');v.pause();}</script>
+<div id="tour"></div>
+<section class="feat"><div class="wrap"><div class="copy"><h2>File di ogni tipo, una presentazione</h2><p>Scegli una presentazione Keynote, un PDF, un filmato, delle foto, un modello 3D, un memo vocale e un foglio di calcolo: diventano un'unica presentazione, una slide ciascuno, nell'ordine che vuoi. Niente conversioni, niente copia e incolla, nessun programma di slide.</p><ul class="bul"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-stack"/></svg>Keynote, PowerPoint, Word, PDF, video, foto, audio</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-check"/></svg>Modelli 3D, animazioni Lottie, Markdown, tabelle e pagine web dal vivo</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-folder"/></svg>Da File, Foto, AirDrop, Mail o dalla fotocamera, perfino da una scansione</li></ul></div><div class="shotframe featshot"><img src="/shot-deck.webp" width="612" height="1330" alt="Modifica di una presentazione in FreeView: una copertina, la scheda di un prodotto, foto, una slide magica, un filmato, un prototipo 3D e una tabella di preordini, in ordine" loading="lazy"></div></div></section>
+<section class="feat flip"><div class="wrap"><div class="shotframe featshot"><img src="/shot-cover.webp" width="612" height="1330" alt="Una slide di copertina sopra una foto del mare: titolo, logo e la foto, il nome e i contatti di chi presenta" loading="lazy"></div><div class="copy"><h2>Tua in pochi secondi</h2><p>Aggiungi una copertina con logo, nome, foto e contatti, e slide magiche che si impaginano da sole, anche con un sito web dal vivo o un file da scaricare. Ogni indirizzo web in una slide diventa un codice QR. Scegli uno stile o creane uno dai colori del tuo logo.</p><ul class="bul"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-photo"/></svg>Il tuo logo da Foto, da File o dagli appunti</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-globe"/></svg>Siti web dal vivo e file da scaricare in una slide</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-code"/></svg>Un codice QR per ogni link, in automatico</li></ul></div></div></section>
+<section class="feat"><div class="wrap"><div class="copy"><h2>Condividi un link, qualunque sia la dimensione</h2><p>Filmati lunghi, presentazioni enormi, decine di foto: invia un link, non allegati. Aggiungi un messaggio di benvenuto, scegli quanto dura il link e aggiornalo dopo le modifiche senza cambiarlo.</p><ul class="bul"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-airplay"/></svg>Un link al posto di file che non si riescono ad aprire</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-lock"/></svg>Una schermata di benvenuto e, se serve, una password</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-clock"/></svg>Scade quando vuoi tu; vedi quante volte è stato aperto</li></ul></div><div class="shotframe featshot"><img src="/shot-share.webp" width="612" height="1330" alt="Condivisione di una presentazione: la copertina, cosa contiene, un titolo e un messaggio, e quanto dura il link" loading="lazy"></div></div></section>
+<section class="feat flip"><div class="wrap"><div class="shotframe featshot"><img src="/shot-commentary.webp" width="612" height="1330" alt="Revisione di un commento in FreeView: la foto di un banco da lavoro sulla slide, chi presenta in una bolla rotonda sotto, e le impaginazioni Bolla, Riquadro e Diviso" loading="lazy"></div><div class="copy"><h2>Parla sopra le tue slide</h2><p>Registrati mentre presenti, slide dopo slide, con la tua fotocamera e la tua voce, poi invialo nello stesso link. Gli altri ti guardano spiegare tutto quando fa più comodo a loro, su qualsiasi schermo.</p><ul class="bul"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-face"/></svg>La tua fotocamera in una bolla, in un riquadro o a schermo diviso</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-play"/></svg>Metti in pausa quando vuoi, cambia impaginazione durante la riproduzione</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-airplay"/></svg>Includilo in un link condiviso o salvalo come video</li></ul></div></div></section>
+<section class="feat"><div class="wrap"><div class="copy"><h2>Si apre su qualsiasi schermo</h2><p>Chi riceve il link lo guarda nel browser, su un portatile, un tablet, un telefono o una TV, pronto da presentare. Niente app, niente account, niente da installare, e Keynote, video e 3D funzionano e basta.</p><ul class="bul"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-globe"/></svg>Qualsiasi browser moderno</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-keys"/></svg>Tasti freccia, telecomandi per presentazioni, scorrimento o tocco</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-check"/></svg>A tutto schermo, da bordo a bordo</li></ul></div><div class="shotframe featshot"><img src="/shot-web-phone.webp" width="612" height="1330" alt="La presentazione condivisa in riproduzione nel browser di un telefono" loading="lazy"></div></div></section>
+<section class="feat flip"><div class="wrap"><div class="shotframe featshot"><img src="/shot-edit.webp" width="612" height="1330" alt="Modifica di una foto in FreeView: ritaglio, rotazione e bianco e nero" loading="lazy"></div><div class="copy"><h2>Modifica direttamente nella presentazione</h2><p>Ritaglia, ruota o reinventa una foto, accorcia un video o un memo vocale, sistema una pagina di un PDF, ovunque si trovi, in una slide o in una copertina. Ripristina riporta sempre l'originale.</p><ul class="bul"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-photo"/></svg>Ritaglia, ruota, bianco e nero, Reinventa</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-play"/></svg>Accorcia, togli l'audio e scegli il fotogramma di copertina dei video</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-hand"/></svg>Scatta foto, scansiona documenti o registra audio direttamente</li></ul></div></div></section>
+<section class="feat"><div class="wrap"><div class="copy"><h2>Presenta qualsiasi cosa, ovunque</h2><p>Sul tuo schermo tutto si apre a tutto schermo, senza niente in mezzo. Passa un iPad in modalità kiosk, lascia che la riproduzione automatica faccia scorrere le slide in loop, o passa alla modalità notte rosso intenso quando sei al buio.</p><ul class="bul"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-lock"/></svg>Modalità kiosk con PIN, riproduzione automatica in loop</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-moon"/></svg>Modalità notte rossa, anche per pagine e video</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-airplay"/></svg>AirPlay e schermi esterni</li></ul></div><div class="phone" role="img" aria-label="Una slide mostrata senza niente sopra; una pressione con tre dita fa comparire il tastierino del PIN e si inseriscono quattro cifre"><div class="notch"></div><div class="screen"><div class="kiosk"><div class="pg a"><div class="k">Lumen Studio</div><b>Nuova stagione,<br>nuova luce.</b><div class="k">01</div></div></div><div class="fingers"><i></i><i></i><i></i></div><div class="pin"><div class="t">Inserisci il PIN per uscire</div><div class="dots4"><i></i><i></i><i></i><i></i></div><div class="pad"><i>1</i><i>2</i><i>3</i><i>4</i><i>5</i><i>6</i><i>7</i><i>8</i><i>9</i></div></div></div></div></div></section>
+<section class="feat flip"><div class="wrap"><div class="phone" role="img" aria-label="L'elenco dei recenti con tre elementi e un indicatore di navigazione privata"><div class="notch"></div><div class="screen"><div class="st"><span>9:41</span><svg viewBox="0 0 34 12" fill="#fff" aria-hidden="true"><rect x="0" y="3" width="4" height="6" rx="1"/><rect x="6" y="1" width="4" height="10" rx="1"/><rect x="20" y="1" width="12" height="7" rx="2"/></svg></div><div class="body"><div class="mini-mark"><img src="/logo.png" alt="" width="20" height="20">FreeView</div><div class="chipp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-eyeslash"/></svg>Privato</div><div class="hist"><div class="r"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><use href="#i-doc"/></svg><div><b>Lumen Primavera 2026</b><span>Lumen-Primavera-2026.pdf</span></div></div><div class="r"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><use href="#i-stack"/></svg><div><b>Lancio</b><span>Presentazione · 3 elementi</span></div></div><div class="r"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><use href="#i-globe"/></svg><div><b>FreeView</b><span>freeview.app</span></div></div><div class="r lockrow"><span style="display:flex;gap:10px;align-items:center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><use href="#i-lock"/></svg>Altre 2 in cronologia</span><b>Sblocca</b></div></div></div></div></div><div class="copy"><h2>Privacy prima di tutto</h2><p>Niente account, niente pubblicità, niente tracciamento. I tuoi file e la tua cronologia non lasciano mai il dispositivo, a meno che tu non li condivida, e i link condivisi scadono da soli.</p><ul class="bul"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-eyeslash"/></svg>La navigazione privata non conserva cookie né cronologia</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-face"/></svg>Blocco con Face ID o Touch ID</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><use href="#i-check"/></svg>Interrompi qualsiasi link quando vuoi</li></ul></div></div></section>
+
+<section class="gallery">
+  <div class="wrap">
+    <h2>Gratis da usare. Pro se vuoi tutto.</h2>
+    <p>Visualizzare, presentare, modificare, slide personalizzate e stili sono gratis. La versione gratuita conserva le tue tre presentazioni più recenti e condivide un link alla volta, fino a una settimana. FreeView Pro conserva tutte le presentazioni e condivide tutti i link che vuoi, fino a 90 giorni, con password, visualizzazioni per slide e senza marchio FreeView.</p>
+    <div class="price">
+      <div class="cardp"><div class="amt">$1.99</div><div class="per">Pro · mensile</div></div>
+      <div class="cardp best"><div class="amt">$4.99</div><div class="per">Pro · primo anno · poi $9.99 all'anno</div></div>
+      <div class="cardp"><div class="amt">$9.99</div><div class="per">A vita · acquisto unico · prezzo di lancio</div></div>
+    </div>
+    <p style="font-size:13px;margin-top:16px">Prezzi di lancio fino al 15 novembre 2026; dopo, il piano annuale inizia con una settimana gratuita a $9.99 all'anno e A vita costa $19.99. Prezzi USA; il tuo App Store mostra i prezzi locali. I piani mensile e annuale si rinnovano automaticamente se non disdetti almeno 24 ore prima della fine del periodo; gestiscili in Impostazioni → Account Apple → Abbonamenti.</p>
+    <a class="appstore" style="margin-top:26px" href="https://apps.apple.com/app/id1526222244" target="_blank" rel="noopener" aria-label="Scarica FreeView sull'App Store">
+      <img src="/appstore-badge.svg" alt="Scarica sull'App Store">
+    </a>
+  </div>
+</section>
+
+<footer>
+  © 2026 FRANCESCO BERTOCCI, LLC · FreeView
+  <div style="margin-top:4px"><a href="/it/privacy.html">Privacy</a>·<a href="/it/terms.html">Termini</a>·<a href="/it/support.html">Supporto</a>·<a href="mailto:hello@freeview.app">hello@freeview.app</a></div>
+  <nav aria-label="Lingua"><a href="/" hreflang="en" lang="en">English</a>·<a href="/es/" hreflang="es" lang="es">Español</a>·<a href="/fr/" hreflang="fr" lang="fr">Français</a>·<a href="/it/" hreflang="it" lang="it" aria-current="page">Italiano</a>·<a href="/pt-br/" hreflang="pt-BR" lang="pt-BR">Português (Brasil)</a></nav>
+</footer>
+</body>
+</html>
