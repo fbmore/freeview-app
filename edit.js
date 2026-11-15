@@ -59,7 +59,10 @@
     const code = e && (e.ckErrorCode || e.serverErrorCode);
     if (code === 'QUOTA_EXCEEDED') return 'Your iCloud storage is full.';
     if (code === 'AUTHENTICATION_REQUIRED' || code === 'AUTHENTICATION_FAILED') return 'Sign in with Apple again to keep saving.';
-    return (e && (e.reason || e.message)) ? `Couldn't save: ${e.reason || e.message}` : "Couldn't save that. Try again.";
+    if (code === 'NETWORK_ERROR' || /NETWORK_ERROR|Failed to fetch/.test(String(e && (e.reason || e.message)))) return 'Couldn’t reach iCloud. Check your connection and try again.';
+    if (code === 'LIMIT_EXCEEDED' || code === 'TOO_LARGE') return 'That file is too big to upload here. Add it in FreeView on your Mac, iPhone or iPad.';
+    console.error(e);
+    return "Couldn't save that. Try again.";
   }
   function show(view) {
     for (const id of ['welcome', 'library', 'deck', 'links', 'settings']) $('#' + id).hidden = id !== view;
