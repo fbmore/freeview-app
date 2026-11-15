@@ -32,6 +32,12 @@
     trash: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>',
     cam: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="3" y="6.5" width="13" height="11" rx="2.5"/><path d="M16 10.5l5-3v9l-5-3z"/></svg>',
     watch: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l6-3.5z" fill="currentColor" stroke="none"/></svg>',
+    x: '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+    sound: '<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M4 9h3.5L12 5v14l-4.5-4H4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+    mute: '<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M4 9h3.5L12 5v14l-4.5-4H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+    folder: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2h7.5A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/></svg>',
+    stack: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="3" y="7" width="14" height="13" rx="2.5"/><path d="M7 4h11.5A2.5 2.5 0 0 1 21 6.5V16"/></svg>',
+    globe: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg>',
     device: '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="2.5" y="4" width="15" height="10.5" rx="1.5"/><path d="M7 18h6M10 14.5V18"/><rect x="17" y="8" width="4.5" height="10" rx="1.2"/></svg>',
   };
 
@@ -209,6 +215,12 @@
       }
       spec.images = images;
       if (videos.some(Boolean)) spec.videos = videos;
+      const kept = (slide.images || []).slice(0, 4).filter((e) => true);
+      if (slide.syncsMedia && videos.some(Boolean)) spec.syncs = true;
+      const silent = new Set(slide.silent || []);
+      if (silent.size) spec.silent = kept.map((e) => (silent.has(e) ? true : null)).slice(0, images.length);
+      const sites = await Promise.all(kept.map(async (e) => { if (S.fileType(e) !== 'link') return null; const t = await store.text(`${folder}/${e}`) || ''; const m = /URL=(.+)/.exec(t); return m ? m[1].trim() : null; }));
+      if (sites.some(Boolean)) spec.sites = sites.slice(0, images.length);
       if (fits.some(Boolean)) spec.fits = fits;
       if (slide.edge && images.length === 1) spec.edge = S.fileType(slide.images[0]) === 'image' ? 'still' : 'media';
       spec._live = live;
@@ -476,25 +488,7 @@
     const tail = `<div class="actions"><button type="button" class="btn ghost" data-act="up" ${i === 0 ? 'disabled' : ''}>Move Earlier</button><button type="button" class="btn ghost" data-act="down" ${i === deck.entries.length - 1 ? 'disabled' : ''}>Move Later</button>
       <button type="button" class="btn ghost danger" data-act="remove">${ICON.trash} Remove Slide</button></div>`;
     if (info.type === 'custom' && info.slide) {
-      const s = info.slide, cover = s.kind === 'cover';
-      panel.innerHTML = head + `
-        <label class="field"><span>Title</span><input id="f-title" value="${esc(s.title)}" placeholder="${cover ? 'Presentation title' : 'Title'}" autocomplete="off"></label>
-        ${cover ? `<label class="field"><span>Subtitle</span><input id="f-subtitle" value="${esc(s.subtitle)}" placeholder="A line under the title" autocomplete="off"></label>`
-                : `<label class="field"><span>Text</span><textarea id="f-body" rows="5" placeholder="A few words. **Bold**, lists and links work.">${esc(s.body)}</textarea></label>`}
-        ${cover ? '' : `<div class="field"><span>Pictures and videos <em>${(s.images || []).length} of 4</em></span><div class="media-list">${(s.images || []).map((m, k) => `
-          <div class="media-item"><span class="mi-thumb" data-k="${k}"></span><span class="mi-name">${esc(mediaLabel(m))}</span><button type="button" class="icon-btn" data-drop="${k}" aria-label="Remove">${ICON.trash}</button></div>`).join('')}</div>
-          <div class="row wrap">${(s.images || []).length < 4 ? `<button type="button" class="btn small" data-media="files">${ICON.plus} Photo or Video</button><button type="button" class="btn small" data-media="camera">${ICON.cam} Live Camera</button>` : ''}</div></div>
-          <div class="field"><span>Text</span><div class="seg" role="radiogroup">${['left', 'center'].map((a) => `<button type="button" role="radio" aria-checked="${(s.align || 'left') === a}" data-align="${a}">${a === 'left' ? 'Left' : 'Centered'}</button>`).join('')}</div></div>`}
-        ${tail}`;
-      const save = debounce(() => saveCustom(info), 600);
-      for (const [id, key] of [['#f-title', 'title'], ['#f-subtitle', 'subtitle'], ['#f-body', 'body']]) {
-        const f = $(id, panel); if (!f) continue;
-        f.oninput = () => { s[key] = f.value; info.spec && (info.spec[key] = f.value); redrawCanvas(info); save(); };
-      }
-      $$('[data-align]', panel).forEach((b) => b.onclick = () => { s.align = b.dataset.align; saveCustom(info, true); });
-      $$('[data-drop]', panel).forEach((b) => b.onclick = () => { s.images.splice(+b.dataset.drop, 1); saveCustom(info, true); });
-      $$('[data-media]', panel).forEach((b) => b.onclick = () => b.dataset.media === 'camera' ? addCameraTo(info) : pickFiles('image/*,video/*', (files) => addMediaTo(info, files)));
-      $$('.mi-thumb', panel).forEach((t) => { const m = s.images[+t.dataset.k]; const u = S.fileType(m) === 'image' ? store.url(`${deck.folder}/${m}`) : store.url(`${deck.folder}/${S.posterPath(m)}`); if (u) t.style.backgroundImage = `url("${u}")`; });
+      customInspector(panel, info, head, tail);
     } else {
       const note = { image: '', webImage: '', video: '', audio: '', pdf: info.pages ? `${info.pages} page${info.pages === 1 ? '' : 's'}, each one a slide when you present.` : '', link: info.href ? `Shows ${hostOf(info.href)}.` : '' }[info.type];
       const appOnly = note === undefined;
@@ -503,7 +497,135 @@
     }
     $$('[data-act]', panel).forEach((b) => b.onclick = () => ({ up: () => move(i, i - 1), down: () => move(i, i + 1), remove: () => removeSlide(i) }[b.dataset.act]()));
   }
-  const mediaLabel = (m) => { const t = S.fileType(m); return t === 'live' ? 'Live camera' : t === 'video' ? 'Video' : t === 'audio' ? 'Sound' : 'Photo'; };
+
+  // ── a cover's or Magic slide's panel: the app's sections, in the app's order and words ──
+  const CONTACT_ORDER = ['website', 'email', 'phone', 'linkedin', 'x', 'instagram', 'github', 'threads', 'bluesky'];
+  const CONTACT_LABEL = { website: 'Website', email: 'Email', phone: 'Phone', linkedin: 'LinkedIn', x: 'X', instagram: 'Instagram', github: 'GitHub', threads: 'Threads', bluesky: 'Bluesky' };
+  /** Whose details a slide shows: the slide's own presenter, the presentation's, or the profile's. */
+  function presenterOf(slide) {
+    const style = deck.style || {};
+    const custom = style.presenter === 'custom' && style.person;
+    const who = slide.person || (custom ? style.person : profile) || {};
+    const photoPath = slide.photo ? `${deck.folder}/${slide.photo}` : custom ? `${deck.folder}/.presenter.jpg` : '.profile/profile-photo.jpg';
+    return { who, name: [who.firstName, who.lastName].filter(Boolean).join(' '), role: who.role || '', contacts: who.contacts || {}, hasPhoto: store.has(photoPath) };
+  }
+  const sw = (key, label, on, disabled, extra) =>
+    `<label class="switch${disabled ? ' off' : ''}"><span>${label}${extra ? `<em>${esc(extra)}</em>` : ''}</span><input type="checkbox" role="switch" data-sw="${key}" ${on ? 'checked' : ''} ${disabled ? 'disabled' : ''}><i aria-hidden="true"></i></label>`;
+  function customInspector(panel, info, head, tail) {
+    const s = info.slide, cover = s.kind === 'cover';
+    const P = presenterOf(s);
+    const images = s.images || [];
+    const hasBody = !!(s.body || '').trim();
+    const sections = [];
+    sections.push(`<section class="sect"><h3>Text</h3>
+      <label class="field"><span>Title</span><input id="f-title" value="${esc(s.title)}" placeholder="${cover ? 'Your presentation' : 'Title'}" autocomplete="off"></label>
+      ${cover ? `<label class="field"><span>Subtitle</span><input id="f-subtitle" value="${esc(s.subtitle)}" placeholder="A subtitle, a date, a place" autocomplete="off"></label>`
+              : `<label class="field"><span>Text</span><textarea id="f-body" rows="5" placeholder="A few words. **Bold**, lists and links work.">${esc(s.body)}</textarea></label>`}</section>`);
+    if (!cover) {
+      const plays = images.filter((m) => ['video', 'audio'].includes(S.fileType(m)));
+      const silent = new Set(s.silent || []);
+      sections.push(`<section class="sect"><h3>Media <em>${images.length} of 4</em></h3>
+        ${images.length ? `<div class="mgrid" role="list">${images.map((m, k) => {
+          const t = S.fileType(m), sound = t === 'video' || t === 'audio';
+          return `<div class="mtile" role="listitem" draggable="true" tabindex="0" data-k="${k}" aria-label="${esc(mediaLabel(m))}, ${k + 1} of ${images.length}">
+            <span class="mi-thumb" data-k="${k}"></span><span class="mlabel">${esc(mediaLabel(m))}</span>
+            <button type="button" class="mbtn drop" data-drop="${k}" aria-label="Remove">${ICON.x}</button>
+            ${sound ? `<button type="button" class="mbtn snd${silent.has(m) ? ' muted' : ''}" data-snd="${k}" aria-label="${silent.has(m) ? 'Sound off' : 'Sound on'}" title="${silent.has(m) ? 'Its sound is off. Click to turn it on.' : 'Its sound plays. Click to turn it off.'}">${silent.has(m) ? ICON.mute : ICON.sound}</button>` : ''}
+          </div>`; }).join('')}</div>` : ''}
+        ${plays.length ? `<div class="switches">${sw('syncsMedia', plays.length > 1 ? 'Sync Media' : 'Play on the Slide', s.syncsMedia === true)}</div>` : ''}
+        ${images.length < 4 ? `<div class="addlist">
+          <button type="button" class="addrow" data-media="files">${ICON.folder}<span>Add from Files</span></button>
+          <button type="button" class="addrow" data-media="deck">${ICON.stack}<span>Add from This Presentation</span></button>
+          <button type="button" class="addrow" data-media="site">${ICON.globe}<span>Add a Website</span></button>
+          <button type="button" class="addrow" data-media="front">${ICON.cam}<span>Add a Live Camera</span><em>Front</em></button>
+          <button type="button" class="addrow" data-media="back">${ICON.cam}<span>Add a Live Camera</span><em>Back</em></button></div>` : ''}
+        <p class="foot">Up to four, of any kind. With text they sit beside it; on their own they fill the slide. Drag one onto another to reorder.${plays.length ? ' With Sync Media on, its videos and audio play right on the slide and start and pause together.' : ''}</p></section>`);
+      const align = s.align || '';
+      sections.push(`<section class="sect"><h3>Layout</h3>
+        <div class="seg" role="radiogroup" aria-label="Alignment">${[['', 'Style'], ['center', 'Centre'], ['left', 'Left']].map(([v, l]) => `<button type="button" role="radio" aria-checked="${align === v}" data-align="${v}">${l}</button>`).join('')}</div>
+        ${images.length && hasBody ? `<label class="field inline"><span>Text Column</span><select id="f-split">${[['', 'Auto'], ['0.3', '30%'], ['0.4', '40%'], ['0.5', '50%'], ['0.6', '60%']].map(([v, l]) => `<option value="${v}" ${String(s.split || '') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>` : ''}
+        <p class="foot">The slide arranges itself: a title on its own becomes the hero, pictures on their own fill the slide, and text sits beside pictures.</p></section>`);
+    } else {
+      sections.push(`<section class="sect"><h3>Background</h3>
+        <div class="bgrow"><span class="mi-thumb big" id="bgthumb"></span><div class="row wrap"><button type="button" class="btn small" id="bgpick">${s.background ? 'Replace…' : 'Choose Picture…'}</button>${s.background ? '<button type="button" class="btn small ghost danger" id="bgdrop">Remove</button>' : ''}</div></div></section>`);
+    }
+    const contactRows = CONTACT_ORDER.filter((k) => (P.contacts[k] || '').trim()).map((k) => sw('c:' + k, CONTACT_LABEL[k], (s.contacts || []).includes(k), false, P.contacts[k]));
+    sections.push(`<section class="sect"><h3>Show</h3><div class="switches">
+      ${sw('showLogo', 'Logo', s.showLogo)}
+      ${sw('showName', 'Name', s.showName, !P.name, P.name)}
+      ${sw('showPhoto', 'Photo', s.showPhoto, !P.hasPhoto)}
+      ${sw('showRole', 'Role', s.showRole, !P.role, P.role)}
+      ${contactRows.join('')}</div>
+      <p class="foot">${s.person ? 'This slide shows a presenter of its own. Choose what it shows.' : 'Name, photo, role and contacts come from Settings › Profile, or from the presenter set in this presentation’s Style. Choose what this slide shows.'}</p>
+      ${s.person ? '' : '<button type="button" class="btn small" id="editprofile">Edit Profile and Contacts…</button>'}</section>`);
+    const buttons = s.buttons || [];
+    sections.push(`<section class="sect"><h3>Links</h3><div class="switches">${sw('qr', 'QR Codes for Web Addresses', s.qr !== false)}</div>
+      ${buttons.map((b, k) => `<div class="btnrow"><input data-bl="${k}" value="${esc(b.label)}" placeholder="Label" aria-label="Button label"><input data-bu="${k}" value="${esc(b.url)}" placeholder="Web address" aria-label="Button web address" inputmode="url" spellcheck="false"><button type="button" class="icon-btn" data-bdrop="${k}" aria-label="Remove button">${ICON.trash}</button></div>`).join('')}
+      <button type="button" class="btn small" id="addbutton">${ICON.plus} Add Button</button></section>`);
+    panel.innerHTML = head + sections.join('') + tail;
+
+    const save = debounce(() => saveCustom(info), 600);
+    for (const [id, key] of [['#f-title', 'title'], ['#f-subtitle', 'subtitle'], ['#f-body', 'body']]) {
+      const f = $(id, panel); if (!f) continue;
+      f.oninput = () => { s[key] = f.value; if (info.spec) info.spec[key] = f.value; redrawCanvas(info); save(); };
+    }
+    $$('[data-align]', panel).forEach((b) => (b.onclick = () => { if (b.dataset.align) s.align = b.dataset.align; else delete s.align; saveCustom(info, true); }));
+    const split = $('#f-split', panel); if (split) split.onchange = () => { if (split.value) s.split = +split.value; else delete s.split; saveCustom(info, true); };
+    $$('[data-drop]', panel).forEach((b) => (b.onclick = (e) => { e.stopPropagation(); const [m] = s.images.splice(+b.dataset.drop, 1); if (s.silent) { s.silent = s.silent.filter((x) => x !== m); if (!s.silent.length) delete s.silent; } saveCustom(info, true); }));
+    $$('[data-snd]', panel).forEach((b) => (b.onclick = (e) => {
+      e.stopPropagation(); const m = s.images[+b.dataset.snd]; const set = new Set(s.silent || []);
+      if (set.has(m)) set.delete(m); else set.add(m);
+      if (set.size) s.silent = [...set]; else delete s.silent; saveCustom(info, true);
+    }));
+    $$('[data-media]', panel).forEach((b) => (b.onclick = () => {
+      const k = b.dataset.media;
+      if (k === 'files') pickFiles('image/*,video/*,audio/*,application/pdf,.pdf', (files) => addMediaTo(info, files));
+      else if (k === 'deck') pickFromDeck(info);
+      else if (k === 'site') addSiteTo(info);
+      else addCameraTo(info, k);
+    }));
+    // Reorder: drag one tile onto another (as in the app), or ⌥← / ⌥→ on a focused tile.
+    const moveMedia = (from, to) => { if (to < 0 || to >= s.images.length || from === to) return; const [m] = s.images.splice(from, 1); s.images.splice(to, 0, m); saveCustom(info, true).then(() => { const t = $$('.mtile', $('#inspector'))[to]; if (t) t.focus(); }); };
+    $$('.mtile', panel).forEach((t) => {
+      const k = +t.dataset.k;
+      t.ondragstart = (e) => { e.dataTransfer.setData('text/fv-media', String(k)); e.dataTransfer.effectAllowed = 'move'; t.classList.add('dragging'); };
+      t.ondragend = () => t.classList.remove('dragging');
+      t.ondragover = (e) => { if (e.dataTransfer.types.includes('text/fv-media')) { e.preventDefault(); t.classList.add('drop'); } };
+      t.ondragleave = () => t.classList.remove('drop');
+      t.ondrop = (e) => { t.classList.remove('drop'); const from = parseInt(e.dataTransfer.getData('text/fv-media'), 10); if (Number.isInteger(from)) { e.preventDefault(); moveMedia(from, k); } };
+      t.onkeydown = (e) => {
+        if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowUp')) { e.preventDefault(); moveMedia(k, k - 1); }
+        else if (e.altKey && (e.key === 'ArrowRight' || e.key === 'ArrowDown')) { e.preventDefault(); moveMedia(k, k + 1); }
+        else if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); $('[data-drop]', t).click(); }
+      };
+    });
+    $$('.mi-thumb[data-k]', panel).forEach((t) => { const m = s.images[+t.dataset.k]; const u = S.fileType(m) === 'image' ? store.url(`${deck.folder}/${m}`) : store.url(`${deck.folder}/${S.posterPath(m)}`); if (u) t.style.backgroundImage = `url("${u}")`; });
+    $$('[data-sw]', panel).forEach((c) => (c.onchange = () => {
+      const k = c.dataset.sw;
+      if (k.startsWith('c:')) {
+        const f = k.slice(2); s.contacts = (s.contacts || []).filter((x) => x !== f);
+        if (c.checked) s.contacts.push(f);
+      } else s[k] = c.checked;
+      saveCustom(info, true);
+    }));
+    const ep = $('#editprofile', panel); if (ep) ep.onclick = () => goTab('settings');
+    // Cover background: a picture of its own, kept like a Magic slide's (.picture-xxxxxxxx.jpg).
+    const bg = $('#bgthumb', panel);
+    if (bg && s.background) { const u = store.url(`${deck.folder}/${s.background}`); if (u) bg.style.backgroundImage = `url("${u}")`; }
+    const pick = $('#bgpick', panel);
+    if (pick) pick.onclick = () => pickFiles('image/*', ([f]) => work('Uploading…', async () => {
+      const name = `.picture-${S.shortID()}.${(f.name.split('.').pop() || 'jpg').toLowerCase()}`;
+      await store.putFile(`${deck.folder}/${name}`, f); s.background = name;
+    }).then(() => saveCustom(info, true)));
+    const drop = $('#bgdrop', panel); if (drop) drop.onclick = () => { delete s.background; saveCustom(info, true); };
+    // Buttons: a label and a web address, under the text (beside the QR codes).
+    const bsave = debounce(() => saveCustom(info), 700);
+    $$('[data-bl]', panel).forEach((i) => (i.oninput = () => { s.buttons[+i.dataset.bl].label = i.value; bsave(); }));
+    $$('[data-bu]', panel).forEach((i) => (i.oninput = () => { s.buttons[+i.dataset.bu].url = i.value.trim(); bsave(); }));
+    $$('[data-bdrop]', panel).forEach((b) => (b.onclick = () => { s.buttons.splice(+b.dataset.bdrop, 1); if (!s.buttons.length) delete s.buttons; saveCustom(info, true); }));
+    $('#addbutton', panel).onclick = () => { s.buttons = (s.buttons || []).concat([{ label: '', url: '' }]); renderInspector(info); const l = $$('[data-bl]', panel).pop(); if (l) l.focus(); };
+  }
+  const mediaLabel = (m) => ({ live: 'Live camera', video: 'Video', audio: 'Sound', link: 'Website', pdf: 'PDF' }[S.fileType(m)] || 'Photo');
   function debounce(fn, ms) { let t; return () => { clearTimeout(t); t = setTimeout(fn, ms); }; }
   async function redrawCanvas(info) {
     const box = $('#canvas > div'); if (!box || !info.spec) return;
@@ -572,6 +694,11 @@
   async function addCustom(kind, withCamera) {
     const entry = uniqueName(kind === 'cover' ? 'Cover' : 'Magic Slide');
     const slide = S.newCustomSlide(kind, kind === 'cover' ? { title: deck.visit.title } : { title: withCamera ? 'Live' : '' });
+    if (kind === 'cover') {
+      const P = presenterOf(slide);
+      slide.showPhoto = P.hasPhoto;
+      slide.contacts = CONTACT_ORDER.filter((k) => (P.contacts[k] || '').trim()).slice(0, 2);
+    }
     await work('Adding…', async () => {
       if (withCamera) slide.images.push(await cameraMedia());
       await store.writeJSON(`${deck.folder}/${entry}`, slide, true);
@@ -582,11 +709,12 @@
     const f = $('#f-title'); if (f) { f.focus(); f.select(); }
   }
   /** A live camera for a Magic slide: a .fvlive the apps show live too, with a poster from this camera. */
-  async function cameraMedia() {
+  async function cameraMedia(facing) {
     const name = `.live-${S.shortID()}.fvlive`;
     let poster = null;
     try { await camera(false); poster = await frameOf(cameraStream); } catch { toast('The camera is off, so the slide shows a placeholder until it’s on.'); }
-    await store.writeJSON(`${deck.folder}/${name}`, S.newCameraMedia(), true);
+    const live = S.newCameraMedia(); if (facing === 'back') live.tiles[0].source = 'camera:back';
+    await store.writeJSON(`${deck.folder}/${name}`, live, true);
     if (poster) await store.putFile(`${deck.folder}/${S.posterPath(name)}`, poster);
     return name;
   }
@@ -619,8 +747,50 @@
     });
     await saveCustom(info, true);
   }
-  async function addCameraTo(info) {
-    await work('Adding the camera…', async () => { info.slide.images.push(await cameraMedia()); });
+
+  /** Picks one of this presentation's photos, videos or PDFs to show on the Magic slide too. */
+  function pickFromDeck(info) {
+    const ok = deck.entries.filter((e) => ['image', 'webImage', 'video', 'audio', 'pdf'].includes(S.fileType(e)) && !info.slide.images.includes(e));
+    if (!ok.length) return toast('This presentation has no photos, videos or PDFs to add yet.');
+    const d = $('#deckpick');
+    $('.dp-grid', d).replaceChildren(...ok.map((e) => {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'dp-item'; b.innerHTML = '<span class="frame"></span><span class="dp-name"></span>';
+      $('.dp-name', b).textContent = S.baseName(e);
+      slideInfo(deck.folder, e).then((x) => draw($('.frame', b), x, { thumb: true }));
+      b.onclick = () => { d.close(); info.slide.images.push(e); saveCustom(info, true); };
+      return b;
+    }));
+    d.showModal();
+  }
+  /** A website on the slide: its address, kept as the apps keep one, with a card of its name (the app pictures the page itself). */
+  async function addSiteTo(info) {
+    const d = $('#sitepick'); const input = $('input', d); input.value = '';
+    d.showModal(); input.focus();
+    input.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); d.close('add'); } };
+    d.onclose = async () => {
+      if (d.returnValue !== 'add') return;
+      let url = input.value.trim(); if (!url) return;
+      if (!/^[a-z]+:\/\//i.test(url)) url = 'https://' + url;
+      try { new URL(url); } catch { return toast('That doesn’t look like a web address.'); }
+      const name = `.site-${S.shortID()}.url`;
+      await work('Adding the website…', async () => {
+        await store.putFile(`${deck.folder}/${name}`, new Blob([`[InternetShortcut]\nURL=${url}\n`], { type: 'text/plain' }));
+        await store.putFile(`${deck.folder}/${S.posterPath(name)}`, await siteCard(url));
+        info.slide.images.push(name);
+      });
+      saveCustom(info, true);
+    };
+  }
+  function siteCard(url) {
+    const c = document.createElement('canvas'); c.width = 1600; c.height = 1000;
+    const x = c.getContext('2d'); x.fillStyle = '#1c1c1e'; x.fillRect(0, 0, 1600, 1000);
+    x.fillStyle = '#fff'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.font = '700 96px -apple-system, system-ui, sans-serif'; x.fillText(hostOf(url), 800, 470, 1400);
+    x.fillStyle = 'rgba(255,255,255,.55)'; x.font = '500 44px -apple-system, system-ui, sans-serif'; x.fillText('Opens the website', 800, 580);
+    return new Promise((ok) => c.toBlob(ok, 'image/jpeg', 0.9));
+  }
+  async function addCameraTo(info, facing) {
+    await work('Adding the camera…', async () => { info.slide.images.push(await cameraMedia(facing)); });
     await saveCustom(info, true);
   }
 
@@ -826,6 +996,10 @@
       await enter();
       await loading.catch((e) => { console.error(e); toast('iCloud didn’t send everything. Reload to try again.'); });
       busy('');
+      // The profile (name, photo, role) may have come in after the first slides were drawn.
+      profile = await store.json('.profile/profile.json');
+      infoCache.clear();
+      if (deck) { deck.style = await store.json(`${deck.folder}/.style.json`); renderRail(); renderSelected(); }
       if (!deck && !$('#library').hidden) { const m = /deck=([0-9A-F-]+)/i.exec(location.hash); if (m && store.visit(m[1])) openDeck(m[1]); else renderLibrary(); }
       if (!$('#links').hidden) renderLinks();
       if (!$('#settings').hidden) renderSettings();

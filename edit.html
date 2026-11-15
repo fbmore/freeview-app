@@ -195,6 +195,60 @@
   .hint { color: var(--muted); font-size: 14px; margin: 0; }
   .appnote { display: flex; gap: 12px; align-items: flex-start; padding: 12px; background: var(--raised); border-radius: var(--r-md); color: var(--muted); font-size: 14px; }
   .appnote svg { flex: none; color: var(--fg); }
+  .sect { display: flex; flex-direction: column; gap: 10px; padding-bottom: 16px; box-shadow: 0 1px 0 var(--hairline); }
+  .sect h3 { margin: 0; font-size: 12px; font-weight: 650; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); display: flex; justify-content: space-between; }
+  .sect h3 em { font-style: normal; text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--faint); font-variant-numeric: tabular-nums; }
+  .sect .foot { margin: 0; font-size: 12.5px; line-height: 1.4; color: var(--faint); }
+  .sect > .btn { align-self: flex-start; }
+  .switches { display: flex; flex-direction: column; background: var(--raised); border-radius: var(--r-md); overflow: hidden; }
+  .switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 0 12px; cursor: pointer; position: relative; }
+  .switch + .switch::before { content: ''; position: absolute; top: 0; left: 12px; right: 0; height: 1px; background: var(--hairline); }
+  .switch > span { display: flex; flex-direction: column; min-width: 0; font-size: 14px; }
+  .switch > span em { font-style: normal; font-size: 12px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .switch.off { cursor: default; } .switch.off > span { color: var(--faint); }
+  .switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .switch i { flex: none; width: 42px; height: 26px; border-radius: 999px; background: rgba(120,120,128,.36); position: relative; transition: background-color .2s var(--ease); }
+  .switch i::after { content: ''; position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,.25); transition: transform .2s var(--ease); }
+  .switch input:checked + i { background: #30d158; }
+  .switch input:checked + i::after { transform: translateX(16px); }
+  .switch input:disabled + i { opacity: .4; }
+  .switch input:focus-visible + i { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .field.inline { flex-direction: row; align-items: center; justify-content: space-between; }
+  .field select { border: 0; border-radius: var(--r-sm); background: var(--raised); color: var(--fg); padding: 7px 10px; font: inherit; font-size: 14px; box-shadow: inset 0 0 0 1px var(--hairline); }
+  .mgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .mtile { position: relative; aspect-ratio: 16 / 10; border-radius: 10px; overflow: hidden; background: var(--raised); cursor: grab; outline: none;
+    box-shadow: 0 0 0 1px var(--hairline); transition-property: box-shadow, opacity, transform; transition-duration: .15s; transition-timing-function: var(--ease); }
+  .mtile .mi-thumb { position: absolute; inset: 0; width: auto; height: auto; border-radius: 0; outline: 0; background-size: cover; }
+  .mtile .mlabel { position: absolute; left: 6px; bottom: 6px; padding: 2px 7px; border-radius: 999px; background: rgba(0,0,0,.6); font-size: 11px; font-weight: 600; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+  .mtile:focus-visible { box-shadow: 0 0 0 2.5px var(--accent); }
+  .mtile.dragging { opacity: .4; }
+  .mtile.drop { box-shadow: 0 0 0 2.5px var(--accent); transform: scale(.98); }
+  .mbtn { position: absolute; top: 5px; display: grid; place-items: center; width: 24px; height: 24px; border: 0; border-radius: 50%; background: rgba(0,0,0,.62); color: #fff; cursor: pointer;
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); transition: background-color .15s; }
+  .mbtn::after { content: ''; position: absolute; inset: -8px; }
+  .mbtn:hover { background: rgba(0,0,0,.85); }
+  .mbtn.drop { right: 5px; } .mbtn.snd { left: 5px; } .mbtn.snd.muted { color: #ff9f0a; }
+  .addlist { display: flex; flex-direction: column; background: var(--raised); border-radius: var(--r-md); overflow: hidden; }
+  .addrow { position: relative; display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 0 12px; border: 0; background: none; color: var(--accent); font-size: 14px; text-align: left; cursor: pointer; transition: background-color .15s; }
+  .addrow + .addrow::before { content: ''; position: absolute; top: 0; left: 40px; right: 0; height: 1px; background: var(--hairline); }
+  .addrow:hover { background: rgba(255,255,255,.04); }
+  .addrow span { flex: 1; } .addrow em { font-style: normal; color: var(--faint); font-size: 13px; }
+  dialog.sheet { border: 0; padding: 20px; border-radius: 18px; background: #1f1f22; color: var(--fg); box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 24px 64px rgba(0,0,0,.6); width: min(560px, calc(100vw - 32px)); }
+  dialog.sheet::backdrop { background: rgba(0,0,0,.5); }
+  dialog.sheet h2 { margin: 0 0 14px; font-size: 17px; }
+  .dp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; max-height: 60vh; overflow: auto; }
+  .dp-item { display: flex; flex-direction: column; gap: 6px; padding: 0; border: 0; background: none; text-align: left; cursor: pointer; }
+  .dp-item .frame { aspect-ratio: 16 / 10; border-radius: 9px; overflow: hidden; background: var(--raised); box-shadow: 0 0 0 1px var(--hairline); transition: box-shadow .15s; }
+  .dp-item:hover .frame { box-shadow: 0 0 0 2px var(--accent); }
+  .dp-name { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sheet .row.end { justify-content: flex-end; margin-top: 16px; }
+  .sheet input[type=url] { width: 100%; border: 0; border-radius: var(--r-md); background: var(--raised); padding: 11px 12px; box-shadow: inset 0 0 0 1px var(--hairline); }
+  .sheet input[type=url]:focus { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
+  .bgrow { display: flex; align-items: center; gap: 12px; }
+  .mi-thumb.big { width: 88px; height: 55px; border-radius: 8px; }
+  .btnrow { display: grid; grid-template-columns: 1fr 1.4fr auto; gap: 6px; align-items: center; }
+  .btnrow input { min-width: 0; border: 0; border-radius: var(--r-sm); background: var(--raised); padding: 8px 10px; font-size: 14px; box-shadow: inset 0 0 0 1px var(--hairline); }
+  .btnrow input:focus { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
   .actions { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; margin-top: auto; padding-top: 12px; box-shadow: 0 -1px 0 var(--hairline); }
 
   /* ── slides drawn anywhere ── */
@@ -381,10 +435,13 @@
   </div>
 </div>
 
+<dialog id="deckpick" class="sheet"><h2>Add from This Presentation</h2><div class="dp-grid"></div><form method="dialog" class="row end"><button class="btn" value="cancel">Cancel</button></form></dialog>
+<dialog id="sitepick" class="sheet"><form method="dialog"><h2>Add a Website</h2><input type="url" placeholder="example.com" aria-label="Web address" spellcheck="false" autocomplete="url">
+  <div class="row end"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn primary" value="add">Add</button></div></form></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
 <input type="file" id="picker" multiple hidden>
 
-<script src="/edit-store.js?v=2"></script>
-<script src="/edit.js?v=2"></script>
+<script src="/edit-store.js?v=4"></script>
+<script src="/edit.js?v=4"></script>
 </body>
 </html>

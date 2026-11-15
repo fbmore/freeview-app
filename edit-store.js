@@ -108,7 +108,7 @@
   function newCustomSlide(kind, fields) {
     return Object.assign({
       kind, title: '', subtitle: '', body: '', images: [],
-      showLogo: true, showName: kind === 'cover', showPhoto: false, showRole: kind === 'cover',
+      showLogo: true, showName: kind === 'cover', showPhoto: false, showRole: false,
       contacts: [], qr: true,
     }, fields || {});
   }
