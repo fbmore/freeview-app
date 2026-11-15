@@ -369,7 +369,8 @@
   }
   async function renderLibrary() {
     const grid = $('#grid');
-    const decks = store.decks();
+    const q = ($('#search').value || '').trim().toLowerCase();
+    const decks = store.decks().filter((v) => !q || (v.title || '').toLowerCase().includes(q));
     $('#empty').hidden = decks.length > 0 || !!store.loading;
     if (!decks.length && store.loading) {
       grid.replaceChildren(...Array.from({ length: 8 }, () => { const d = document.createElement('div'); d.className = 'deckcard ghost'; d.setAttribute('aria-hidden', 'true'); d.innerHTML = '<div class="cover"></div><div class="meta"><span class="bar"></span><span class="bar short"></span></div>'; return d; }));
@@ -380,6 +381,12 @@
       const b = document.createElement('button'); b.type = 'button'; b.className = 'deckcard';
       b.innerHTML = `<div class="cover"></div><div class="meta"><strong>${esc(v.title)}</strong><span>${entries.length} slide${entries.length === 1 ? '' : 's'} · ${when(S.fromApple(v.date))}</span></div>`;
       b.onclick = () => openDeck(v.id);
+      b.oncontextmenu = (e) => { e.preventDefault(); deckMenu(v, e.clientX, e.clientY); };
+      const more = document.createElement('span'); more.className = 'more'; more.setAttribute('role', 'button'); more.setAttribute('aria-label', 'More'); more.tabIndex = 0;
+      more.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg>';
+      more.onclick = (e) => { e.stopPropagation(); const r = more.getBoundingClientRect(); deckMenu(v, r.left, r.bottom + 4); };
+      more.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); more.click(); } };
+      b.appendChild(more);
       if (entries[0]) slideInfo(folder, entries[0]).then((info) => draw($('.cover', b), info, { thumb: true })).catch(() => {});
       return b;
     }));
@@ -396,6 +403,7 @@
     const visit = store.visit(id); if (!visit) return showLibrary();
     const { folder, entries } = store.deckOf(visit);
     deck = { visit, folder, entries, selected: Math.min(selected, Math.max(0, entries.length - 1)), style: await store.json(`${folder}/.style.json`) };
+    deck.chosen = new Set(entries.length ? [entries[deck.selected]] : []); deck.anchor = deck.selected;
     $('#stylebtn').setAttribute('aria-pressed', 'false');
     deck.notes = (await store.json(`${folder}/.notes.json`)) || {};
     deck.transitions = (await store.json(`${folder}/.transitions.json`)) || {};
@@ -412,17 +420,22 @@
 
   function renderRail() {
     const rail = $('#rail');
+    if (!deck.chosen) deck.chosen = new Set();
+    for (const e of [...deck.chosen]) if (!deck.entries.includes(e)) deck.chosen.delete(e);
+    if (!deck.chosen.size && deck.entries[deck.selected]) deck.chosen.add(deck.entries[deck.selected]);
     rail.replaceChildren(...deck.entries.map((entry, i) => {
-      const b = document.createElement('div'); b.className = 'thumb' + (i === deck.selected ? ' on' : ''); b.tabIndex = 0; b.draggable = true;
-      b.setAttribute('role', 'option'); b.setAttribute('aria-selected', i === deck.selected);
+      const on = chosenHas(entry);
+      const b = document.createElement('div'); b.className = 'thumb' + (on ? ' on' : '') + (i === deck.selected ? ' focus' : ''); b.tabIndex = 0; b.draggable = true;
+      b.setAttribute('role', 'option'); b.setAttribute('aria-selected', on);
       b.innerHTML = `<span class="n">${i + 1}</span><div class="frame"></div>`;
-      b.onclick = () => select(i);
+      b.onclick = (e) => clickThumb(i, e);
+      b.oncontextmenu = (e) => { e.preventDefault(); if (!chosenHas(entry)) select(i); slideMenu(e.clientX, e.clientY); };
       b.onkeydown = (e) => {
         if ((e.altKey || e.metaKey) && (e.key === 'ArrowUp' || e.key === 'ArrowLeft')) { e.preventDefault(); move(i, i - 1); }
         else if ((e.altKey || e.metaKey) && (e.key === 'ArrowDown' || e.key === 'ArrowRight')) { e.preventDefault(); move(i, i + 1); }
-        else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); select(i - 1, true); }
-        else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); select(i + 1, true); }
-        else if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); removeSlide(i); }
+        else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); e.shiftKey ? extendTo(i - 1) : select(i - 1, true); }
+        else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); e.shiftKey ? extendTo(i + 1) : select(i + 1, true); }
+        else if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); deleteChosen(); }
       };
       b.ondragstart = (e) => { e.dataTransfer.setData('text/fv-slide', String(i)); e.dataTransfer.effectAllowed = 'move'; b.classList.add('dragging'); };
       b.ondragend = () => b.classList.remove('dragging');
@@ -437,10 +450,33 @@
     rail.appendChild(add);
     $('#deck').classList.toggle('blank', deck.entries.length === 0);
   }
+  const chosenHas = (entry) => !!(deck && deck.chosen && deck.chosen.has(entry));
+  /** The chosen slides, in the presentation's order. */
+  const chosenList = () => deck.entries.filter((e) => deck.chosen.has(e));
+  function paintChosen() {
+    $$('#rail .thumb:not(.add)').forEach((t, k) => { const on = chosenHas(deck.entries[k]); t.classList.toggle('on', on); t.classList.toggle('focus', k === deck.selected); t.setAttribute('aria-selected', on); });
+  }
+  function clickThumb(i, e) {
+    if (e.metaKey || e.ctrlKey) {
+      const entry = deck.entries[i];
+      if (deck.chosen.has(entry) && deck.chosen.size > 1) deck.chosen.delete(entry); else deck.chosen.add(entry);
+      deck.selected = i; paintChosen(); return renderSelected();
+    }
+    if (e.shiftKey) return extendTo(i);
+    select(i);
+  }
+  function extendTo(i) {
+    if (i < 0 || i >= deck.entries.length) return;
+    const a = Math.min(deck.anchor ?? deck.selected, i), b = Math.max(deck.anchor ?? deck.selected, i);
+    deck.chosen = new Set(deck.entries.slice(a, b + 1)); deck.selected = i;
+    paintChosen(); const el = $$('#rail .thumb')[i]; if (el) { el.scrollIntoView({ block: 'nearest', inline: 'nearest' }); el.focus(); }
+    renderSelected();
+  }
+  function selectAll() { deck.chosen = new Set(deck.entries); paintChosen(); renderSelected(); }
   function select(i, focus) {
     if (i < 0 || i >= deck.entries.length) return;
-    deck.selected = i;
-    $$('#rail .thumb').forEach((t, k) => { t.classList.toggle('on', k === i); t.setAttribute('aria-selected', k === i); });
+    deck.selected = i; deck.anchor = i; deck.chosen = new Set([deck.entries[i]]);
+    paintChosen();
     const el = $$('#rail .thumb')[i]; if (el) { el.scrollIntoView({ block: 'nearest', inline: 'nearest' }); if (focus) el.focus(); }
     renderSelected();
   }
@@ -487,6 +523,7 @@
 
   function renderInspector(info) {
     const panel = $('#inspector');
+    if (deck.chosen && deck.chosen.size > 1) return severalInspector(panel);
     const i = deck.selected;
     const head = `<div class="kind">${esc(info.label)}<span>${i + 1} of ${deck.entries.length}</span></div>`;
     const own = (deck.transitions || {})[info.entry] || '';
@@ -501,7 +538,7 @@
     } else {
       const note = { image: '', webImage: '', video: '', audio: '', pdf: info.pages ? `${info.pages} page${info.pages === 1 ? '' : 's'}, each one a slide when you present.` : '', link: info.href ? `Shows ${hostOf(info.href)}.` : '' }[info.type];
       const appOnly = note === undefined;
-      panel.innerHTML = head + `<div class="filename">${esc(info.name)}</div>` + (note ? `<p class="hint">${esc(note)}</p>` : '') +
+      panel.innerHTML = head + `<div class="filename">${esc(info.type === 'link' && info.href ? info.href : info.name)}</div>` + (note ? `<p class="hint">${esc(note)}</p>` : '') +
         (appOnly ? `<div class="appnote">${ICON.device}<span>Edit this slide in FreeView on your Mac, iPhone or iPad. It stays as it is here and moves with the rest.</span></div>` : '') + tail;
     }
     $$('[data-act]', panel).forEach((b) => b.onclick = () => ({ up: () => move(i, i - 1), down: () => move(i, i + 1), remove: () => removeSlide(i) }[b.dataset.act]()));
@@ -830,6 +867,291 @@
     });
   }
 
+
+  // ── several slides at once (the app's "N Slides" panel) ──
+  function severalInspector(panel) {
+    const picked = chosenList(), n = picked.length;
+    const values = new Set(picked.map((e) => (deck.transitions || {})[e] || ''));
+    const val = values.size === 1 ? [...values][0] : 'mixed';
+    panel.innerHTML = `<div class="kind">${n} Slides</div>
+      <div class="fan">${picked.slice(0, 3).map(() => '<span class="frame"></span>').join('')}</div>
+      <section class="sect">
+        <label class="field inline"><span>Transition</span><select id="m-trans"><option value="">Default</option>${val === 'mixed' ? '<option value="mixed" selected>Mixed</option>' : ''}${TRANSITIONS.map(([v, l]) => `<option value="${v}" ${val === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+        <button type="button" class="btn small" id="m-dup">Duplicate ${n} Slides…</button>
+        <button type="button" class="btn small ghost danger" id="m-del">${ICON.trash} Delete ${n} Slides</button>
+        <p class="foot">Changes here apply to these ${n} slides only.</p></section>`;
+    $$('.fan .frame', panel).forEach((f, k) => slideInfo(deck.folder, picked[k]).then((x) => draw(f, x, { thumb: true })));
+    $('#m-trans').onchange = (e) => {
+      if (e.target.value === 'mixed') return;
+      const m = Object.assign({}, deck.transitions); for (const p of picked) { if (e.target.value) m[p] = e.target.value; else delete m[p]; }
+      deck.transitions = m;
+      work('Saving…', () => (Object.keys(m).length ? store.writeJSON(`${deck.folder}/.transitions.json`, m) : store.deleteFile(`${deck.folder}/.transitions.json`)));
+    };
+    $('#m-dup').onclick = () => askChoice(`Duplicate ${n} Slides`, 'Where should the copies go?', [['after', 'After the Selection'], ['end', 'At the End of the Presentation']], (c) => duplicateChosen(c === 'end'));
+    $('#m-del').onclick = deleteChosen;
+  }
+
+  /** Copies one slide from presentation `from` into `to`, with everything it shows (LocalFiles.copyEntry). */
+  async function copyEntry(entry, from, to) {
+    const copyFile = async (src, dst) => { const u = await store.src(`${from}/${src}`); if (!u) return false; await store.putFile(`${to}/${dst}`, await (await fetch(u)).blob()); return true; };
+    const slash = entry.indexOf('/');
+    if (slash > 0) {
+      const slot = entry.slice(0, slash), rest = entry.slice(slash + 1);
+      const used = store.pathsIn(to + '/').map((p) => parseInt(p.slice(to.length + 1).split('/')[0], 10)).filter((x) => Number.isInteger(x));
+      const next = String((used.length ? Math.max(...used) : -1) + 1);
+      for (const p of store.pathsIn(`${from}/${slot}/`)) await copyFile(p.slice(from.length + 1), `${next}/${p.slice(from.length + slot.length + 2)}`);
+      return `${next}/${rest}`;
+    }
+    const dot = entry.lastIndexOf('.'), base = dot > 0 ? entry.slice(0, dot) : entry, ext = dot > 0 ? entry.slice(dot + 1) : '';
+    const exists = (n) => store.has(`${to}/${n}`);
+    let name = from === to ? `${base} Copy.${ext}` : entry, n = 2;
+    while (exists(name)) { name = `${base} Copy${n === 2 && from !== to ? '' : ' ' + n}.${ext}`; n++; }
+    if (S.fileType(entry) !== 'custom') { await copyFile(entry, name); return name; }
+    const slide = await store.json(`${from}/${entry}`);
+    const own = async (ref) => {
+      const hidden = ref.startsWith('.');
+      if (!(hidden || from !== to) || !store.has(`${from}/${ref}`)) return ref;
+      const leaf = ref.split('/').pop(), refExt = leaf.includes('.') ? leaf.split('.').pop() : '';
+      const prefix = hidden ? leaf.slice(0, leaf.indexOf('-') > 0 ? leaf.indexOf('-') : leaf.length) : '.picture';
+      const copy = `${prefix}-${S.shortID()}${refExt ? '.' + refExt : ''}`;
+      if (!await copyFile(ref, copy)) return ref;
+      if (store.has(`${from}/${S.posterPath(ref)}`)) await copyFile(S.posterPath(ref), S.posterPath(copy));
+      const sound = `.sound-${leaf.replace(/\.[^.]+$/, '')}.m4a`;
+      if (store.has(`${from}/${sound}`)) await copyFile(sound, `.sound-${copy.replace(/\.[^.]+$/, '')}.m4a`);
+      return copy;
+    };
+    slide.images = await Promise.all((slide.images || []).map(own));
+    if (slide.background) slide.background = await own(slide.background);
+    if (slide.photo) slide.photo = await own(slide.photo);
+    if (slide.silent) slide.silent = slide.silent.filter((x) => slide.images.includes(x));
+    await store.writeJSON(`${to}/${name}`, slide, true);
+    return name;
+  }
+  async function insertCopies(copies, at, label) {
+    const entries = deck.entries.slice(); entries.splice(Math.min(at, entries.length), 0, ...copies);
+    await saveEntries(entries);
+    deck.chosen = new Set(copies); deck.selected = entries.indexOf(copies[0]); deck.anchor = deck.selected;
+    renderRail(); renderSelected();
+    toast(copies.length > 1 ? `${copies.length} slides ${label}` : `Slide ${label}`);
+  }
+  async function duplicateChosen(atEnd) {
+    const picked = chosenList(); if (!picked.length) return;
+    await work(picked.length > 1 ? `Duplicating ${picked.length} slides…` : 'Duplicating…', async () => {
+      const copies = [];
+      for (const e of picked) {
+        const c = await copyEntry(e, deck.folder, deck.folder); copies.push(c);
+        if ((deck.transitions || {})[e]) deck.transitions[c] = deck.transitions[e];
+        if ((deck.notes || {})[e]) deck.notes[c] = deck.notes[e];
+      }
+      if (Object.keys(deck.transitions || {}).length) await store.writeJSON(`${deck.folder}/.transitions.json`, deck.transitions);
+      if (Object.keys(deck.notes || {}).length) await store.writeJSON(`${deck.folder}/.notes.json`, deck.notes);
+      const at = atEnd ? deck.entries.length : Math.max(...picked.map((e) => deck.entries.indexOf(e))) + 1;
+      await insertCopies(copies, at, 'duplicated');
+    });
+  }
+  const CLIP = 'freeview-slides:';
+  async function copyChosen() {
+    const picked = chosenList(); if (!picked.length) return;
+    const text = CLIP + JSON.stringify({ folder: deck.folder, entries: picked });
+    try { await navigator.clipboard.writeText(text); } catch { window.__fvClip = text; }
+    window.__fvClip = text;
+    toast(picked.length > 1 ? `${picked.length} slides copied` : 'Slide copied');
+  }
+  async function pasteSlides(text) {
+    let c; try { c = JSON.parse(text.slice(CLIP.length)); } catch { return; }
+    const known = (c.entries || []).filter((e) => store.has(`${c.folder}/${e}`));
+    if (!known.length) return toast('Those slides aren’t in your library any more.');
+    await work('Pasting…', async () => {
+      const copies = []; for (const e of known) copies.push(await copyEntry(e, c.folder, deck.folder));
+      const sel = chosenList(); const at = sel.length ? Math.max(...sel.map((e) => deck.entries.indexOf(e))) + 1 : deck.entries.length;
+      await insertCopies(copies, at, 'pasted');
+    });
+  }
+  async function deleteChosen() {
+    const picked = chosenList(); if (!picked.length) return;
+    const before = deck.entries.slice(), first = deck.entries.indexOf(picked[0]);
+    const entries = deck.entries.filter((e) => !deck.chosen.has(e));
+    deck.entries = entries; deck.selected = Math.min(first, entries.length - 1); deck.chosen = new Set(entries[deck.selected] ? [entries[deck.selected]] : []);
+    renderRail(); renderSelected();
+    await work('Saving…', () => saveEntries(entries));
+    // The files go a moment later, so Undo brings the slides back as they were.
+    let undone = false;
+    const timer = setTimeout(() => { if (!undone) for (const g of picked) if (!deck || !deck.entries.includes(g)) store.deleteFile(`${deck ? deck.folder : ''}/${g}`).catch(() => {}); }, 6500);
+    toast(picked.length > 1 ? `${picked.length} slides deleted` : 'Slide deleted', { label: 'Undo', run: async () => {
+      undone = true; clearTimeout(timer);
+      deck.entries = before; deck.chosen = new Set(picked); deck.selected = first; renderRail(); renderSelected();
+      await work('Saving…', () => saveEntries(before));
+    } });
+  }
+  async function replaceSlide(i) {
+    pickFiles('', async ([f]) => {
+      const old = deck.entries[i];
+      await work('Replacing…', async () => {
+        const entry = `${freeSlot()}/${S.cleanName(f.name)}`;
+        await store.putFile(`${deck.folder}/${entry}`, f);
+        const entries = deck.entries.slice(); entries[i] = entry;
+        for (const m of [deck.notes, deck.transitions]) if (m && m[old]) { m[entry] = m[old]; delete m[old]; }
+        await saveEntries(entries);
+        if (old.includes('/')) store.deleteFile(`${deck.folder}/${old}`).catch(() => {});
+      });
+      deck.chosen = new Set([deck.entries[i]]); renderRail(); renderSelected();
+    });
+  }
+
+  // ── a small menu at a point (right-click on a slide or a presentation) ──
+  function showMenu(x, y, items) {
+    const m = $('#ctxmenu');
+    m.replaceChildren(...items.map((it) => {
+      if (it === '-') { const hr = document.createElement('hr'); return hr; }
+      const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'menuitem');
+      b.className = it.danger ? 'danger' : ''; b.innerHTML = `<span>${esc(it.label)}</span>${it.key ? `<kbd>${it.key}</kbd>` : ''}`;
+      b.onclick = () => { m.hidden = true; it.run(); };
+      return b;
+    }));
+    m.hidden = false;
+    const r = m.getBoundingClientRect();
+    m.style.left = Math.min(x, innerWidth - r.width - 8) + 'px'; m.style.top = Math.min(y, innerHeight - r.height - 8) + 'px';
+    $('button', m).focus();
+    const close = (e) => { if (!m.contains(e.target)) { m.hidden = true; document.removeEventListener('pointerdown', close, true); } };
+    setTimeout(() => document.addEventListener('pointerdown', close, true));
+  }
+  function slideMenu(x, y) {
+    const n = deck.chosen.size, i = deck.selected, entry = deck.entries[i];
+    const t = S.fileType(entry);
+    showMenu(x, y, [
+      ...(n === 1 ? [{ label: 'Present from Here', run: () => present({ from: P_indexOf(entry) }) },
+                     { label: (deck.notes || {})[entry] ? 'Edit Notes…' : 'Add Notes…', run: () => { const nt = $('#f-notes'); if (nt) { nt.scrollIntoView({ block: 'center' }); nt.focus(); } } },
+                     ...(t !== 'custom' ? [{ label: 'Replace…', run: () => replaceSlide(i) }] : []), '-'] : []),
+      { label: n > 1 ? `Copy ${n} Slides` : 'Copy', key: '⌘C', run: copyChosen },
+      { label: n > 1 ? `Duplicate ${n} Slides` : 'Duplicate', key: '⌘D', run: () => (n > 1 ? $('#m-dup').click() : duplicateChosen(false)) },
+      '-',
+      { label: n > 1 ? `Delete ${n} Slides` : 'Delete', key: '⌫', danger: true, run: deleteChosen },
+    ]);
+  }
+  /** Where an entry starts when presenting (a PDF before it counts a slide a page). */
+  function P_indexOf(entry) { return Math.max(0, deck.entries.indexOf(entry)); }
+
+  /** A choice of a few, asked in a small sheet. */
+  function askChoice(title, text, options, done) {
+    const d = $('#choice');
+    $('h2', d).textContent = title; $('p', d).textContent = text;
+    $('.row', d).replaceChildren(...[['cancel', 'Cancel']].concat(options).map(([v, l], k) => {
+      const b = document.createElement('button'); b.className = 'btn' + (k === options.length ? ' primary' : '') + (v === 'remove' ? ' danger-fill' : ''); b.value = v; b.textContent = l; return b;
+    }));
+    d.onclose = () => { if (d.returnValue && d.returnValue !== 'cancel') done(d.returnValue); };
+    d.showModal();
+  }
+
+  // ── adding: a web page, the camera, the microphone, the screen ──
+  function addWebPage() {
+    const d = $('#sitepick'); const input = $('input', d); input.value = ''; $('h2', d).textContent = 'Add a Web Page';
+    d.showModal(); input.focus();
+    input.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); d.close('add'); } };
+    d.onclose = async () => {
+      $('h2', d).textContent = 'Add a Website';
+      if (d.returnValue !== 'add') return;
+      let url = input.value.trim(); if (!url) return; if (!/^[a-z]+:\/\//i.test(url)) url = 'https://' + url;
+      try { new URL(url); } catch { return toast('That doesn’t look like a web address.'); }
+      await addLinkSlide(url);
+    };
+  }
+  async function addLinkSlide(url) {
+    const name = hostOf(url).replace(/\//g, ' ') + '.url', slot = freeSlot(), entry = `${slot}/${name}`;
+    await work('Adding the page…', async () => {
+      await store.putFile(`${deck.folder}/${entry}`, new Blob([`[InternetShortcut]\nURL=${url}\n`], { type: 'text/plain' }));
+      await store.putFile(`${deck.folder}/${S.posterPath(entry)}`, await siteCard(url));
+      const entries = deck.entries.slice(); const at = deck.entries.length ? deck.selected + 1 : 0; entries.splice(at, 0, entry);
+      await saveEntries(entries); deck.selected = at; deck.chosen = new Set([entry]);
+    });
+    renderRail(); renderSelected();
+  }
+  const stamp = () => { const d = new Date(), z = (x) => String(x).padStart(2, '0'); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())} at ${z(d.getHours())}.${z(d.getMinutes())}.${z(d.getSeconds())}`; };
+  function mp4Type(audioOnly) {
+    const list = audioOnly ? ['audio/mp4;codecs=mp4a.40.2', 'audio/mp4'] : ['video/mp4;codecs=avc1.640028,mp4a.40.2', 'video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4'];
+    return window.MediaRecorder ? list.find((t) => MediaRecorder.isTypeSupported(t)) : null;
+  }
+  /** Take a photo or video, record sound, or record the screen; what's made is added as a slide. */
+  async function capture(kind) {
+    const d = $('#capture'), view = $('video', d), status = $('.cap-status', d), btns = $('.cap-buttons', d);
+    const type = mp4Type(kind === 'audio');
+    if (kind !== 'photo' && !type) return toast('This browser can’t record in a format FreeView plays. Use Safari, or Chrome 126 or later.');
+    let stream;
+    try {
+      if (kind === 'screen') {
+        const screen = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 }, audio: true });
+        let mic = null; try { mic = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch {}
+        const tracks = [...screen.getVideoTracks()];
+        const audios = [...screen.getAudioTracks(), ...(mic ? mic.getAudioTracks() : [])];
+        if (audios.length > 1) { const ac = new AudioContext(), dst = ac.createMediaStreamDestination(); for (const t of audios) ac.createMediaStreamSource(new MediaStream([t])).connect(dst); tracks.push(...dst.stream.getAudioTracks()); }
+        else tracks.push(...audios);
+        stream = new MediaStream(tracks); stream.__parts = [screen, mic];
+      } else stream = await navigator.mediaDevices.getUserMedia(kind === 'audio' ? { audio: true } : { video: { width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: true });
+    } catch { return toast(kind === 'screen' ? 'Screen recording was not started.' : 'FreeView needs your camera or microphone for that. Allow it in the address bar and try again.'); }
+    const stopAll = () => { for (const t of stream.getTracks()) t.stop(); for (const s2 of stream.__parts || []) if (s2) s2.getTracks().forEach((t) => t.stop()); };
+    $('h2', d).textContent = { camera: 'Take a Photo or Video', audio: 'Record Audio', screen: 'Record Screen' }[kind];
+    view.hidden = kind === 'audio'; view.srcObject = stream; view.muted = true; view.classList.toggle('mirror', kind === 'camera'); view.play().catch(() => {});
+    let rec = null, chunks = [], t0 = 0, paused = 0, pausedAt = 0, timer = 0, result = null;
+    const clock2 = () => { const sec = Math.floor(((rec && rec.state === 'paused' ? pausedAt : performance.now()) - t0 - paused) / 1000); return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`; };
+    const finish = (file) => { result = file; d.close('use'); };
+    const buttons = (list) => btns.replaceChildren(...list.map(([label, cls, fn]) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn ' + cls; b.textContent = label; b.onclick = fn; return b; }));
+    const startRec = () => {
+      chunks = []; rec = new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: kind === 'screen' ? 6_000_000 : 4_000_000 });
+      rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+      rec.start(1000); t0 = performance.now(); paused = 0;
+      timer = setInterval(() => (status.textContent = '● ' + clock2()), 250);
+      buttons([['Pause', '', () => { if (rec.state === 'recording') { rec.pause(); pausedAt = performance.now(); this_.textContent = 'Resume'; } else { rec.resume(); paused += performance.now() - pausedAt; this_.textContent = 'Pause'; } }], ['Stop', 'primary rec', stopRec]]);
+      const this_ = $('button', btns);
+    };
+    const stopRec = async () => {
+      clearInterval(timer);
+      await new Promise((ok) => { rec.onstop = ok; rec.stop(); });
+      const blob = new Blob(chunks, { type: type.split(';')[0] });
+      const name = { camera: `Video ${stamp()}.mp4`, audio: `Recording ${stamp()}.m4a`, screen: `Screen Recording ${stamp()}.mp4` }[kind];
+      status.textContent = `${clock2()} recorded`;
+      view.srcObject = null; if (kind !== 'audio') { view.src = URL.createObjectURL(blob); view.muted = false; view.controls = true; view.classList.remove('mirror'); }
+      const a = kind === 'audio' ? Object.assign(document.createElement('audio'), { controls: true, src: URL.createObjectURL(blob), className: 'cap-audio' }) : null;
+      if (a) status.after(a);
+      buttons([['Record Again', '', () => { if (a) a.remove(); view.controls = false; view.removeAttribute('src'); view.srcObject = stream; view.muted = true; view.classList.toggle('mirror', kind === 'camera'); view.play(); status.textContent = ''; ready(); }],
+               ['Use Recording', 'primary', () => finish(new File([blob], name, { type: blob.type }))]]);
+    };
+    const ready = () => {
+      if (kind === 'camera') buttons([['Take Photo', '', async () => {
+        const c = document.createElement('canvas'); c.width = view.videoWidth; c.height = view.videoHeight;
+        const x = c.getContext('2d'); x.translate(c.width, 0); x.scale(-1, 1); x.drawImage(view, 0, 0);
+        const blob = await new Promise((ok) => c.toBlob(ok, 'image/jpeg', 0.9)); finish(new File([blob], `Photo ${stamp()}.jpg`, { type: 'image/jpeg' }));
+      }], ['Record Video', 'primary rec', startRec]]);
+      else buttons([['Record', 'primary rec', startRec]]);
+    };
+    status.textContent = kind === 'screen' ? 'Sharing your screen. Press Record when you’re ready; the recording becomes a slide.' : '';
+    ready();
+    d.onclose = () => { clearInterval(timer); if (rec && rec.state !== 'inactive') rec.stop(); stopAll(); view.srcObject = null; view.removeAttribute('src'); view.controls = false; $$('.cap-audio', d).forEach((x) => x.remove()); if (d.returnValue === 'use' && result) addFiles([result]); };
+    for (const t of stream.getVideoTracks()) t.onended = () => { if (rec && rec.state !== 'inactive') stopRec(); };
+    d.showModal();
+  }
+
+  // ── Home: a presentation's menu (Rename, Edit, Duplicate, Remove) and search ──
+  function deckMenu(v, x, y) {
+    showMenu(x, y, [
+      { label: 'Edit Presentation', run: () => openDeck(v.id) },
+      { label: 'Rename', run: () => askName('Rename', v.title, (name) => work('Renaming…', async () => { const nv = JSON.parse(JSON.stringify(v)); nv.title = name; nv.renamed = true; await store.putVisit(nv); }).then(renderLibrary)) },
+      { label: 'Duplicate', run: () => duplicateDeck(v) },
+      '-',
+      { label: 'Remove', danger: true, run: () => askChoice(`Remove “${v.title}”?`, 'It’s removed from FreeView on all your devices, with its slides.', [['remove', 'Remove']], () => work('Removing…', () => store.deleteDeck(v)).then(renderLibrary)) },
+    ]);
+  }
+  async function duplicateDeck(v) {
+    const { folder, entries } = store.deckOf(v);
+    const files = store.pathsIn(folder + '/');
+    let made;
+    await work(`Duplicating “${v.title}”…`, async () => {
+      const copy = S.uuid();
+      let k = 0;
+      for (const p of files) { busy(`Duplicating… ${++k} of ${files.length}`); const u = await store.src(p); if (u) await store.putFile(`${copy}/${p.slice(folder.length + 1)}`, await (await fetch(u)).blob()); }
+      made = { id: S.uuid(), title: `${v.title} Copy`, date: S.appleNow(), kind: { deck: { folder: copy, entries } } };
+      await store.putVisit(made);
+    });
+    if (made) openDeck(made.id);
+  }
   // ── adding ──
 
   function pickFiles(accept, done) {
@@ -839,19 +1161,33 @@
   }
   function openAddMenu(anchor) {
     const m = $('#addmenu');
+    const hasCover = deck.entries.some((e) => S.fileType(e) === 'custom' && infoCache.get(`${deck.folder}/${e}`) && (infoCache.get(`${deck.folder}/${e}`).slide || {}).kind === 'cover');
+    const items = [['files', 'Files…', 'Photos, videos, PDFs and more; each one a slide. You can also drop or paste them.'],
+      ['web', 'Web Page…', 'A website, live when you present'],
+      ['camera', 'Take a Photo or Video', 'With this computer’s camera'],
+      ['audio', 'Record Audio', 'Your voice or anything near the microphone'],
+      ...(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia ? [['screen', 'Record Screen', 'A window, a tab or the whole screen, as a video']] : []),
+      '-', ...(hasCover ? [] : [['cover', 'Cover Slide', 'The title, with your name and contacts']]),
+      ['magic', 'Magic Slide', 'A title, a few words and up to four pictures'],
+      ['live', 'Live Camera', 'A Magic slide with your camera, live when you present']];
+    m.replaceChildren(...items.map((it) => { if (it === '-') return document.createElement('hr'); const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'menuitem'); b.dataset.add = it[0]; b.innerHTML = `<strong>${it[1]}</strong><span>${it[2]}</span>`; b.onclick = () => addAction(it[0]); return b; }));
     const r = anchor.getBoundingClientRect();
-    m.style.left = Math.min(r.left, innerWidth - 260) + 'px';
-    m.style.top = (r.bottom + 6 + 220 > innerHeight ? r.top - 6 - 212 : r.bottom + 6) + 'px';
-    m.hidden = false; $('button', m).focus();
+    m.hidden = false;
+    const h = m.offsetHeight, w = m.offsetWidth;
+    m.style.left = Math.max(8, Math.min(r.left, innerWidth - w - 8)) + 'px';
+    m.style.top = (r.bottom + 6 + h > innerHeight ? Math.max(8, r.top - 6 - h) : r.bottom + 6) + 'px';
+    $('button', m).focus();
     const close = (e) => { if (!m.contains(e.target)) { m.hidden = true; document.removeEventListener('pointerdown', close, true); } };
     setTimeout(() => document.addEventListener('pointerdown', close, true));
   }
   function addAction(kind) {
     $('#addmenu').hidden = true;
-    if (kind === 'files') pickFiles('image/*,video/*,audio/*,application/pdf,.pdf,.md,.key,.pptx,.usdz,.glb', addFiles);
+    if (kind === 'files') pickFiles('', addFiles);
     else if (kind === 'magic') addCustom('text');
     else if (kind === 'cover') addCustom('cover');
-    else if (kind === 'camera') addCustom('text', true);
+    else if (kind === 'live') addCustom('text', true);
+    else if (kind === 'web') addWebPage();
+    else capture(kind);
   }
   function freeSlot() {
     let n = 0; for (const e of deck.entries) { const m = /^(\d+)\//.exec(e); if (m) n = Math.max(n, +m[1] + 1); }
@@ -1148,7 +1484,18 @@
     $('#pnext').onclick = () => go(P.index + 1);
     $('#pstage').onclick = (e) => { if (P.watch || e.target.closest('a, button, video[controls], .fv .media img')) return; go(P.index + (e.clientX < innerWidth / 3 ? -1 : 1)); };
     document.addEventListener('keydown', (e) => {
-      if ($('#present').hidden) { if (e.key === 'Escape') $('#addmenu').hidden = true; return; }
+      if ($('#present').hidden) {
+        if (e.key === 'Escape') { $('#addmenu').hidden = true; $('#ctxmenu').hidden = true; }
+        const typing = e.target.closest && e.target.closest('input, textarea, select, [contenteditable]');
+        if (!deck || typing || document.querySelector('dialog[open]') || $('#deck').hidden) return;
+        const cmd = e.metaKey || e.ctrlKey;
+        if (cmd && e.key.toLowerCase() === 'a') { e.preventDefault(); selectAll(); }
+        else if (cmd && e.key.toLowerCase() === 'd') { e.preventDefault(); deck.chosen.size > 1 ? $('#m-dup') && $('#m-dup').click() : duplicateChosen(false); }
+        else if (cmd && e.key.toLowerCase() === 'c') { e.preventDefault(); copyChosen(); }
+        else if (cmd && e.key === 'Enter') { e.preventDefault(); present({ from: deck.selected }); }
+        else if (!cmd && (e.key === 'Backspace' || e.key === 'Delete') && e.target.closest('#rail, body') && !e.target.closest('#inspector')) { e.preventDefault(); deleteChosen(); }
+        return;
+      }
       if (P.watch && (e.key === ' ')) { e.preventDefault(); const v = $('#bubble'); v.paused ? v.play() : v.pause(); return; }
       if (P.watch) { if (e.key === 'Escape') closePresent(); return; }
       if (['ArrowRight', 'ArrowDown', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); go(P.index + 1); }
@@ -1161,6 +1508,17 @@
     document.addEventListener('dragleave', (e) => { if (!e.relatedTarget) document.body.classList.remove('dropping'); });
     document.addEventListener('drop', (e) => { document.body.classList.remove('dropping'); if (deck && e.dataTransfer.files.length) { e.preventDefault(); addFiles([...e.dataTransfer.files]); } });
     window.addEventListener('focus', () => store && store.kind === 'cloud' && store.sync().catch(() => {}));
+    // ⌘V in a presentation: slides copied here, files, or a web address.
+    document.addEventListener('paste', (e) => {
+      if (!deck || $('#deck').hidden || (e.target.closest && e.target.closest('input, textarea, [contenteditable]'))) return;
+      const text = e.clipboardData.getData('text/plain') || '';
+      if (text.startsWith(CLIP)) { e.preventDefault(); return pasteSlides(text); }
+      if (e.clipboardData.files.length) { e.preventDefault(); return addFiles([...e.clipboardData.files]); }
+      if (/^https?:\/\/\S+$/i.test(text.trim())) { e.preventDefault(); return addLinkSlide(text.trim()); }
+      if (window.__fvClip && !text) { e.preventDefault(); pasteSlides(window.__fvClip); }
+    });
+    // Home: search and each presentation's menu.
+    $('#search').oninput = () => renderLibrary();
   }
 
   async function start() {
