@@ -33,10 +33,22 @@
     const open = XMLHttpRequest.prototype.open;
     XMLHttpRequest.prototype.open = function (method, url, ...rest) {
       const u = String(url);
-      if (/^POST$/i.test(method) && /^https:\/\/[^/]*icloud-content\.com(:\d+)?\/.*Upload/i.test(u)) url = `${UPLOAD_PROXY}?u=${encodeURIComponent(u)}`;
+      if (/^POST$/i.test(method) && /^https:\/\/[^/]*icloud-content\.com(:\d+)?\/.*Upload/i.test(u)) {
+        url = `${UPLOAD_PROXY}?u=${encodeURIComponent(u)}`;
+        // How far each upload has got, for a progress bar (watchUploads).
+        let sent = 0;
+        this.upload.addEventListener('progress', (e) => { const d = e.loaded - sent; sent = e.loaded; for (const fn of uploadWatchers) fn(d); });
+      }
       return open.call(this, method, url, ...rest);
     };
   })();
+  const uploadWatchers = new Set();
+  /** Calls `onProgress(fraction)` as `total` bytes go up; returns a function that stops watching. */
+  function watchUploads(total, onProgress) {
+    let done = 0;
+    const fn = (d) => { done += d; onProgress(Math.min(1, done / Math.max(total, 1))); };
+    uploadWatchers.add(fn); return () => uploadWatchers.delete(fn);
+  }
 
   // ── format helpers ──
 
@@ -350,7 +362,7 @@
         if (r.deleted) return this.links.delete(name);
         try {
           const t = f.thumb && f.thumb.value;
-          this.links.set(name, { link: JSON.parse(fromBase64(f.link.value)), thumb: t && t.downloadURL ? t.downloadURL.replace('${f}', 'thumb.jpg') : '' });
+          this.links.set(name, { link: JSON.parse(fromBase64(f.link.value)), thumb: t && t.downloadURL ? t.downloadURL.replace('${f}', 'thumb.jpg') : '', tag: r.recordChangeTag });
         } catch {}
       } else if (r.recordType === 'File' || r.recordName.startsWith('f-')) {
         if (r.deleted) { for (const [p, v] of this.files) if (v.name === r.recordName) { this.files.delete(p); this.cache.delete(p); } return; }
@@ -412,6 +424,40 @@
       this.items.set(visit.id, { visit, tag: r.recordChangeTag });
       this.changed();
     }
+    /** A shared link in the list the apps sync (`l-<name>`: the SharedLink as JSON, its thumbnail). */
+    async putLink(link, thumb) {
+      const old = this.links.get(link.recordName);
+      const fields = { link: { value: toBase64(sortedJSON(link)) }, modified: { value: Date.now() } };
+      if (thumb) fields.thumb = { value: thumb };
+      const r = await this.save({ recordName: 'l-' + link.recordName, recordType: 'Link', recordChangeTag: old && old.tag, zoneID: ZONE, fields });
+      this.take(r);
+      if (thumb) { const x = this.links.get(link.recordName); if (x) x.thumb = URL.createObjectURL(thumb); }
+      this.changed();
+    }
+    async deleteLink(name) {
+      const res = await this.db.deleteRecords(['l-' + name], { zoneID: ZONE });
+      if (res.hasErrors && res.errors[0].ckErrorCode !== 'NOT_FOUND') throw res.errors[0];
+      this.links.delete(name); this.changed();
+    }
+    // The link's copy, in the public database (the Worker reads it by name for viewers).
+    async publicSave(record) {
+      const res = await this.container.publicCloudDatabase.saveRecords([record]);
+      if (res.hasErrors) throw res.errors[0];
+      return res.records[0];
+    }
+    /** Changes only the given fields. */
+    async publicUpdate(name, fields) {
+      const db = this.container.publicCloudDatabase;
+      const got = await db.fetchRecords([name]);
+      if (got.hasErrors) throw got.errors[0];
+      const r = got.records[0];
+      const res = await db.saveRecords([{ recordName: name, recordType: r.recordType, recordChangeTag: r.recordChangeTag, fields }]);
+      if (res.hasErrors) throw res.errors[0];
+    }
+    async publicDelete(name) {
+      const res = await this.container.publicCloudDatabase.deleteRecords([name]);
+      if (res.hasErrors && res.errors[0].ckErrorCode !== 'NOT_FOUND') throw res.errors[0];
+    }
     /** Removes a presentation and its folder: on the apps, deleting the Item removes the folder too. */
     async deleteDeck(visit) {
       const { folder } = this.deckOf(visit);
@@ -435,6 +481,11 @@
     }
     async deleteFile(path) { this.files.delete(path); this.cache.delete(path); this.changed(); }
     async putVisit(visit) { this.items.set(visit.id, { visit }); this.changed(); }
+    async putLink(link, thumb) { this.links.set(link.recordName, { link, thumb: thumb ? URL.createObjectURL(thumb) : (this.links.get(link.recordName) || {}).thumb || '' }); this.changed(); }
+    async deleteLink(name) { this.links.delete(name); this.changed(); }
+    async publicSave(record) { return record; }
+    async publicUpdate() {}
+    async publicDelete() {}
     async deleteDeck(visit) { const { folder } = this.deckOf(visit); for (const p of this.pathsIn(folder + '/')) this.files.delete(p); this.items.delete(visit.id); this.changed(); }
     async sync() {}
 
@@ -462,7 +513,7 @@
 
   const FREE_PRESENTATIONS = 3;
   window.FVStore = {
-    CloudStore, DemoStore, sortedJSON, uuid, shortID, appleNow, fromApple, sha256, fileType, posterPath,
+    CloudStore, DemoStore, WORKER, watchUploads, sortedJSON, uuid, shortID, appleNow, fromApple, sha256, fileType, posterPath,
     baseName, cleanName, newCustomSlide, newCameraMedia,
   };
 })();

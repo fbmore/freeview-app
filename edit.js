@@ -126,12 +126,379 @@
       if (l.hasPassword) bits.push('Password');
       if (l.hasCommentary) bits.push('Commentary');
       row.innerHTML = '<span class="lt"></span><div class="li"><strong>' + esc(l.title) + '</strong><span class="' + (ended ? 'ended' : '') + '">' + esc(bits.join(' · ')) + '</span></div>'
-        + '<div class="la">' + (ended ? '' : '<button type="button" class="btn small" data-copy>Copy Link</button><a class="btn small ghost" href="' + esc(url) + '" target="_blank" rel="noopener">Open</a>') + '</div>';
+        + '<div class="la">' + (ended ? '<button type="button" class="btn small ghost" data-remove>Remove</button>' : '<button type="button" class="btn small" data-copy>Copy Link</button><a class="btn small ghost" href="' + esc(url) + '" target="_blank" rel="noopener">Open</a><button type="button" class="icon-btn small" data-more aria-label="More"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg></button>') + '</div>';
       if (l.thumb) $('.lt', row).style.backgroundImage = 'url("' + l.thumb + '")';
       const copy = $('[data-copy]', row);
       if (copy) copy.onclick = async () => { try { await navigator.clipboard.writeText(url); copy.textContent = 'Copied'; setTimeout(() => (copy.textContent = 'Copy Link'), 1600); } catch { toast(url); } };
+      const rm = $('[data-remove]', row);
+      if (rm) rm.onclick = () => work('Removing…', () => removeLink(l)).then(renderLinks);
+      const more = $('[data-more]', row);
+      if (more) more.onclick = () => { const r = more.getBoundingClientRect(); linkMenu(l, r.right - 200, r.bottom + 4); };
       return row;
     }));
+  }
+
+  // ── sharing a link, as the app's Share Presentation (SharedLinks.swift, ShareExport.make): the slides made
+  //    web-ready here, uploaded to iCloud's public database as one SharedSet, listed as a Link the apps sync ──
+
+  const VIEWER = 'https://freeview.app/v/';
+  // The Worker passes each upload on to iCloud, and Cloudflare caps a request near 100 MB.
+  const UPLOAD_MAX = 95e6;
+  const linkDays = (d) => ({ 1: '1 day', 7: '1 week', 30: '30 days' }[d] || `${d} days`);
+  const durations = (isPro) => (isPro ? [1, 7, 30, 90] : [1, 7]);
+  const allLinks = () => [...store.links.values()].map((x) => x.link).filter((l) => l && l.recordName && !l.cleaned);
+  const liveLinks = () => allLinks().filter((l) => S.fromApple(l.expiresAt) > new Date());
+  const linkFor = (visitID) => liveLinks().filter((l) => l.visitID === visitID).sort((a, b) => (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt))[0];
+  const mb = (n) => (n >= 1e9 ? (n / 1e9).toFixed(1) + ' GB' : Math.max(1, Math.round(n / 1e6)) + ' MB');
+
+  async function blobOf(path) {
+    const u = await store.src(path); if (!u) return null;
+    const r = await fetch(u); return r.ok ? r.blob() : null;
+  }
+  function canvasBlob(c, type = 'image/jpeg', q = 0.85) {
+    return new Promise((ok, fail) => c.toBlob((b) => (b ? ok(b) : fail(new Error('Couldn’t make a picture.'))), type, q));
+  }
+  /** As the app's writeJPEG: no larger than `side`, oriented, as JPEG. */
+  async function jpeg(blob, side) {
+    const bmp = await createImageBitmap(blob, { imageOrientation: 'from-image' });
+    const k = Math.min(1, side / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(bmp.width * k)); c.height = Math.max(1, Math.round(bmp.height * k));
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height); bmp.close();
+    return canvasBlob(c);
+  }
+  async function pdfPageJPEG(doc, p, side) {
+    const page = await doc.getPage(p + 1);
+    const base = page.getViewport({ scale: 1 });
+    const vp = page.getViewport({ scale: side / Math.max(base.width, base.height) });
+    const c = document.createElement('canvas'); c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+    const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
+    await page.render({ canvasContext: x, viewport: vp }).promise;
+    return canvasBlob(c);
+  }
+  /** An audio slide's picture: its waveform, as the app's Waveform.card. */
+  async function waveCard(blob) {
+    const c = document.createElement('canvas'); c.width = 1920; c.height = 1080;
+    const x = c.getContext('2d'); x.fillStyle = '#0B0B0C'; x.fillRect(0, 0, c.width, c.height);
+    let peaks = new Array(96).fill(0.04);
+    try {
+      const buf = await new OfflineAudioContext(1, 1, 44100).decodeAudioData(await blob.arrayBuffer());
+      const d = buf.getChannelData(0), step = Math.max(1, Math.floor(d.length / peaks.length));
+      peaks = peaks.map((_, i) => { let m = 0; for (let j = i * step; j < Math.min(d.length, (i + 1) * step); j += 16) m = Math.max(m, Math.abs(d[j])); return m; });
+      const top = Math.max(...peaks, 0.01); peaks = peaks.map((v) => Math.max(0.04, v / top));
+    } catch {}
+    const w = 1440 / peaks.length; x.fillStyle = 'rgba(255,255,255,.85)';
+    peaks.forEach((v, i) => { const h = v * 520; x.beginPath(); x.roundRect(240 + i * w + w * 0.2, 540 - h / 2, w * 0.6, h, w * 0.3); x.fill(); });
+    return canvasBlob(c);
+  }
+
+  /** The presentation as files a browser can show (ShareExport.make): items, slide order, what was left out. */
+  async function makeExport(visit, { withCommentary, onStep }) {
+    const { folder, entries } = store.deckOf(visit);
+    const x = { items: [], slides: [], origins: [], skipped: [], tooBig: [], cover: null, commentary: null, commentaryVideo: null };
+    const add = (blob, type, name) => { x.items.push({ blob, type, name }); return x.items.length - 1; };
+    const slide = (s, entry, page) => { x.slides.push(s); x.origins.push(entry + ':' + page); };
+    const media = new Map();   // video or audio path → its item, uploaded once
+    const asIs = async (path, type, name) => {
+      if (media.has(path)) return media.get(path);
+      const b = await blobOf(path); if (!b) return null;
+      if (b.size > UPLOAD_MAX) { x.tooBig.push(S.baseName(path)); return null; }
+      const i = add(b, type, name); media.set(path, i); return i;
+    };
+    for (const [i, entry] of entries.entries()) {
+      onStep(i / entries.length);
+      const path = `${folder}/${entry}`, t = S.fileType(entry), file = S.baseName(entry);
+      const ext = file.includes('.') ? file.split('.').pop().toLowerCase() : '';
+      const base = ext ? file.slice(0, -(ext.length + 1)) : file;
+      try {
+        if (t === 'image') {
+          const b = await blobOf(path); const j = b && await jpeg(b, 2400).catch(() => null);
+          if (j) slide('a:' + add(j, 'image', base + '.jpg'), i, 0); else x.skipped.push(file);
+        } else if (t === 'webImage' && ext !== 'svgz') {
+          const b = await blobOf(path); if (b) slide('a:' + add(b, 'image', file), i, 0); else x.skipped.push(file);
+        } else if (t === 'live') {
+          // Live only in the app: on the web it's the slide as it last looked live.
+          const b = await blobOf(`${folder}/${S.posterPath(entry)}`); const j = b && await jpeg(b, 2400).catch(() => null);
+          if (j) slide('a:' + add(j, 'image', base + '.jpg'), i, 0); else x.skipped.push(file);
+        } else if (t === 'pdf') {
+          const doc = await pdfDoc(await store.src(path));
+          for (let p = 0; p < doc.numPages; p++) {
+            slide('a:' + add(await pdfPageJPEG(doc, p, 2400), 'image', `${base}-${p + 1}.jpg`), i, p);
+            onStep((i + (p + 1) / doc.numPages) / entries.length);
+          }
+        } else if (t === 'video') {
+          const k = await asIs(path, 'video', file); if (k != null) slide('a:' + k, i, 0); else if (!x.tooBig.includes(file)) x.skipped.push(file);
+        } else if (t === 'audio') {
+          const b = await blobOf(path);
+          if (!b || b.size > UPLOAD_MAX) { (b ? x.tooBig : x.skipped).push(file); continue; }
+          const a = add(b, 'audio', file); media.set(path, a);
+          const p = add(await waveCard(b), 'poster', base + '-waveform.jpg');
+          slide(`a:${a}:p:${p}`, i, 0);
+        } else if (t === 'link') {
+          const m = /URL=(.+)/.exec((await store.text(path)) || ''); const page = m && m[1].trim();
+          if (!page) continue;
+          // Sites rarely show inside another page: the picture of it, with a button that opens it.
+          const pic = await blobOf(`${folder}/${S.posterPath(entry)}`); const j = pic && await jpeg(pic, 1600).catch(() => null);
+          slide(j ? `a:${add(j, 'image', base + '.jpg')}:u:${page}` : 'u:' + page, i, 0);
+        } else if (t === 'markdown' || t === 'lottie') {
+          const b = await blobOf(path); if (b) slide('a:' + add(b, t, file), i, 0); else x.skipped.push(file);
+        } else if (t === 'model3D' && ext === 'glb') {
+          const b = await blobOf(path); if (b && b.size <= UPLOAD_MAX) slide('a:' + add(b, 'model', file), i, 0); else x.skipped.push(file);
+        } else if (t === 'sheet' && ext === 'csv') {
+          const b = await blobOf(path); if (b) slide('a:' + add(b, 'table', file), i, 0); else x.skipped.push(file);
+        } else if (t === 'custom') {
+          const sl = await store.json(path); if (!sl) { x.skipped.push(file); continue; }
+          // Its resolved description goes up (fvslide.js draws it on the web), each picture beside it.
+          const pending = [];
+          const ref = (p) => { if (!store.has(p)) return null; let k = pending.indexOf(p); if (k < 0) { pending.push(p); k = pending.length - 1; } return `pending-asset:${k}`; };
+          const spec = await resolveSpec(folder, sl, ref);
+          delete spec._live;
+          let json = JSON.stringify(spec);
+          for (const [k, p] of pending.entries()) {
+            const pt = S.fileType(p), pf = S.baseName(p);
+            let idx = null;
+            if (pt === 'video' || pt === 'audio') idx = await asIs(p, 'asset', pf);
+            else {
+              const b = await blobOf(p);
+              if (b && /\.png$/i.test(p)) idx = add(b, 'asset', `${base}-${k}.png`);
+              else if (b) { const j = await jpeg(b, 2400).catch(() => null); if (j) idx = add(j, 'asset', `${base}-${k}.jpg`); }
+            }
+            // Matched with its quotes, so "pending-asset:1" doesn't match inside "pending-asset:10".
+            json = json.split(`"pending-asset:${k}"`).join(idx == null ? 'null' : `"asset:${idx}"`);
+          }
+          slide('a:' + add(new Blob([json], { type: 'application/json' }), 'custom', base + '.json'), i, 0);
+        } else {
+          x.skipped.push(file);
+        }
+      } catch (e) { console.error(e); x.skipped.push(file); }
+    }
+    onStep(1);
+
+    // The link preview's picture: the first photo, page or picture of a page; a video's cover; an audio waveform.
+    for (const s of x.slides) {
+      if (!s.startsWith('a:')) continue;
+      const parts = s.split(':'), it = x.items[+parts[1]];
+      try {
+        if (it.type === 'image') x.cover = await jpeg(it.blob, 1200);
+        else if (it.type === 'audio' && parts[2] === 'p') x.cover = await jpeg(x.items[+parts[3]].blob, 1200);
+        else if (it.type === 'video') {
+          const entry = entries[+x.origins[x.slides.indexOf(s)].split(':')[0]];
+          const pic = await blobOf(`${folder}/${S.posterPath(entry)}`); if (pic) x.cover = await jpeg(pic, 1200);
+        }
+      } catch {}
+      if (x.cover) break;
+    }
+
+    // The commentary: the take and its marks, renumbered to the slides that made it to the web (SlideMap.remap).
+    const c = withCommentary && deck && deck.visit.id === visit.id ? await latestCommentary() : null;
+    if (c && JSON.stringify(c.entries || []) === JSON.stringify(entries)) {
+      const take = await blobOf(`${c._dir}/take.mov`);
+      if (take && take.size <= UPLOAD_MAX) {
+        const appOrigins = [];
+        for (const [i, entry] of entries.entries()) {
+          const t = S.fileType(entry);
+          let n = 1;
+          if (t === 'pdf') n = (await pdfDoc(await store.src(`${folder}/${entry}`))).numPages;
+          else if (t === 'link') n = /URL=./.test((await store.text(`${folder}/${entry}`)) || '') ? 1 : 0;
+          for (let p = 0; p < n; p++) appOrigins.push(i + ':' + p);
+        }
+        const table = appOrigins.map((o) => { const k = x.origins.indexOf(o); return k < 0 ? null : k; });
+        const marks = []; let last = 0;
+        for (const m of c.marks) {
+          const s = m.slide < table.length && table[m.slide] != null ? table[m.slide] : last; last = s;
+          if (marks.length && marks[marks.length - 1].slide === s) continue;
+          marks.push({ slide: s, time: m.time });
+        }
+        if (marks.length) marks[0].time = 0;
+        const events = (c.events || []).flatMap((e) => (e.slide < table.length && table[e.slide] != null ? [{ t: e.time, s: table[e.slide], k: e.kind, v: e.values }] : []));
+        x.commentary = JSON.stringify({ version: 1, id: c.id, duration: c.duration, marks, layout: c.layout, recordedLayout: c.recordedLayout || c.layout, events, clips: [] });
+        x.commentaryVideo = take;
+      }
+    }
+    return x;
+  }
+
+  /** Who the link is from, for the viewer's welcome screen (addSender): name, role, photo and logo. */
+  async function addSender(x, folder) {
+    const style = (await store.json(`${folder}/.style.json`)) || {};
+    const custom = style.presenter === 'custom' && style.person;
+    const who = (custom ? style.person : profile) || {};
+    const sender = {};
+    const name = [who.firstName, who.lastName].filter(Boolean).join(' ');
+    if (name) sender.name = name;
+    if (who.role) sender.role = who.role;
+    const photo = await blobOf(custom ? `${folder}/.presenter.jpg` : '.profile/profile-photo.jpg');
+    if (photo) { x.items.push({ blob: photo, type: 'asset', name: 'sender-photo.jpg' }); sender.photo = x.items.length - 1; }
+    const logoMode = style.logo || 'profile';
+    const logo = logoMode === 'none' ? null : await blobOf(logoMode === 'custom' ? `${folder}/.logo.png` : '.profile/default-logo.png');
+    if (logo) { x.items.push({ blob: logo, type: 'asset', name: 'sender-logo.png' }); sender.logo = x.items.length - 1; }
+    return Object.keys(sender).length ? sender : null;
+  }
+  async function hashPassword(password) {
+    const salt = S.uuid().replace(/-/g, '').slice(0, 16);
+    return `${salt}:${await S.sha256(salt + password)}`;
+  }
+
+  async function createLink(visit, o, onStage) {
+    const isPro = pro === true;
+    const x = await makeExport(visit, { withCommentary: o.commentary, onStep: (f) => onStage('Preparing…', f) });
+    if (!x.slides.length) throw new Error('Nothing in this presentation can go on the web yet.');
+    const sender = o.showSender ? await addSender(x, store.deckOf(visit).folder) : null;
+    const total = x.items.reduce((n, it) => n + it.blob.size, 0) + (x.commentaryVideo ? x.commentaryVideo.size : 0);
+    if (total >= (isPro ? 2e9 : 250e6)) throw new Error(isPro ? `It comes to ${mb(total)}, more than a link can carry (2 GB).` : `It comes to ${mb(total)}. Free links carry up to 250 MB; Pro up to 2 GB.`);
+    // Free: one live link, so the current one ends as the new one starts.
+    if (!isPro) for (const old of liveLinks()) await stopLink(old).catch(() => {});
+
+    const options = { mark: !isPro };
+    if (sender) options.sender = sender;
+    if (o.autoplay > 0) options.autoplay = o.autoplay;
+    if (isPro && o.password) options.pw = await hashPassword(o.password);
+    const name = S.uuid() + '-' + S.uuid();
+    const expires = Date.now() + o.days * 864e5;
+    const prefs = showPrefs();
+    const fields = {
+      title: { value: o.title }, expiresAt: { value: expires }, options: { value: JSON.stringify(options) },
+      items: { value: x.items.map((it) => it.blob) }, itemTypes: { value: x.items.map((it) => it.type) }, itemNames: { value: x.items.map((it) => it.name) },
+      slides: { value: x.slides }, transition: { value: prefs.transition === 'magicMove' ? 'crossfade' : prefs.transition },
+    };
+    if (o.message) fields.message = { value: o.message };
+    if (x.cover) fields.cover = { value: x.cover };
+    if (x.commentary) { fields.commentary = { value: x.commentary }; fields.commentaryVideo = { value: x.commentaryVideo }; }
+
+    onStage('Uploading…', 0);
+    const stopWatch = S.watchUploads(total, (f) => onStage('Uploading…', f));
+    try { await store.publicSave({ recordName: name, recordType: 'SharedSet', fields }); } finally { stopWatch(); }
+
+    const ownerKey = [...crypto.getRandomValues(new Uint8Array(32))].map((b) => b.toString(16).padStart(2, '0')).join('');
+    const now = S.appleNow();
+    const link = { recordName: name, title: o.title, slideCount: x.slides.length, createdAt: now, updatedAt: now, expiresAt: expires / 1000 - 978307200,
+      visitID: visit.id, skipped: x.skipped.concat(x.tooBig), hasPassword: !!options.pw, hasCommentary: !!x.commentary, hasSender: !!sender, ownerKey };
+    if (o.message) link.message = o.message;
+    if (options.autoplay) link.autoplay = options.autoplay;
+    await store.putLink(link, x.cover);
+    // Its viewings are its owner's, before the address is out (the app's LinkVisit.claim).
+    fetch(`${S.WORKER}/own/${name}`, { method: 'POST', headers: { 'X-FV-Owner': ownerKey } }).catch(() => {});
+    return { link, tooBig: x.tooBig, skipped: x.skipped };
+  }
+
+  /** Stop Sharing: the copies go from iCloud now, the link stays in the list as ended. */
+  async function stopLink(link) {
+    await store.publicDelete(link.recordName);
+    await store.putLink(Object.assign({}, link, { expiresAt: S.appleNow(), updatedAt: S.appleNow() }));
+    if (link.ownerKey) fetch(`${S.WORKER}/link/${link.recordName}`, { method: 'DELETE', headers: { 'X-FV-Owner': link.ownerKey } }).catch(() => {});
+  }
+  /** Keep Longer: same link, a new end counted from now. */
+  async function extendLink(link, days) {
+    const expires = Date.now() + days * 864e5;
+    await store.publicUpdate(link.recordName, { expiresAt: { value: expires } });
+    await store.putLink(Object.assign({}, link, { expiresAt: expires / 1000 - 978307200 }));
+  }
+  async function removeLink(link) {
+    if (S.fromApple(link.expiresAt) > new Date()) await stopLink(link);
+    else await store.publicDelete(link.recordName).catch(() => {});
+    await store.deleteLink(link.recordName);
+  }
+
+  function linkURLRow(link) {
+    const url = VIEWER + link.recordName;
+    return `<div class="linkout"><input readonly value="${esc(url)}" aria-label="Link"><button type="button" class="btn primary" data-copylink>Copy Link</button><a class="btn" href="${esc(url)}" target="_blank" rel="noopener">Open</a></div>`;
+  }
+  function wireCopy(root, link) {
+    const b = $('[data-copylink]', root); if (!b) return;
+    b.onclick = async () => { try { await navigator.clipboard.writeText(VIEWER + link.recordName); b.textContent = 'Copied'; setTimeout(() => (b.textContent = 'Copy Link'), 1600); } catch { $('input', root).select(); } };
+  }
+
+  /** Share Presentation: the app's sheet, then its progress, then the link. */
+  async function openShare(fresh) {
+    if (!deck) return;
+    const d = $('#sharesheet'), body = $('.sh-body', d);
+    const visit = deck.visit, isPro = pro === true;
+    const existing = !fresh && linkFor(visit.id);
+    const done = (res) => {
+      const l = res.link, ends = S.fromApple(l.expiresAt);
+      const left = res.skipped.length ? `<p class="foot">Left out, since browsers can’t show them: ${esc(res.skipped.join(', '))}. They play in FreeView on your iPhone, iPad or Mac.</p>` : '';
+      const big = res.tooBig.length ? `<p class="foot">Too large to upload from a browser (over ${mb(UPLOAD_MAX)} each): ${esc(res.tooBig.join(', '))}. Share from FreeView on your Mac or iPhone to include them.</p>` : '';
+      $('h2', d).textContent = 'Shared Link';
+      body.innerHTML = `<p class="lede">${esc(l.title)} · ${l.slideCount} slide${l.slideCount === 1 ? '' : 's'} · Works until ${esc(ends.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}</p>
+        ${linkURLRow(l)}${left}${big}
+        <div class="row end"><button type="button" class="btn" data-new>New Link…</button><button type="button" class="btn primary" data-done>Done</button></div>`;
+      wireCopy(body, l);
+      $('[data-done]', body).onclick = () => d.close();
+      $('[data-new]', body).onclick = () => openShare(true);
+    };
+    if (existing) { if (!d.open) d.showModal(); return done({ link: existing, skipped: existing.skipped || [], tooBig: [] }); }
+
+    const c = await latestCommentary();
+    const fits = c && JSON.stringify(c.entries || []) === JSON.stringify(deck.entries);
+    const name = [profile && profile.firstName, profile && profile.lastName].filter(Boolean).join(' ');
+    const hasMe = !!name || store.has('.profile/profile-photo.jpg');
+    const last = allLinks().filter((l) => l.visitID === visit.id).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+    const auto = last ? last.autoplay || 0 : 0;
+    const days = 7;
+    const freeNote = !isPro && liveLinks().length ? 'Free shares one link at a time, for up to a week and 250 MB. Creating this one ends your current link. Pro shares as many as you like, for up to 90 days, up to 2 GB each, with passwords and per-slide views.'
+      : fresh ? 'A separate link with its own end date and view count. Your current link keeps working until it ends.'
+      : 'PDF pages become images; videos go up as they are. Everything is uploaded to iCloud for as long as the link works.';
+    $('h2', d).textContent = fresh ? 'New Link' : 'Share Presentation';
+    body.innerHTML = `
+      ${c ? `<section class="sect"><h3>Commentary</h3><div class="switches">${sw('commentary', 'Include Commentary', fits, !fits, clock(c.duration || 0))}</div>
+        <p class="foot">${fits ? 'The link opens on your commentary: your camera and voice, the slides following along, in the layout you chose. People can still browse the slides on their own.' : 'The commentary was recorded on a different arrangement of slides, so it can’t go in this link. Record it again to include it.'}</p></section>` : ''}
+      <section class="sect">
+        <label class="field"><span>Title</span><input id="sh-title" value="${esc(visit.title || '')}" autocomplete="off"></label>
+        <label class="field"><span>Message (optional)</span><textarea id="sh-message" rows="2" placeholder="Shown before the presentation starts"></textarea></label>
+        <div class="switches">${sw('sender', 'Show My Name and Photo', hasMe, !hasMe)}</div>
+        <p class="foot">The title shows in link previews. With a message, the link opens on a welcome screen with your name, photo and logo (from Settings › Profile), before the presentation starts.</p>
+      </section>
+      <section class="sect">
+        ${isPro ? '<label class="field"><span>Password (optional)</span><input id="sh-password" type="password" autocomplete="new-password"></label>'
+                : '<button type="button" class="prolock small" id="sh-pwpro"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Password</span><strong>Pro</strong></button>'}
+        <p class="foot">${isPro ? 'People will need it to open the link. Share it separately.' : 'Protect links with a password, share more of them for longer, and drop the FreeView mark with Pro.'}</p>
+      </section>
+      <section class="sect">
+        <div class="switches">${sw('autoplay', 'Autoplay', auto > 0)}</div>
+        <label class="field inline" id="sh-autorow" ${auto > 0 ? '' : 'hidden'}><span>Each Slide For</span><select id="sh-seconds">${[...new Set([3, 5, 10, 20, 30, 60, auto || 5])].sort((a, b) => a - b).map((s) => `<option value="${s}" ${s === (auto || 5) ? 'selected' : ''}>${s} Seconds</option>`).join('')}</select></label>
+        <p class="foot">The link plays by itself, each slide for this long; videos and audio play to their end. People can still step through it.</p>
+      </section>
+      <section class="sect">
+        <label class="field inline"><span>Link works for</span><select id="sh-days">${[1, 7, 30, 90].map((n) => `<option value="${n}" ${n === days ? 'selected' : ''}>${linkDays(n)}${durations(isPro).includes(n) ? '' : ' · Pro'}</option>`).join('')}</select></label>
+        <p class="foot">Anyone with the link can watch it in a browser, ready to present. It stops working on its own after that; you can end it sooner in Shared Links.</p>
+      </section>
+      <p class="foot">${freeNote}</p>
+      <div class="row end"><button type="button" class="btn" data-cancel>Cancel</button><button type="button" class="btn primary" data-create>Create Link</button></div>`;
+    if (!d.open) d.showModal();
+    const swOn = (k) => { const i = $(`[data-sw="${k}"]`, body); return !!(i && i.checked && !i.disabled); };
+    $('[data-sw="autoplay"]', body).onchange = (e) => { $('#sh-autorow').hidden = !e.target.checked; };
+    $('#sh-days').onchange = (e) => { if (!durations(isPro).includes(+e.target.value)) { e.target.value = '7'; showPaywall(); } };
+    if ($('#sh-pwpro')) $('#sh-pwpro').onclick = showPaywall;
+    $('[data-cancel]', body).onclick = () => d.close();
+    const create = $('[data-create]', body);
+    $('#sh-title').oninput = () => { create.disabled = !$('#sh-title').value.trim(); };
+    create.onclick = async () => {
+      const o = { title: $('#sh-title').value.trim(), message: $('#sh-message').value.trim(), showSender: swOn('sender'), commentary: swOn('commentary'),
+        password: $('#sh-password') ? $('#sh-password').value : '', autoplay: swOn('autoplay') ? +$('#sh-seconds').value : 0, days: +$('#sh-days').value };
+      if (store.kind === 'demo') return toast('In the sample nothing is uploaded. Sign in with Apple to share links.');
+      d.addEventListener('cancel', blockEsc);
+      body.innerHTML = `<p class="lede" id="sh-stage">Preparing…</p><div class="bar"><i id="sh-bar"></i></div><p class="foot">Keep this page open until the link is ready.</p>`;
+      try {
+        const res = await createLink(visit, o, (label, f) => { $('#sh-stage').textContent = label; $('#sh-bar').style.transform = `scaleX(${Math.max(0.02, Math.min(1, f))})`; });
+        done(res);
+        if (!$('#links').hidden) renderLinks();
+      } catch (e) {
+        console.error(e);
+        d.close(); toast(e && !e.ckErrorCode && !e.serverErrorCode && e.message && !/fetch|network/i.test(e.message) ? e.message : errorText(e).replace('save that', 'share it'));
+      } finally { d.removeEventListener('cancel', blockEsc); }
+    };
+  }
+  const blockEsc = (e) => e.preventDefault();
+
+  function linkMenu(l, x, y) {
+    const visit = l.visitID && store.visit(l.visitID);
+    showMenu(x, y, [
+      visit && { label: 'Edit Presentation', run: () => openDeck(l.visitID) },
+      { label: 'Keep Longer…', run: () => askChoice('Keep Longer', 'From now. The link stays the same.', durations(pro === true).map((n) => [String(n), linkDays(n)]),
+        (v) => work('Saving…', () => extendLink(l, +v)).then(renderLinks)) },
+      '-',
+      { label: 'Stop Sharing', danger: true, run: () => askChoice('Stop Sharing?', 'The link stops working now, and its copies are deleted from iCloud.', [['remove', 'Stop Sharing']],
+        () => work('Stopping…', () => stopLink(l)).then(renderLinks)) },
+    ].filter(Boolean));
   }
 
   // ── settings: the profile the apps use for covers and Magic slides ──
@@ -213,7 +580,9 @@
   const tagOf = (path) => { const f = store.files.get(path); return f ? (f.tag || f.url) : ''; };
 
   /** A Magic slide or cover, resolved the way the apps do (CustomSlides.spec) for fvslide.js. */
-  async function resolveSpec(folder, slide) {
+  /** `ref`, when given, stands in for `store.src` (a link's export swaps each file for a placeholder). */
+  async function resolveSpec(folder, slide, ref) {
+    const src = ref || ((p) => store.src(p));
     const style = deck && deck.folder === folder ? deck.style : await store.json(`${folder}/.style.json`);
     const theme = Object.assign({ background: '#0B0B0C', foreground: '#FFFFFF', accent: '#FFFFFF', font: 'system', align: 'left', titleScale: 1, bodyScale: 1, radius: 2 }, style && style.theme);
     const spec = { kind: slide.kind, title: slide.title || '', subtitle: slide.subtitle || '', body: slide.body || '', qr: slide.qr !== false, theme };
@@ -221,13 +590,13 @@
     if (buttons.length) spec.buttons = buttons;
     const logoMode = (style && style.logo) || 'profile';
     if (slide.showLogo && logoMode !== 'none') {
-      const logo = await store.src(logoMode === 'custom' ? `${folder}/.logo.png` : '.profile/default-logo.png');
+      const logo = await src(logoMode === 'custom' ? `${folder}/.logo.png` : '.profile/default-logo.png');
       if (logo) spec.logo = logo;
     }
     const picture = (entry) => {
       const t = S.fileType(entry);
-      if (t === 'image' || t === 'webImage') return store.src(`${folder}/${entry}`);
-      return store.src(`${folder}/${S.posterPath(entry)}`);
+      if (t === 'image' || t === 'webImage') return src(`${folder}/${entry}`);
+      return src(`${folder}/${S.posterPath(entry)}`);
     };
     if (slide.kind === 'cover' && slide.background) { const bg = await picture(slide.background); if (bg) spec.background = bg; }
     if (slide.kind === 'text') {
@@ -240,7 +609,7 @@
         if (!pic && t === 'live') pic = CAMERA_POSTER;
         if (!pic) continue;
         images.push(pic);
-        videos.push(t === 'video' || t === 'audio' ? await store.src(`${folder}/${entry}`) : null);
+        videos.push(t === 'video' || t === 'audio' ? await src(`${folder}/${entry}`) : null);
         if (t === 'live') {
           const l = await store.json(`${folder}/${entry}`); const tile = l && l.tiles && l.tiles[0];
           fits.push(tile && tile.fill ? 'cover' : 'contain');
@@ -260,7 +629,7 @@
       spec._live = live;
     }
     const who = style && style.presenter === 'custom' && style.person ? style.person : profile;
-    const photo = await store.src(style && style.presenter === 'custom' ? `${folder}/.presenter.jpg` : '.profile/profile-photo.jpg');
+    const photo = await src(style && style.presenter === 'custom' ? `${folder}/.presenter.jpg` : '.profile/profile-photo.jpg');
     if (who) {
       const person = {};
       const name = [who.firstName, who.lastName].filter(Boolean).join(' ');
@@ -1813,6 +2182,7 @@
   // ── wiring ──
 
   function wire() {
+    $('#sharebtn').onclick = () => openShare(false);
     $('#prolock').onclick = showPaywall; $('#progetbtn').onclick = showPaywall;
     $('#newdeck').onclick = $('#newdeck2').onclick = async () => {
       const v = await work('Creating…', () => store.newDeck('Untitled Presentation'));
@@ -1888,7 +2258,7 @@
     if (demo) {
       store = new S.DemoStore(); await store.seed();
       // Demo only: a handle for trying things out (nothing here reaches iCloud).
-      window.__fvDemo = { store, deck: () => deck, renderCommentary, present: (o) => present(o) };
+      window.__fvDemo = { store, deck: () => deck, renderCommentary, present: (o) => present(o), makeExport: (v) => makeExport(v, { withCommentary: true, onStep() {} }) };
       $('#modebadge').hidden = false;
       // ?free shows the Free limits in the sample.
       if (new URLSearchParams(location.search).has('free')) pro = false;

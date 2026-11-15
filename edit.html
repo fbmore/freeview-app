@@ -110,6 +110,17 @@
   .prolock:active { scale: .96; }
   .prolock span { flex: 1; }
   .prolock strong { font-weight: 600; }
+  #sharesheet { max-height: calc(100dvh - 48px); overflow: auto; }
+  #sharesheet .sh-body { display: flex; flex-direction: column; gap: 16px; }
+  #sharesheet .sect { padding: 0; border: 0; }
+  #sharesheet > .sh-body > .foot { margin: 0; font-size: 12.5px; line-height: 1.4; color: var(--faint); }
+  #sharesheet #sh-message { min-height: 64px; }
+  #sharesheet .field.inline { flex-direction: row; align-items: center; justify-content: space-between; }
+  .linkout { display: flex; gap: 8px; }
+  .linkout input { flex: 1; min-width: 0; border: 0; border-radius: var(--r-md); background: var(--raised); color: var(--fg); padding: 10px 12px; font: inherit; font-size: 14px; box-shadow: inset 0 0 0 1px var(--hairline); }
+  .bar { height: 6px; border-radius: 999px; background: var(--raised-2); overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--accent); transform-origin: left; transform: scaleX(.02); transition: transform .2s var(--ease); }
+  .prolock.small { margin: 0; min-height: 44px; font-size: 14px; }
   #empty { text-align: center; color: var(--muted); padding: 80px 0; display: flex; flex-direction: column; align-items: center; gap: 14px; }
 
   /* ── sections (tab bar like the app's) ── */
@@ -479,9 +490,9 @@
 
   <section id="links" class="page" hidden>
     <div class="libhead"><h1>Shared Links</h1></div>
-    <p class="lede">Links you've shared from FreeView, on any of your devices. Anyone with a link can watch the presentation in a browser until it ends.</p>
+    <p class="lede">Links you've shared, here and in FreeView on any of your devices. Anyone with a link can watch the presentation in a browser until it ends.</p>
     <div id="linklist"></div>
-    <div id="linksempty" class="emptynote" hidden><strong>No shared links yet</strong><span>Share a presentation from FreeView on your iPhone, iPad or Mac, and its link shows up here.</span></div>
+    <div id="linksempty" class="emptynote" hidden><strong>No shared links yet</strong><span>Open a presentation and choose Share, here or in FreeView on your iPhone, iPad or Mac. It opens in any browser, ready to present.</span></div>
   </section>
 
   <section id="settings" class="page" hidden>
@@ -526,6 +537,7 @@
       <button type="button" class="btn" id="addbtn"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="label">Add</span></button>
       <button type="button" class="btn" id="watchbtn" hidden><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l6-3.5z" fill="currentColor" stroke="none"/></svg><span>Watch Commentary</span></button>
       <button type="button" class="btn" id="recordbtn"><svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="12" r="6.5" fill="#ff453a"/></svg><span class="label">Record Commentary</span></button>
+      <button type="button" class="btn" id="sharebtn"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7.5 7.5 12 3l4.5 4.5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg><span class="label">Share</span></button>
       <button type="button" class="btn primary" id="presentbtn"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.6-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>Present</button>
     </div>
     <div id="rail" role="listbox" aria-label="Slides"></div>
@@ -575,6 +587,7 @@
 <dialog id="namepick" class="sheet"><form method="dialog"><h2>Name</h2><input type="text" class="nameinput" aria-label="Name" autocomplete="off">
   <div class="row end"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn primary" value="save">Save</button></div></form></dialog>
 <div id="ctxmenu" role="menu" hidden></div>
+<dialog id="sharesheet" class="sheet"><h2>Share Presentation</h2><div class="sh-body"></div></dialog>
 <dialog id="choice" class="sheet"><form method="dialog"><h2></h2><p class="lede"></p><div class="row end"></div></form></dialog>
 <dialog id="capture" class="sheet wide"><form method="dialog"><h2></h2><video playsinline autoplay muted></video><p class="cap-status"></p>
   <div class="row end"><button class="btn" value="cancel" formnovalidate>Cancel</button><span class="cap-buttons row"></span></div></form></dialog>
@@ -587,7 +600,7 @@
 <div id="toast" role="status" aria-live="polite"></div>
 <input type="file" id="picker" multiple hidden>
 
-<script src="/edit-store.js?v=11"></script>
-<script src="/edit.js?v=11"></script>
+<script src="/edit-store.js?v=12"></script>
+<script src="/edit.js?v=12"></script>
 </body>
 </html>
