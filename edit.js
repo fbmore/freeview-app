@@ -397,6 +397,8 @@
     const { folder, entries } = store.deckOf(visit);
     deck = { visit, folder, entries, selected: Math.min(selected, Math.max(0, entries.length - 1)), style: await store.json(`${folder}/.style.json`) };
     $('#stylebtn').setAttribute('aria-pressed', 'false');
+    deck.notes = (await store.json(`${folder}/.notes.json`)) || {};
+    deck.transitions = (await store.json(`${folder}/.transitions.json`)) || {};
     show('deck');
     $('#crumb').textContent = visit.title;
     $('#title').value = visit.title;
@@ -487,7 +489,12 @@
     const panel = $('#inspector');
     const i = deck.selected;
     const head = `<div class="kind">${esc(info.label)}<span>${i + 1} of ${deck.entries.length}</span></div>`;
-    const tail = `<div class="actions"><button type="button" class="btn ghost" data-act="up" ${i === 0 ? 'disabled' : ''}>Move Earlier</button><button type="button" class="btn ghost" data-act="down" ${i === deck.entries.length - 1 ? 'disabled' : ''}>Move Later</button>
+    const own = (deck.transitions || {})[info.entry] || '';
+    const slideSect = `<section class="sect"><h3>Slide</h3>
+      <label class="field inline"><span>Transition</span><select id="f-trans"><option value="">Default</option>${TRANSITIONS.map(([v, l]) => `<option value="${v}" ${own === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+      <label class="field"><span>Notes</span><textarea id="f-notes" rows="4" placeholder="What you’ll say over this slide">${esc((deck.notes || {})[info.entry] || '')}</textarea></label>
+      <p class="foot">Only you see them: under the camera while you record, and in FreeView while you present.</p></section>`;
+    const tail = slideSect + `<div class="actions"><button type="button" class="btn ghost" data-act="up" ${i === 0 ? 'disabled' : ''}>Move Earlier</button><button type="button" class="btn ghost" data-act="down" ${i === deck.entries.length - 1 ? 'disabled' : ''}>Move Later</button>
       <button type="button" class="btn ghost danger" data-act="remove">${ICON.trash} Remove Slide</button></div>`;
     if (info.type === 'custom' && info.slide) {
       customInspector(panel, info, head, tail);
@@ -498,7 +505,24 @@
         (appOnly ? `<div class="appnote">${ICON.device}<span>Edit this slide in FreeView on your Mac, iPhone or iPad. It stays as it is here and moves with the rest.</span></div>` : '') + tail;
     }
     $$('[data-act]', panel).forEach((b) => b.onclick = () => ({ up: () => move(i, i - 1), down: () => move(i, i + 1), remove: () => removeSlide(i) }[b.dataset.act]()));
+    const tr = $('#f-trans', panel);
+    if (tr) tr.onchange = () => {
+      const m = Object.assign({}, deck.transitions); if (tr.value) m[info.entry] = tr.value; else delete m[info.entry];
+      deck.transitions = m;
+      work('Saving…', () => (Object.keys(m).length ? store.writeJSON(`${deck.folder}/.transitions.json`, m) : store.deleteFile(`${deck.folder}/.transitions.json`)));
+    };
+    const nt = $('#f-notes', panel);
+    if (nt) {
+      const saveNotes = debounce(() => {
+        // As the app keeps them: only slides still in the presentation, no blank notes, nothing when empty.
+        const m = {}; for (const [k, v] of Object.entries(deck.notes || {})) if (v.trim() && deck.entries.includes(k.split('#')[0])) m[k] = v;
+        deck.notes = m;
+        work('Saving…', () => (Object.keys(m).length ? store.writeJSON(`${deck.folder}/.notes.json`, m) : store.deleteFile(`${deck.folder}/.notes.json`)));
+      }, 700);
+      nt.oninput = () => { deck.notes = Object.assign({}, deck.notes, { [info.entry]: nt.value }); saveNotes(); };
+    }
   }
+  const TRANSITIONS = [['slide', 'Slide'], ['instant', 'Instant'], ['crossfade', 'Cross-fade'], ['fadeBlack', 'Fade through black'], ['fadeWhite', 'Fade through white'], ['magicMove', 'Magic Move']];
 
   // ── a cover's or Magic slide's panel: the app's sections, in the app's order and words ──
   const CONTACT_ORDER = ['website', 'email', 'phone', 'linkedin', 'x', 'instagram', 'github', 'threads', 'bluesky'];
@@ -993,10 +1017,15 @@
     const prev = P.nodes[P.index];
     P.index = n;
     [n, n + 1, n - 1].forEach((k) => { const s = P.slides[k], el = P.nodes[k]; if (s && !el.dataset.drawn) { el.dataset.drawn = '1'; const box = document.createElement('div'); el.appendChild(box); draw(box, s.info, { page: s.page, live: true }); } });
+    const t = (deck.transitions || {})[P.slides[n].info.entry] || 'crossfade';
+    const stage = $('#pstage'); stage.dataset.t = t === 'magicMove' ? 'crossfade' : t;
+    stage.dataset.dir = jump ? '' : (prev && P.nodes.indexOf(prev) > n ? 'back' : 'fwd');
     P.nodes.forEach((el, k) => el.classList.toggle('on', k === n));
     if (prev && prev !== P.nodes[n]) $$('video, audio', prev).forEach((m) => { if (!m.srcObject) m.pause(); });
     $$('video:not(.live-cam), audio', P.nodes[n]).forEach((m) => { if (!m.srcObject) { m.muted = false; m.currentTime = 0; m.play().catch(() => { m.muted = true; m.play().catch(() => {}); }); } });
     $('#pcount').textContent = `${n + 1} / ${P.slides.length}`;
+    const note = (deck.notes || {})[`${P.slides[n].info.entry}#${P.slides[n].page}`] || (deck.notes || {})[P.slides[n].info.entry] || '';
+    $('#pnotes').textContent = note; $('#pnotes').hidden = !note || !P.rec;
     if (P.rec && P.rec.started && !jump) P.rec.marks.push({ slide: n, time: +recTime().toFixed(3) });
   }
   function closePresent() {
