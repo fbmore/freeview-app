@@ -78,6 +78,30 @@
     const tab = view === 'deck' ? 'library' : view;
     $$('#tabs button').forEach((b) => { if (b.dataset.tab === tab) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
   }
+  // ── FreeView Pro: bought in the app; the web follows it (see CloudStore.checkPro) ──
+  let pro = null, proCheckedAt = 0;
+  async function refreshPro(force) {
+    if (!store || store.kind !== 'cloud' || (!force && Date.now() - proCheckedAt < 10 * 60e3)) return;
+    proCheckedAt = Date.now();
+    const was = pro; pro = await store.checkPro();
+    if (pro !== was) { if (!deck && !$('#library').hidden) renderLibrary(); }
+    renderProStatus();
+  }
+  function renderProStatus() {
+    const el = $('#prostatus'); if (!el) return;
+    el.textContent = pro === true ? 'Pro is on for this Apple Account: every presentation, here and in the app.'
+      : pro === false ? 'Free: your three most recent presentations and one shared link. FreeView Pro unlocks everything, here and in the app. Get it in FreeView on your iPhone, iPad or Mac, signed in to the same Apple Account.'
+      : store && store.kind === 'demo' ? 'Pro comes with your Apple Account once you sign in.' : 'Checking…';
+    $('#progetbtn').hidden = pro !== false;
+  }
+  function showPaywall() {
+    askChoice('Unlock FreeView Pro', 'Pro keeps every presentation, with longer, bigger and password-protected links. Get it in FreeView on your iPhone, iPad or Mac, signed in to this Apple Account, then come back here.',
+      [['check', 'Check Again'], ['get', 'Get FreeView']], (v) => {
+        if (v === 'get') window.open('https://apps.apple.com/app/id1526222244', '_blank', 'noopener');
+        else refreshPro(true).then(() => toast(pro === true ? 'Pro is on.' : pro === false ? 'Still on Free for this Apple Account.' : 'Couldn’t check right now. Try again in a moment.'));
+      });
+  }
+
   function goTab(tab) {
     if (tab === 'links') { deck = null; show('links'); $('#crumb').textContent = ''; renderLinks(); history.replaceState(null, '', '#links'); }
     else if (tab === 'settings') { deck = null; show('settings'); $('#crumb').textContent = ''; renderSettings(); history.replaceState(null, '', '#settings'); }
@@ -116,6 +140,7 @@
     ['linkedin', 'LinkedIn', 'handle', 'off'], ['x', 'X', '@handle', 'off'], ['instagram', 'Instagram', '@handle', 'off'], ['github', 'GitHub', 'handle', 'off'],
     ['threads', 'Threads', '@handle', 'off'], ['bluesky', 'Bluesky', 'you.bsky.social', 'off']];
   async function renderSettings() {
+    renderProStatus();
     profile = (await store.json('.profile/profile.json')) || profile || {};
     const p = Object.assign({ firstName: '', lastName: '', role: '', contacts: {} }, profile);
     $('#contactfields').innerHTML = CONTACTS.map(([k, label, ph, ac]) =>
@@ -387,7 +412,11 @@
   async function renderLibrary() {
     const grid = $('#grid');
     const q = ($('#search').value || '').trim().toLowerCase();
-    const decks = store.decks().filter((v) => !q || (v.title || '').toLowerCase().includes(q));
+    const all = store.visibleDecks(pro);
+    const hidden = store.decks().length - all.length;
+    const decks = all.filter((v) => !q || (v.title || '').toLowerCase().includes(q));
+    const lock = $('#prolock'); lock.hidden = !hidden;
+    if (hidden) $('span', lock).textContent = hidden === 1 ? '1 more presentation in your history' : `${hidden} more presentations in your history`;
     $('#empty').hidden = decks.length > 0 || !!store.loading;
     if (!decks.length && store.loading) {
       grid.replaceChildren(...Array.from({ length: 8 }, () => { const d = document.createElement('div'); d.className = 'deckcard ghost'; d.setAttribute('aria-hidden', 'true'); d.innerHTML = '<div class="cover"></div><div class="meta"><span class="bar"></span><span class="bar short"></span></div>'; return d; }));
@@ -418,6 +447,7 @@
 
   async function openDeck(id, selected = 0) {
     const visit = store.visit(id); if (!visit) return showLibrary();
+    if (!store.visibleDecks(pro).some((v) => v.id === id)) { showLibrary(); return showPaywall(); }
     const { folder, entries } = store.deckOf(visit);
     deck = { visit, folder, entries, selected: Math.min(selected, Math.max(0, entries.length - 1)), style: await store.json(`${folder}/.style.json`) };
     deck.chosen = new Set(entries.length ? [entries[deck.selected]] : []); deck.anchor = deck.selected;
@@ -752,7 +782,7 @@
     deck.style = fullStyle(deck.style);
     const st = deck.style, t = st.theme;
     const saved = (await store.json('.profile/styles.json')) || [];
-    const others = store.decks().filter((v) => v.id !== deck.visit.id && v.kind.deck).slice(0, 30);
+    const others = store.visibleDecks(pro).filter((v) => v.id !== deck.visit.id && v.kind.deck).slice(0, 30);
     const logoURL = st.logo === 'custom' ? await store.src(`${deck.folder}/.logo.png`) : st.logo === 'profile' ? await store.src('.profile/default-logo.png') : '';
     const custom = st.presenter === 'custom';
     const person = Object.assign({ firstName: '', lastName: '', role: '', contacts: {} }, st.person || {});
@@ -1783,6 +1813,7 @@
   // ── wiring ──
 
   function wire() {
+    $('#prolock').onclick = showPaywall; $('#progetbtn').onclick = showPaywall;
     $('#newdeck').onclick = $('#newdeck2').onclick = async () => {
       const v = await work('Creating…', () => store.newDeck('Untitled Presentation'));
       if (v) { await openDeck(v.id); $('#title').focus(); $('#title').select(); }
@@ -1859,6 +1890,8 @@
       // Demo only: a handle for trying things out (nothing here reaches iCloud).
       window.__fvDemo = { store, deck: () => deck, renderCommentary, present: (o) => present(o) };
       $('#modebadge').hidden = false;
+      // ?free shows the Free limits in the sample.
+      if (new URLSearchParams(location.search).has('free')) pro = false;
       return enter();
     }
     show('welcome');
@@ -1880,6 +1913,8 @@
       await enter();
       await loading.catch((e) => { console.error(e); toast('iCloud didn’t send everything. Reload to try again.'); });
       busy('');
+      refreshPro(true);
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshPro(); });
       // The profile (name, photo, role) may have come in after the first slides were drawn.
       profile = await store.json('.profile/profile.json');
       infoCache.clear();

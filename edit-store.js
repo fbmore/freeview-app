@@ -26,8 +26,9 @@
   // iCloud's upload host (…icloud-content.com/…/singleFileUpload) only lets www.icloud.com read its
   // replies, so CloudKit JS's asset uploads fail anywhere else ("NETWORK_ERROR"). Those requests go
   // through the FreeView Worker instead, which passes the bytes on to iCloud and keeps nothing.
-  const UPLOAD_PROXY = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && new URLSearchParams(location.search).has('localworker')
-    ? 'http://localhost:8787/ck-upload' : 'https://freeview-views.fbmore.workers.dev/ck-upload';
+  const WORKER = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && new URLSearchParams(location.search).has('localworker')
+    ? 'http://localhost:8787' : 'https://freeview-views.fbmore.workers.dev';
+  const UPLOAD_PROXY = `${WORKER}/ck-upload`;
   (function routeUploads() {
     const open = XMLHttpRequest.prototype.open;
     XMLHttpRequest.prototype.open = function (method, url, ...rest) {
@@ -214,6 +215,13 @@
         .filter((v) => v.kind && (v.kind.deck || v.kind.file))
         .sort((a, b) => b.date - a.date);
     }
+    /** As the app's Home: everything with Pro; on Free every single file and the three most recent
+     *  presentations. `pro` null (not known) shows everything. */
+    visibleDecks(pro) {
+      if (pro !== false) return this.decks();
+      let n = 0;
+      return this.decks().filter((v) => !v.kind.deck || ++n <= FREE_PRESENTATIONS);
+    }
     visit(id) { const i = this.items.get(id); return i && i.visit; }
     /** A presentation's folder and slides; a single file reads as a deck of one. */
     deckOf(visit) {
@@ -293,6 +301,21 @@
       const user = await this.container.setUpAuth();
       this.container.whenUserSignsOut().then(() => onSignedOut && onSignedOut());
       return user || this.container.whenUserSignsIn();
+    }
+
+    /** Pro, as the app sees it: the Worker asks iCloud whose sign-in this is, then RevenueCat (the app
+     *  logs in there with the same iCloud user). true / false, or null when it couldn't be checked. */
+    async checkPro() {
+      const auth = this.container && this.container._auth;
+      const token = auth && auth._ckSession;
+      if (!token) return null;
+      try {
+        const r = await fetch(`${WORKER}/pro`, { method: 'POST', body: JSON.stringify({ token, env: ENVIRONMENT }) });
+        const j = await r.json();
+        // iCloud may hand back a fresh sign-in token; keep using the newest.
+        if (j.token && j.token !== token && typeof auth._setSession === 'function') auth._setSession(j.token);
+        return typeof j.pro === 'boolean' ? j.pro : null;
+      } catch { return null; }
     }
 
     /** Everything in the Library zone (then only what changed, on later calls). */
@@ -437,6 +460,7 @@
     }
   }
 
+  const FREE_PRESENTATIONS = 3;
   window.FVStore = {
     CloudStore, DemoStore, sortedJSON, uuid, shortID, appleNow, fromApple, sha256, fileType, posterPath,
     baseName, cleanName, newCustomSlide, newCameraMedia,
