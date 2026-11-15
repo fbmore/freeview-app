@@ -547,10 +547,14 @@
     } else {
       const note = { image: '', webImage: '', video: '', audio: '', pdf: info.pages ? `${info.pages} page${info.pages === 1 ? '' : 's'}, each one a slide when you present.` : '', link: info.href ? `Shows ${hostOf(info.href)}.` : '' }[info.type];
       const appOnly = note === undefined;
-      panel.innerHTML = head + `<div class="filename">${esc(info.type === 'link' && info.href ? info.href : info.name)}</div>` + (note ? `<p class="hint">${esc(note)}</p>` : '') +
+      const editBtn = info.type === 'image' ? `<div class="row wrap"><button type="button" class="btn small" id="editphoto">Edit Photo…</button></div>`
+        : info.type === 'video' ? `<div class="row wrap"><button type="button" class="btn small" id="editcover">Choose Cover…</button></div>` : '';
+      panel.innerHTML = head + `<div class="filename">${esc(info.type === 'link' && info.href ? info.href : info.name)}</div>` + (note ? `<p class="hint">${esc(note)}</p>` : '') + editBtn +
         (appOnly ? `<div class="appnote">${ICON.device}<span>Edit this slide in FreeView on your Mac, iPhone or iPad. It stays as it is here and moves with the rest.</span></div>` : '') + tail;
     }
     $$('[data-act]', panel).forEach((b) => b.onclick = () => ({ up: () => move(i, i - 1), down: () => move(i, i + 1), remove: () => removeSlide(i) }[b.dataset.act]()));
+    const ep2 = $('#editphoto', panel); if (ep2) ep2.onclick = () => editPhoto(info);
+    const ec = $('#editcover', panel); if (ec) ec.onclick = () => chooseCover(info);
     const tr = $('#f-trans', panel);
     if (tr) tr.onchange = () => {
       const m = Object.assign({}, deck.transitions); if (tr.value) m[info.entry] = tr.value; else delete m[info.entry];
@@ -1160,6 +1164,134 @@
       await store.putVisit(made);
     });
     if (made) openDeck(made.id);
+  }
+
+  // ── the app's media editor: a photo's crop, rotation and black & white; a video's cover ──
+  /** The untouched file, kept beside an edited one (MediaEditorView: `.original-<name>`). */
+  const originalOf = (entry) => { const i = entry.lastIndexOf('/'); return (i >= 0 ? entry.slice(0, i + 1) : '') + '.original-' + entry.slice(i + 1); };
+  async function editPhoto(info) {
+    const d = $('#photoedit'), cv = $('canvas', d), x = cv.getContext('2d');
+    const img = new Image(); img.crossOrigin = 'anonymous'; img.src = info.url;
+    try { await img.decode(); } catch { return toast('This picture can’t be edited here.'); }
+    const st = { rot: 0, bw: false, aspect: 'original', crop: { x: 0, y: 0, w: 1, h: 1 } };   // crop in the rotated picture's 0…1 space
+    const hasOriginal = store.has(`${deck.folder}/${originalOf(info.entry)}`);
+    $('#pe-revert').hidden = !hasOriginal;
+    const dims = () => (st.rot % 180 ? [img.naturalHeight, img.naturalWidth] : [img.naturalWidth, img.naturalHeight]);
+    /** The picture as edited, at `scale`, cropped or not. */
+    function render(scale, cropped) {
+      const [W, H] = dims(), c = document.createElement('canvas');
+      const cr = cropped ? st.crop : { x: 0, y: 0, w: 1, h: 1 };
+      c.width = Math.max(1, Math.round(W * cr.w * scale)); c.height = Math.max(1, Math.round(H * cr.h * scale));
+      const g = c.getContext('2d');
+      if (st.bw) g.filter = 'grayscale(1)';
+      g.translate(-cr.x * W * scale, -cr.y * H * scale);
+      g.translate(W * scale / 2, H * scale / 2); g.rotate(st.rot * Math.PI / 180);
+      g.drawImage(img, -img.naturalWidth * scale / 2, -img.naturalHeight * scale / 2, img.naturalWidth * scale, img.naturalHeight * scale);
+      return c;
+    }
+    const box = $('.pe-stage', d);
+    let view = { s: 1, ox: 0, oy: 0 };
+    function paint() {
+      const [W, H] = dims(), bw2 = box.clientWidth, bh = box.clientHeight;
+      const k = Math.min(bw2 / W, bh / H) * 0.94; view = { s: k, ox: (bw2 - W * k) / 2, oy: (bh - H * k) / 2 };
+      cv.width = bw2 * devicePixelRatio; cv.height = bh * devicePixelRatio; cv.style.width = bw2 + 'px'; cv.style.height = bh + 'px';
+      x.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0); x.clearRect(0, 0, bw2, bh);
+      x.drawImage(render(k, false), view.ox, view.oy);
+      const c = st.crop, rx = view.ox + c.x * W * k, ry = view.oy + c.y * H * k, rw = c.w * W * k, rh = c.h * H * k;
+      x.fillStyle = 'rgba(0,0,0,.55)'; x.beginPath(); x.rect(view.ox, view.oy, W * k, H * k); x.rect(rx, ry, rw, rh); x.fill('evenodd');
+      x.strokeStyle = '#fff'; x.lineWidth = 2; x.strokeRect(rx, ry, rw, rh);
+      x.lineWidth = 1; x.strokeStyle = 'rgba(255,255,255,.35)';
+      for (const f of [1 / 3, 2 / 3]) { x.beginPath(); x.moveTo(rx + rw * f, ry); x.lineTo(rx + rw * f, ry + rh); x.moveTo(rx, ry + rh * f); x.lineTo(rx + rw, ry + rh * f); x.stroke(); }
+      x.fillStyle = '#fff'; for (const [hx, hy] of [[rx, ry], [rx + rw, ry], [rx, ry + rh], [rx + rw, ry + rh]]) x.fillRect(hx - 5, hy - 5, 10, 10);
+      $$('[data-aspect]', d).forEach((b) => b.setAttribute('aria-checked', String(b.dataset.aspect === st.aspect)));
+      $('#pe-bw').setAttribute('aria-pressed', String(st.bw));
+    }
+    function fitAspect() {
+      const [W, H] = dims();
+      if (st.aspect === 'square') { const side = Math.min(W, H); st.crop = { w: side / W, h: side / H, x: (1 - side / W) / 2, y: (1 - side / H) / 2 }; }
+      else if (st.aspect === 'original') st.crop = { x: 0, y: 0, w: 1, h: 1 };
+      paint();
+    }
+    // Dragging: a corner resizes (keeping a square square), inside moves.
+    let drag = null;
+    cv.onpointerdown = (e) => {
+      const [W, H] = dims(), r = cv.getBoundingClientRect(), px = (e.clientX - r.left - view.ox) / (W * view.s), py = (e.clientY - r.top - view.oy) / (H * view.s);
+      const c = st.crop, tol = 14 / (Math.min(W, H) * view.s);
+      const corner = [['tl', c.x, c.y], ['tr', c.x + c.w, c.y], ['bl', c.x, c.y + c.h], ['br', c.x + c.w, c.y + c.h]].find(([, cx2, cy2]) => Math.abs(px - cx2) < tol * 1.5 && Math.abs(py - cy2) < tol * 1.5);
+      if (corner) drag = { kind: corner[0], start: { ...c } };
+      else if (px > c.x && px < c.x + c.w && py > c.y && py < c.y + c.h) drag = { kind: 'move', start: { ...c }, px, py };
+      else return;
+      if (st.aspect === 'original' && drag.kind !== 'move') st.aspect = 'free';
+      cv.setPointerCapture(e.pointerId);
+    };
+    cv.onpointermove = (e) => {
+      if (!drag) return;
+      const [W, H] = dims(), r = cv.getBoundingClientRect();
+      const px = Math.min(1, Math.max(0, (e.clientX - r.left - view.ox) / (W * view.s))), py = Math.min(1, Math.max(0, (e.clientY - r.top - view.oy) / (H * view.s)));
+      const s0 = drag.start, min = 0.05;
+      let { x: cx2, y: cy2, w, h } = s0;
+      if (drag.kind === 'move') { cx2 = Math.min(1 - w, Math.max(0, s0.x + px - drag.px)); cy2 = Math.min(1 - h, Math.max(0, s0.y + py - drag.py)); }
+      else {
+        let l = s0.x, t = s0.y, rr = s0.x + s0.w, b = s0.y + s0.h;
+        if (drag.kind.includes('l')) l = Math.min(px, rr - min); else rr = Math.max(px, l + min);
+        if (drag.kind.startsWith('t')) t = Math.min(py, b - min); else b = Math.max(py, t + min);
+        if (st.aspect === 'square') { const side = Math.min((rr - l) * W, (b - t) * H); if (drag.kind.includes('l')) l = rr - side / W; else rr = l + side / W; if (drag.kind.startsWith('t')) t = b - side / H; else b = t + side / H; }
+        cx2 = l; cy2 = t; w = rr - l; h = b - t;
+      }
+      st.crop = { x: cx2, y: cy2, w, h }; paint();
+    };
+    cv.onpointerup = () => { drag = null; };
+    $$('[data-aspect]', d).forEach((b) => (b.onclick = () => { st.aspect = b.dataset.aspect; fitAspect(); }));
+    $('#pe-rotate').onclick = () => { st.rot = (st.rot + 90) % 360; fitAspect(); };
+    $('#pe-bw').onclick = () => { st.bw = !st.bw; paint(); };
+    $('#pe-revert').onclick = () => d.close('revert');
+    d.onclose = async () => {
+      removeEventListener('resize', paint);
+      if (d.returnValue === 'revert') {
+        await work('Reverting…', async () => {
+          const u = await store.src(`${deck.folder}/${originalOf(info.entry)}`);
+          await store.putFile(info.path, await (await fetch(u)).blob());
+          await store.deleteFile(`${deck.folder}/${originalOf(info.entry)}`);
+        });
+      } else if (d.returnValue === 'done') {
+        const edited = st.rot || st.bw || st.crop.w < 0.999 || st.crop.h < 0.999;
+        if (!edited) return;
+        await work('Saving the photo…', async () => {
+          // The untouched file stays beside it the first time, for Revert.
+          if (!store.has(`${deck.folder}/${originalOf(info.entry)}`)) await store.putFile(`${deck.folder}/${originalOf(info.entry)}`, await (await fetch(info.url)).blob());
+          const png = /\.png$/i.test(info.entry);
+          const out = await new Promise((ok) => render(1, true).toBlob(ok, png ? 'image/png' : 'image/jpeg', 0.92));
+          if (png || /\.jpe?g$/i.test(info.entry)) await store.putFile(info.path, out);
+          else {
+            // Other formats are saved as JPEG, and the slide follows the new name (as in the app).
+            const entry = info.entry.replace(/\.[^./]+$/, '') + '.jpg';
+            await store.putFile(`${deck.folder}/${entry}`, out);
+            const entries = deck.entries.map((e) => (e === info.entry ? entry : e)); await saveEntries(entries);
+          }
+        });
+      } else return;
+      infoCache.delete(info.path); renderRail(); renderSelected();
+    };
+    d.showModal(); fitAspect(); addEventListener('resize', paint);
+  }
+  /** A video's cover: a frame of it, kept as `.<name>.poster.jpg` (MediaEditorView's "Set as Cover"). */
+  async function chooseCover(info) {
+    const d = $('#coverpick'), v = $('video', d), range = $('input', d);
+    v.src = info.url; v.muted = true; v.crossOrigin = 'anonymous';
+    await new Promise((ok) => { v.onloadedmetadata = ok; v.onerror = ok; });
+    range.max = v.duration || 0; range.step = 0.05; range.value = 0;
+    range.oninput = () => { v.currentTime = +range.value; };
+    d.onclose = async () => {
+      if (d.returnValue !== 'set') return;
+      await work('Setting the cover…', async () => {
+        const c = document.createElement('canvas'); const k = Math.min(1, 1600 / Math.max(v.videoWidth, v.videoHeight));
+        c.width = Math.round(v.videoWidth * k); c.height = Math.round(v.videoHeight * k); c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+        const blob = await new Promise((ok) => c.toBlob(ok, 'image/jpeg', 0.88));
+        await store.putFile(`${deck.folder}/${S.posterPath(info.entry)}`, blob);
+      });
+      infoCache.delete(info.path); renderRail(); renderSelected();
+    };
+    d.showModal();
   }
   // ── adding ──
 
