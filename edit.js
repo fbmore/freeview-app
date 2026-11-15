@@ -7,6 +7,11 @@
 (function () {
   'use strict';
   const S = window.FVStore;
+  // The visitor's language (i18n.js); English as written here if it didn't load.
+  const I = window.FVI18N || { lang: 'en', t: (s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => (k in v ? v[k] : m)) : s), apply() {},
+    n: (c, one, other, v) => I.t(c === 1 ? one : other, Object.assign({ n: c }, v)), date: (d, o) => new Date(d).toLocaleDateString(undefined, o),
+    dateTime: (d, o) => new Date(d).toLocaleString(undefined, o), fixed: (x, k) => Number(x).toFixed(k) };
+  const T = I.t;
   const $ = (s, el = document) => el.querySelector(s);
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
   const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -16,7 +21,7 @@
     qrcode: 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js',
     pdf: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
     pdfWorker: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
-    fvslide: '/fvslide.js?v=20',
+    fvslide: '/fvslide.js?v=21',
   };
   const scripts = {};
   const loadScript = (url) => scripts[url] || (scripts[url] = new Promise((ok, fail) => {
@@ -62,14 +67,14 @@
     busy(text);
     try { return await fn(); } catch (e) { console.error(e); toast(errorText(e)); } finally { busy(''); }
   }
-  function errorText(e) {
+  function errorText(e, sharing) {
     const code = e && (e.ckErrorCode || e.serverErrorCode);
-    if (code === 'QUOTA_EXCEEDED') return 'Your iCloud storage is full.';
-    if (code === 'AUTHENTICATION_REQUIRED' || code === 'AUTHENTICATION_FAILED') return 'Sign in with Apple again to keep saving.';
-    if (code === 'NETWORK_ERROR' || /NETWORK_ERROR|Failed to fetch/.test(String(e && (e.reason || e.message)))) return 'Couldn’t reach iCloud. Check your connection and try again.';
-    if (code === 'LIMIT_EXCEEDED' || code === 'TOO_LARGE') return 'That file is too big to upload here. Add it in FreeView on your Mac, iPhone or iPad.';
+    if (code === 'QUOTA_EXCEEDED') return T('Your iCloud storage is full.');
+    if (code === 'AUTHENTICATION_REQUIRED' || code === 'AUTHENTICATION_FAILED') return T('Sign in with Apple again to keep saving.');
+    if (code === 'NETWORK_ERROR' || /NETWORK_ERROR|Failed to fetch/.test(String(e && (e.reason || e.message)))) return T('Couldn’t reach iCloud. Check your connection and try again.');
+    if (code === 'LIMIT_EXCEEDED' || code === 'TOO_LARGE') return T('That file is too big to upload here. Add it in FreeView on your Mac, iPhone or iPad.');
     console.error(e);
-    return "Couldn't save that. Try again.";
+    return sharing ? T("Couldn't share it. Try again.") : T("Couldn't save that. Try again.");
   }
   function show(view) {
     for (const id of ['welcome', 'library', 'deck', 'links', 'settings']) $('#' + id).hidden = id !== view;
@@ -89,16 +94,16 @@
   }
   function renderProStatus() {
     const el = $('#prostatus'); if (!el) return;
-    el.textContent = pro === true ? 'Pro is on for this Apple Account: every presentation, here and in the app.'
-      : pro === false ? 'Free: your three most recent presentations and one shared link. FreeView Pro unlocks everything, here and in the app. Get it in FreeView on your iPhone, iPad or Mac, signed in to the same Apple Account.'
-      : store && store.kind === 'demo' ? 'Pro comes with your Apple Account once you sign in.' : 'Checking…';
+    el.textContent = pro === true ? T('Pro is on for this Apple Account: every presentation, here and in the app.')
+      : pro === false ? T('Free: your three most recent presentations and one shared link. FreeView Pro unlocks everything, here and in the app. Get it in FreeView on your iPhone, iPad or Mac, signed in to the same Apple Account.')
+      : store && store.kind === 'demo' ? T('Pro comes with your Apple Account once you sign in.') : T('Checking…');
     $('#progetbtn').hidden = pro !== false;
   }
   function showPaywall() {
-    askChoice('Unlock FreeView Pro', 'Pro keeps every presentation, with longer, bigger and password-protected links. Get it in FreeView on your iPhone, iPad or Mac, signed in to this Apple Account, then come back here.',
-      [['check', 'Check Again'], ['get', 'Get FreeView']], (v) => {
+    askChoice(T('Unlock FreeView Pro'), T('Pro keeps every presentation, with longer, bigger and password-protected links. Get it in FreeView on your iPhone, iPad or Mac, signed in to this Apple Account, then come back here.'),
+      [['check', T('Check Again')], ['get', T('Get FreeView')]], (v) => {
         if (v === 'get') window.open('https://apps.apple.com/app/id1526222244', '_blank', 'noopener');
-        else refreshPro(true).then(() => toast(pro === true ? 'Pro is on.' : pro === false ? 'Still on Free for this Apple Account.' : 'Couldn’t check right now. Try again in a moment.'));
+        else refreshPro(true).then(() => toast(pro === true ? T('Pro is on.') : pro === false ? T('Still on Free for this Apple Account.') : T('Couldn’t check right now. Try again in a moment.')));
       });
   }
 
@@ -119,19 +124,19 @@
       const url = 'https://freeview.app/v/' + l.recordName;
       const ends = S.fromApple(l.expiresAt), ended = ends < new Date();
       const never = ends - Date.now() > 3650 * 864e5;
-      const day = (d) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      const day = (d) => I.date(d, { month: 'short', day: 'numeric' });
       const row = document.createElement('div'); row.className = 'linkrow' + (ended ? ' ended' : '');
-      const when = never ? 'No end date' : ended ? 'Ended ' + day(ends) : 'Until ' + day(ends);
-      const bits = [l.slideCount + ' slide' + (l.slideCount === 1 ? '' : 's'), when];
-      if (l.hasPassword) bits.push('Password');
-      if (l.hasCommentary) bits.push('Commentary');
+      const when = never ? T('No end date') : ended ? T('Ended {date}', { date: day(ends) }) : T('Until {date}', { date: day(ends) });
+      const bits = [I.n(l.slideCount, '{n} slide', '{n} slides'), when];
+      if (l.hasPassword) bits.push(T('Password'));
+      if (l.hasCommentary) bits.push(T('Commentary'));
       row.innerHTML = '<span class="lt"></span><div class="li"><strong>' + esc(l.title) + '</strong><span class="' + (ended ? 'ended' : '') + '">' + esc(bits.join(' · ')) + '</span></div>'
-        + '<div class="la">' + (ended ? '<button type="button" class="btn small ghost" data-remove>Remove</button>' : '<button type="button" class="btn small" data-copy>Copy Link</button><a class="btn small ghost" href="' + esc(url) + '" target="_blank" rel="noopener">Open</a><button type="button" class="icon-btn small" data-more aria-label="More"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg></button>') + '</div>';
+        + '<div class="la">' + (ended ? '<button type="button" class="btn small ghost" data-remove>' + T('Remove') + '</button>' : '<button type="button" class="btn small" data-copy>' + T('Copy Link') + '</button><a class="btn small ghost" href="' + esc(url) + '" target="_blank" rel="noopener">' + T('Open') + '</a><button type="button" class="icon-btn small" data-more aria-label="' + T('More') + '"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg></button>') + '</div>';
       if (l.thumb) $('.lt', row).style.backgroundImage = 'url("' + l.thumb + '")';
       const copy = $('[data-copy]', row);
-      if (copy) copy.onclick = async () => { try { await navigator.clipboard.writeText(url); copy.textContent = 'Copied'; setTimeout(() => (copy.textContent = 'Copy Link'), 1600); } catch { toast(url); } };
+      if (copy) copy.onclick = async () => { try { await navigator.clipboard.writeText(url); copy.textContent = T('Copied'); setTimeout(() => (copy.textContent = T('Copy Link')), 1600); } catch { toast(url); } };
       const rm = $('[data-remove]', row);
-      if (rm) rm.onclick = () => work('Removing…', () => removeLink(l)).then(renderLinks);
+      if (rm) rm.onclick = () => work(T('Removing…'), () => removeLink(l)).then(renderLinks);
       const more = $('[data-more]', row);
       if (more) more.onclick = () => { const r = more.getBoundingClientRect(); linkMenu(l, r.right - 200, r.bottom + 4); };
       return row;
@@ -144,19 +149,19 @@
   const VIEWER = 'https://freeview.app/v/';
   // The Worker passes each upload on to iCloud, and Cloudflare caps a request near 100 MB.
   const UPLOAD_MAX = 95e6;
-  const linkDays = (d) => ({ 1: '1 day', 7: '1 week', 30: '30 days' }[d] || `${d} days`);
+  const linkDays = (d) => (d === 7 ? T('1 week') : I.n(d, '{n} day', '{n} days'));
   const durations = (isPro) => (isPro ? [1, 7, 30, 90] : [1, 7]);
   const allLinks = () => [...store.links.values()].map((x) => x.link).filter((l) => l && l.recordName && !l.cleaned);
   const liveLinks = () => allLinks().filter((l) => S.fromApple(l.expiresAt) > new Date());
   const linkFor = (visitID) => liveLinks().filter((l) => l.visitID === visitID).sort((a, b) => (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt))[0];
-  const mb = (n) => (n >= 1e9 ? (n / 1e9).toFixed(1) + ' GB' : Math.max(1, Math.round(n / 1e6)) + ' MB');
+  const mb = (n) => (n >= 1e9 ? I.fixed(n / 1e9, 1) + ' GB' : Math.max(1, Math.round(n / 1e6)) + ' MB');
 
   async function blobOf(path) {
     const u = await store.src(path); if (!u) return null;
     const r = await fetch(u); return r.ok ? r.blob() : null;
   }
   function canvasBlob(c, type = 'image/jpeg', q = 0.85) {
-    return new Promise((ok, fail) => c.toBlob((b) => (b ? ok(b) : fail(new Error('Couldn’t make a picture.'))), type, q));
+    return new Promise((ok, fail) => c.toBlob((b) => (b ? ok(b) : fail(new Error(T('Couldn’t make a picture.')))), type, q));
   }
   /** As the app's writeJPEG: no larger than `side`, oriented, as JPEG. */
   async function jpeg(blob, side) {
@@ -340,11 +345,11 @@
 
   async function createLink(visit, o, onStage) {
     const isPro = pro === true;
-    const x = await makeExport(visit, { withCommentary: o.commentary, onStep: (f) => onStage('Preparing…', f) });
-    if (!x.slides.length) throw new Error('Nothing in this presentation can go on the web yet.');
+    const x = await makeExport(visit, { withCommentary: o.commentary, onStep: (f) => onStage(T('Preparing…'), f) });
+    if (!x.slides.length) throw new Error(T('Nothing in this presentation can go on the web yet.'));
     const sender = o.showSender ? await addSender(x, store.deckOf(visit).folder) : null;
     const total = x.items.reduce((n, it) => n + it.blob.size, 0) + (x.commentaryVideo ? x.commentaryVideo.size : 0);
-    if (total >= (isPro ? 2e9 : 250e6)) throw new Error(isPro ? `It comes to ${mb(total)}, more than a link can carry (2 GB).` : `It comes to ${mb(total)}. Free links carry up to 250 MB; Pro up to 2 GB.`);
+    if (total >= (isPro ? 2e9 : 250e6)) throw new Error(isPro ? T('It comes to {size}, more than a link can carry (2 GB).', { size: mb(total) }) : T('It comes to {size}. Free links carry up to 250 MB; Pro up to 2 GB.', { size: mb(total) }));
     // Free: one live link, so the current one ends as the new one starts.
     if (!isPro) for (const old of liveLinks()) await stopLink(old).catch(() => {});
 
@@ -364,8 +369,8 @@
     if (x.cover) fields.cover = { value: x.cover };
     if (x.commentary) { fields.commentary = { value: x.commentary }; fields.commentaryVideo = { value: x.commentaryVideo }; }
 
-    onStage('Uploading…', 0);
-    const stopWatch = S.watchUploads(total, (f) => onStage('Uploading…', f));
+    onStage(T('Uploading…'), 0);
+    const stopWatch = S.watchUploads(total, (f) => onStage(T('Uploading…'), f));
     try { await store.publicSave({ recordName: name, recordType: 'SharedSet', fields }); } finally { stopWatch(); }
 
     const ownerKey = [...crypto.getRandomValues(new Uint8Array(32))].map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -400,11 +405,11 @@
 
   function linkURLRow(link) {
     const url = VIEWER + link.recordName;
-    return `<div class="linkout"><input readonly value="${esc(url)}" aria-label="Link"><button type="button" class="btn primary" data-copylink>Copy Link</button><a class="btn" href="${esc(url)}" target="_blank" rel="noopener">Open</a></div>`;
+    return `<div class="linkout"><input readonly value="${esc(url)}" aria-label="${T('Link')}"><button type="button" class="btn primary" data-copylink>${T('Copy Link')}</button><a class="btn" href="${esc(url)}" target="_blank" rel="noopener">${T('Open')}</a></div>`;
   }
   function wireCopy(root, link) {
     const b = $('[data-copylink]', root); if (!b) return;
-    b.onclick = async () => { try { await navigator.clipboard.writeText(VIEWER + link.recordName); b.textContent = 'Copied'; setTimeout(() => (b.textContent = 'Copy Link'), 1600); } catch { $('input', root).select(); } };
+    b.onclick = async () => { try { await navigator.clipboard.writeText(VIEWER + link.recordName); b.textContent = T('Copied'); setTimeout(() => (b.textContent = T('Copy Link')), 1600); } catch { $('input', root).select(); } };
   }
 
   /** Share Presentation: the app's sheet, then its progress, then the link. */
@@ -415,12 +420,12 @@
     const existing = !fresh && linkFor(visit.id);
     const done = (res) => {
       const l = res.link, ends = S.fromApple(l.expiresAt);
-      const left = res.skipped.length ? `<p class="foot">Left out, since browsers can’t show them: ${esc(res.skipped.join(', '))}. They play in FreeView on your iPhone, iPad or Mac.</p>` : '';
-      const big = res.tooBig.length ? `<p class="foot">Too large to upload from a browser (over ${mb(UPLOAD_MAX)} each): ${esc(res.tooBig.join(', '))}. Share from FreeView on your Mac or iPhone to include them.</p>` : '';
-      $('h2', d).textContent = 'Shared Link';
-      body.innerHTML = `<p class="lede">${esc(l.title)} · ${l.slideCount} slide${l.slideCount === 1 ? '' : 's'} · Works until ${esc(ends.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}</p>
+      const left = res.skipped.length ? `<p class="foot">${T('Left out, since browsers can’t show them: {list}. They play in FreeView on your iPhone, iPad or Mac.', { list: esc(res.skipped.join(', ')) })}</p>` : '';
+      const big = res.tooBig.length ? `<p class="foot">${T('Too large to upload from a browser (over {size} each): {list}. Share from FreeView on your Mac or iPhone to include them.', { size: mb(UPLOAD_MAX), list: esc(res.tooBig.join(', ')) })}</p>` : '';
+      $('h2', d).textContent = T('Shared Link');
+      body.innerHTML = `<p class="lede">${esc(l.title)} · ${I.n(l.slideCount, '{n} slide', '{n} slides')} · ${T('Works until {date}', { date: esc(I.dateTime(ends, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) })}</p>
         ${linkURLRow(l)}${left}${big}
-        <div class="row end"><button type="button" class="btn" data-new>New Link…</button><button type="button" class="btn primary" data-done>Done</button></div>`;
+        <div class="row end"><button type="button" class="btn" data-new>${T('New Link…')}</button><button type="button" class="btn primary" data-done>${T('Done')}</button></div>`;
       wireCopy(body, l);
       $('[data-done]', body).onclick = () => d.close();
       $('[data-new]', body).onclick = () => openShare(true);
@@ -434,35 +439,35 @@
     const last = allLinks().filter((l) => l.visitID === visit.id).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
     const auto = last ? last.autoplay || 0 : 0;
     const days = 7;
-    const freeNote = !isPro && liveLinks().length ? 'Free shares one link at a time, for up to a week and 250 MB. Creating this one ends your current link. Pro shares as many as you like, for up to 90 days, up to 2 GB each, with passwords and per-slide views.'
-      : fresh ? 'A separate link with its own end date and view count. Your current link keeps working until it ends.'
-      : 'PDF pages become images; videos go up as they are. Everything is uploaded to iCloud for as long as the link works.';
-    $('h2', d).textContent = fresh ? 'New Link' : 'Share Presentation';
+    const freeNote = !isPro && liveLinks().length ? T('Free shares one link at a time, for up to a week and 250 MB. Creating this one ends your current link. Pro shares as many as you like, for up to 90 days, up to 2 GB each, with passwords and per-slide views.')
+      : fresh ? T('A separate link with its own end date and view count. Your current link keeps working until it ends.')
+      : T('PDF pages become images; videos go up as they are. Everything is uploaded to iCloud for as long as the link works.');
+    $('h2', d).textContent = fresh ? T('New Link') : T('Share Presentation');
     body.innerHTML = `
-      ${c ? `<section class="sect"><h3>Commentary</h3><div class="switches">${sw('commentary', 'Include Commentary', fits, !fits, clock(c.duration || 0))}</div>
-        <p class="foot">${fits ? 'The link opens on your commentary: your camera and voice, the slides following along, in the layout you chose. People can still browse the slides on their own.' : 'The commentary was recorded on a different arrangement of slides, so it can’t go in this link. Record it again to include it.'}</p></section>` : ''}
+      ${c ? `<section class="sect"><h3>${T('Commentary')}</h3><div class="switches">${sw('commentary', T('Include Commentary'), fits, !fits, clock(c.duration || 0))}</div>
+        <p class="foot">${fits ? T('The link opens on your commentary: your camera and voice, the slides following along, in the layout you chose. People can still browse the slides on their own.') : T('The commentary was recorded on a different arrangement of slides, so it can’t go in this link. Record it again to include it.')}</p></section>` : ''}
       <section class="sect">
-        <label class="field"><span>Title</span><input id="sh-title" value="${esc(visit.title || '')}" autocomplete="off"></label>
-        <label class="field"><span>Message (optional)</span><textarea id="sh-message" rows="2" placeholder="Shown before the presentation starts"></textarea></label>
-        <div class="switches">${sw('sender', 'Show My Name and Photo', hasMe, !hasMe)}</div>
-        <p class="foot">The title shows in link previews. With a message, the link opens on a welcome screen with your name, photo and logo (from Settings › Profile), before the presentation starts.</p>
+        <label class="field"><span>${T('Title')}</span><input id="sh-title" value="${esc(visit.title || '')}" autocomplete="off"></label>
+        <label class="field"><span>${T('Message (optional)')}</span><textarea id="sh-message" rows="2" placeholder="${T('Shown before the presentation starts')}"></textarea></label>
+        <div class="switches">${sw('sender', T('Show My Name and Photo'), hasMe, !hasMe)}</div>
+        <p class="foot">${T('The title shows in link previews. With a message, the link opens on a welcome screen with your name, photo and logo (from Settings › Profile), before the presentation starts.')}</p>
       </section>
       <section class="sect">
-        ${isPro ? '<label class="field"><span>Password (optional)</span><input id="sh-password" type="password" autocomplete="new-password"></label>'
-                : '<button type="button" class="prolock small" id="sh-pwpro"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Password</span><strong>Pro</strong></button>'}
-        <p class="foot">${isPro ? 'People will need it to open the link. Share it separately.' : 'Protect links with a password, share more of them for longer, and drop the FreeView mark with Pro.'}</p>
+        ${isPro ? `<label class="field"><span>${T('Password (optional)')}</span><input id="sh-password" type="password" autocomplete="new-password"></label>`
+                : `<button type="button" class="prolock small" id="sh-pwpro"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>${T('Password')}</span><strong>Pro</strong></button>`}
+        <p class="foot">${isPro ? T('People will need it to open the link. Share it separately.') : T('Protect links with a password, share more of them for longer, and drop the FreeView mark with Pro.')}</p>
       </section>
       <section class="sect">
-        <div class="switches">${sw('autoplay', 'Autoplay', auto > 0)}</div>
-        <label class="field inline" id="sh-autorow" ${auto > 0 ? '' : 'hidden'}><span>Each Slide For</span><select id="sh-seconds">${[...new Set([3, 5, 10, 20, 30, 60, auto || 5])].sort((a, b) => a - b).map((s) => `<option value="${s}" ${s === (auto || 5) ? 'selected' : ''}>${s} Seconds</option>`).join('')}</select></label>
-        <p class="foot">The link plays by itself, each slide for this long; videos and audio play to their end. People can still step through it.</p>
+        <div class="switches">${sw('autoplay', T('Autoplay'), auto > 0)}</div>
+        <label class="field inline" id="sh-autorow" ${auto > 0 ? '' : 'hidden'}><span>${T('Each Slide For')}</span><select id="sh-seconds">${[...new Set([3, 5, 10, 20, 30, 60, auto || 5])].sort((a, b) => a - b).map((s) => `<option value="${s}" ${s === (auto || 5) ? 'selected' : ''}>${T('{n} Seconds', { n: s })}</option>`).join('')}</select></label>
+        <p class="foot">${T('The link plays by itself, each slide for this long; videos and audio play to their end. People can still step through it.')}</p>
       </section>
       <section class="sect">
-        <label class="field inline"><span>Link works for</span><select id="sh-days">${[1, 7, 30, 90].map((n) => `<option value="${n}" ${n === days ? 'selected' : ''}>${linkDays(n)}${durations(isPro).includes(n) ? '' : ' · Pro'}</option>`).join('')}</select></label>
-        <p class="foot">Anyone with the link can watch it in a browser, ready to present. It stops working on its own after that; you can end it sooner in Shared Links.</p>
+        <label class="field inline"><span>${T('Link works for')}</span><select id="sh-days">${[1, 7, 30, 90].map((n) => `<option value="${n}" ${n === days ? 'selected' : ''}>${linkDays(n)}${durations(isPro).includes(n) ? '' : ' · Pro'}</option>`).join('')}</select></label>
+        <p class="foot">${T('Anyone with the link can watch it in a browser, ready to present. It stops working on its own after that; you can end it sooner in Shared Links.')}</p>
       </section>
       <p class="foot">${freeNote}</p>
-      <div class="row end"><button type="button" class="btn" data-cancel>Cancel</button><button type="button" class="btn primary" data-create>Create Link</button></div>`;
+      <div class="row end"><button type="button" class="btn" data-cancel>${T('Cancel')}</button><button type="button" class="btn primary" data-create>${T('Create Link')}</button></div>`;
     if (!d.open) d.showModal();
     const swOn = (k) => { const i = $(`[data-sw="${k}"]`, body); return !!(i && i.checked && !i.disabled); };
     $('[data-sw="autoplay"]', body).onchange = (e) => { $('#sh-autorow').hidden = !e.target.checked; };
@@ -474,16 +479,16 @@
     create.onclick = async () => {
       const o = { title: $('#sh-title').value.trim(), message: $('#sh-message').value.trim(), showSender: swOn('sender'), commentary: swOn('commentary'),
         password: $('#sh-password') ? $('#sh-password').value : '', autoplay: swOn('autoplay') ? +$('#sh-seconds').value : 0, days: +$('#sh-days').value };
-      if (store.kind === 'demo') return toast('In the sample nothing is uploaded. Sign in with Apple to share links.');
+      if (store.kind === 'demo') return toast(T('In the sample nothing is uploaded. Sign in with Apple to share links.'));
       d.addEventListener('cancel', blockEsc);
-      body.innerHTML = `<p class="lede" id="sh-stage">Preparing…</p><div class="bar"><i id="sh-bar"></i></div><p class="foot">Keep this page open until the link is ready.</p>`;
+      body.innerHTML = `<p class="lede" id="sh-stage">${T('Preparing…')}</p><div class="bar"><i id="sh-bar"></i></div><p class="foot">${T('Keep this page open until the link is ready.')}</p>`;
       try {
         const res = await createLink(visit, o, (label, f) => { $('#sh-stage').textContent = label; $('#sh-bar').style.transform = `scaleX(${Math.max(0.02, Math.min(1, f))})`; });
         done(res);
         if (!$('#links').hidden) renderLinks();
       } catch (e) {
         console.error(e);
-        d.close(); toast(e && !e.ckErrorCode && !e.serverErrorCode && e.message && !/fetch|network/i.test(e.message) ? e.message : errorText(e).replace('save that', 'share it'));
+        d.close(); toast(e && !e.ckErrorCode && !e.serverErrorCode && e.message && !/fetch|network/i.test(e.message) ? e.message : errorText(e, true));
       } finally { d.removeEventListener('cancel', blockEsc); }
     };
   }
@@ -492,12 +497,12 @@
   function linkMenu(l, x, y) {
     const visit = l.visitID && store.visit(l.visitID);
     showMenu(x, y, [
-      visit && { label: 'Edit Presentation', run: () => openDeck(l.visitID) },
-      { label: 'Keep Longer…', run: () => askChoice('Keep Longer', 'From now. The link stays the same.', durations(pro === true).map((n) => [String(n), linkDays(n)]),
-        (v) => work('Saving…', () => extendLink(l, +v)).then(renderLinks)) },
+      visit && { label: T('Edit Presentation'), run: () => openDeck(l.visitID) },
+      { label: T('Keep Longer…'), run: () => askChoice(T('Keep Longer'), T('From now. The link stays the same.'), durations(pro === true).map((n) => [String(n), linkDays(n)]),
+        (v) => work(T('Saving…'), () => extendLink(l, +v)).then(renderLinks)) },
       '-',
-      { label: 'Stop Sharing', danger: true, run: () => askChoice('Stop Sharing?', 'The link stops working now, and its copies are deleted from iCloud.', [['remove', 'Stop Sharing']],
-        () => work('Stopping…', () => stopLink(l)).then(renderLinks)) },
+      { label: T('Stop Sharing'), danger: true, run: () => askChoice(T('Stop Sharing?'), T('The link stops working now, and its copies are deleted from iCloud.'), [['remove', T('Stop Sharing')]],
+        () => work(T('Stopping…'), () => stopLink(l)).then(renderLinks)) },
     ].filter(Boolean));
   }
 
@@ -511,9 +516,9 @@
     profile = (await store.json('.profile/profile.json')) || profile || {};
     const p = Object.assign({ firstName: '', lastName: '', role: '', contacts: {} }, profile);
     $('#contactfields').innerHTML = CONTACTS.map(([k, label, ph, ac]) =>
-      '<label class="field"><span>' + label + '</span><input data-contact="' + k + '" value="' + esc((p.contacts || {})[k] || '') + '" placeholder="' + ph + '" autocomplete="' + ac + '" spellcheck="false"></label>').join('');
+      '<label class="field"><span>' + T(label) + '</span><input data-contact="' + k + '" value="' + esc((p.contacts || {})[k] || '') + '" placeholder="' + esc(T(ph)) + '" autocomplete="' + ac + '" spellcheck="false"></label>').join('');
     for (const k of ['firstName', 'lastName', 'role']) $('#p-' + k).value = p[k] || '';
-    const save = debounce(() => work('Saving…', async () => {
+    const save = debounce(() => work(T('Saving…'), async () => {
       // Every key, always: the apps' decoder has no defaults.
       const next = { firstName: $('#p-firstName').value.trim(), lastName: $('#p-lastName').value.trim(), role: $('#p-role').value.trim(), contacts: {} };
       $$('[data-contact]').forEach((i) => { const v = i.value.trim(); if (v) next.contacts[i.dataset.contact] = v; });
@@ -527,17 +532,17 @@
       $('#logoframe').style.backgroundImage = logo ? 'url("' + logo + '")' : '';
     };
     pics();
-    $('#photobtn').onclick = () => pickFiles('image/*', ([f]) => work('Saving your photo…', async () => { await store.putFile('.profile/profile-photo.jpg', await asImage(f, 'image/jpeg', 1200)); infoCache.clear(); pics(); }));
-    $('#logobtn').onclick = () => pickFiles('image/*', ([f]) => work('Saving your logo…', async () => { await store.putFile('.profile/default-logo.png', await asImage(f, 'image/png', 1200)); infoCache.clear(); pics(); }));
-    $('#icloudnote').textContent = store.kind === 'demo' ? 'This is a demo: nothing is saved. Sign in with Apple to use your own library.'
-      : 'Everything here is saved to your iCloud and shows up in FreeView on your iPhone, iPad and Mac.';
+    $('#photobtn').onclick = () => pickFiles('image/*', ([f]) => work(T('Saving your photo…'), async () => { await store.putFile('.profile/profile-photo.jpg', await asImage(f, 'image/jpeg', 1200)); infoCache.clear(); pics(); }));
+    $('#logobtn').onclick = () => pickFiles('image/*', ([f]) => work(T('Saving your logo…'), async () => { await store.putFile('.profile/default-logo.png', await asImage(f, 'image/png', 1200)); infoCache.clear(); pics(); }));
+    $('#icloudnote').textContent = store.kind === 'demo' ? T('This is a demo: nothing is saved. Sign in with Apple to use your own library.')
+      : T('Everything here is saved to your iCloud and shows up in FreeView on your iPhone, iPad and Mac.');
     $('#signout2').hidden = store.kind === 'demo';
     const sp = showPrefs();
     $('#slideshow').innerHTML = `
-      <label class="field inline"><span>Transition</span><select data-sp="transition">${TRANSITIONS.filter(([v]) => v !== 'magicMove').map(([v, l]) => `<option value="${v}" ${sp.transition === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-      <div class="switches">${sw('numbers', 'Show slide numbers', sp.numbers)}${sw('arrows', 'Show ‹ › buttons', sp.arrows)}${sw('loop', 'Loop videos', sp.loop)}</div>
-      <label class="field inline"><span>Autoplay</span><select data-sp="autoplay">${[[0, 'Off'], [3, 'Each slide 3 seconds'], [5, 'Each slide 5 seconds'], [10, 'Each slide 10 seconds'], [20, 'Each slide 20 seconds'], [30, 'Each slide 30 seconds'], [60, 'Each slide 1 minute']].map(([v, l]) => `<option value="${v}" ${+sp.autoplay === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-      <p class="foot">For presenting in this browser. The transition is for slides without one of their own.</p>`;
+      <label class="field inline"><span>${T('Transition')}</span><select data-sp="transition">${TRANSITIONS.filter(([v]) => v !== 'magicMove').map(([v, l]) => `<option value="${v}" ${sp.transition === v ? 'selected' : ''}>${T(l)}</option>`).join('')}</select></label>
+      <div class="switches">${sw('numbers', T('Show slide numbers'), sp.numbers)}${sw('arrows', T('Show ‹ › buttons'), sp.arrows)}${sw('loop', T('Loop videos'), sp.loop)}</div>
+      <label class="field inline"><span>${T('Autoplay')}</span><select data-sp="autoplay">${[[0, T('Off')], ...[3, 5, 10, 20, 30].map((n) => [n, T('Each slide {n} seconds', { n })]), [60, T('Each slide 1 minute')]].map(([v, l]) => `<option value="${v}" ${+sp.autoplay === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+      <p class="foot">${T('For presenting in this browser. The transition is for slides without one of their own.')}</p>`;
     $$('#slideshow [data-sw]').forEach((c) => (c.onchange = () => setShowPref(c.dataset.sw, c.checked)));
     $$('#slideshow [data-sp]').forEach((c) => (c.onchange = () => setShowPref(c.dataset.sp, c.dataset.sp === 'autoplay' ? +c.value : c.value)));
   }
@@ -564,7 +569,7 @@
     if (type === 'custom') {
       info.slide = await store.json(path);
       info.spec = info.slide && await resolveSpec(folder, info.slide);
-      info.label = info.slide ? (info.slide.kind === 'cover' ? 'Cover' : 'Magic slide') : 'Slide';
+      info.label = info.slide ? T(info.slide.kind === 'cover' ? 'Cover' : 'Magic slide') : T('Slide');
     } else if (type === 'live') {
       const live = await store.json(path);
       info.cameras = !!(live && live.tiles && live.tiles.length && live.tiles.every((t) => /^camera:/.test(t.source)));
@@ -573,7 +578,7 @@
       const m = /URL=(.+)/.exec(text) || /<string>(https?:[^<]+)<\/string>/.exec(text);
       info.href = m ? m[1].trim() : '';
     }
-    info.label = info.label || KIND_LABEL[type] || 'File';
+    info.label = info.label || T(KIND_LABEL[type] || 'File');
     infoCache.set(path, info);
     return info;
   }
@@ -647,7 +652,7 @@
     const href = { website: /:\/\//.test(v) ? v : 'https://' + v, email: 'mailto:' + v, phone: 'tel:' + v.replace(/[^+\d]/g, ''),
       linkedin: 'https://www.linkedin.com/in/' + h, x: 'https://x.com/' + h, instagram: 'https://instagram.com/' + h, github: 'https://github.com/' + h,
       threads: 'https://www.threads.net/@' + h, bluesky: 'https://bsky.app/profile/' + h }[field] || '';
-    const label = { website: 'Website', email: 'Email', phone: 'Phone', linkedin: 'LinkedIn', x: 'X', instagram: 'Instagram', github: 'GitHub', threads: 'Threads', bluesky: 'Bluesky' }[field] || field;
+    const label = T({ website: 'Website', email: 'Email', phone: 'Phone', linkedin: 'LinkedIn', x: 'X', instagram: 'Instagram', github: 'GitHub', threads: 'Threads', bluesky: 'Bluesky' }[field] || field);
     return { label, value: v, href };
   }
   // A camera that hasn't been seen yet: a dark frame with a camera, until the browser's own camera is on.
@@ -698,7 +703,7 @@
     const outer = el; el = document.createElement('div'); el.className = 'slidebox' + (thumb ? ' mini' : ''); outer.replaceChildren(el);
     const t = info.type;
     if (t === 'custom') {
-      if (!info.spec) return card(el, info, 'This slide couldn’t be read.');
+      if (!info.spec) return card(el, info, T('This slide couldn’t be read.'));
       await slideLibs();
       const host = document.createElement('div'); host.className = 'fvhost'; el.appendChild(host);
       if (!present) {
@@ -721,7 +726,7 @@
     }
     if (t === 'image' || t === 'webImage') {
       const img = new Image(); img.decoding = 'async'; img.alt = info.name; img.draggable = false; img.src = info.url;
-      img.onerror = () => card(el, info, 'This picture doesn’t open in a browser (HEIC and some others). It shows in FreeView.');
+      img.onerror = () => card(el, info, T('This picture doesn’t open in a browser (HEIC and some others). It shows in FreeView.'));
       return el.appendChild(img);
     }
     if (t === 'video') {
@@ -738,7 +743,7 @@
       return;
     }
     if (t === 'pdf') {
-      try { const n = await drawPDF(el, info.url, page, thumb ? 1 : 1.5); info.pages = n; } catch { card(el, info, 'This PDF couldn’t be opened.'); }
+      try { const n = await drawPDF(el, info.url, page, thumb ? 1 : 1.5); info.pages = n; } catch { card(el, info, T('This PDF couldn’t be opened.')); }
       return;
     }
     if (t === 'live' && info.cameras) {
@@ -749,7 +754,7 @@
     if (t === 'link') {
       if (info.poster) { const img = new Image(); img.src = info.poster; el.appendChild(img); }
       else { const d = document.createElement('div'); d.className = 'webcard'; d.innerHTML = `<div class="host">${esc(hostOf(info.href))}</div>`; el.appendChild(d); }
-      if (!thumb && info.href) { const a = document.createElement('a'); a.className = 'chip open'; a.href = info.href; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.textContent = 'Open ' + hostOf(info.href); el.appendChild(a); }
+      if (!thumb && info.href) { const a = document.createElement('a'); a.className = 'chip open'; a.href = info.href; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.textContent = T('Open {host}', { host: hostOf(info.href) }); el.appendChild(a); }
       return;
     }
     if (t === 'markdown') {
@@ -760,7 +765,7 @@
     }
     const why = { live: 'A live screen, window or iPhone. It plays in FreeView on your Mac.', office: 'Keynote and PowerPoint files show in FreeView on your iPhone, iPad and Mac.',
       model3D: '3D models show in FreeView on your iPhone, iPad and Mac.', webarchive: 'Saved web pages open in FreeView.' }[t] || 'This file opens in FreeView on your iPhone, iPad or Mac.';
-    card(el, info, why);
+    card(el, info, T(why));
   }
   function card(el, info, why, quiet) {
     el.replaceChildren();
@@ -769,7 +774,7 @@
     d.innerHTML = `${ICON.device}<strong>${esc(info.name)}</strong>${quiet ? '' : `<span>${esc(why)}</span>`}`;
     el.appendChild(d);
   }
-  const hostOf = (href) => { try { return new URL(href).hostname.replace(/^www\./, ''); } catch { return href || 'Website'; } };
+  const hostOf = (href) => { try { return new URL(href).hostname.replace(/^www\./, ''); } catch { return href || T('Website'); } };
 
   // ── library ──
 
@@ -785,7 +790,7 @@
     const hidden = store.decks().length - all.length;
     const decks = all.filter((v) => !q || (v.title || '').toLowerCase().includes(q));
     const lock = $('#prolock'); lock.hidden = !hidden;
-    if (hidden) $('span', lock).textContent = hidden === 1 ? '1 more presentation in your history' : `${hidden} more presentations in your history`;
+    if (hidden) $('span', lock).textContent = I.n(hidden, '1 more presentation in your history', '{n} more presentations in your history');
     $('#empty').hidden = decks.length > 0 || !!store.loading;
     if (!decks.length && store.loading) {
       grid.replaceChildren(...Array.from({ length: 8 }, () => { const d = document.createElement('div'); d.className = 'deckcard ghost'; d.setAttribute('aria-hidden', 'true'); d.innerHTML = '<div class="cover"></div><div class="meta"><span class="bar"></span><span class="bar short"></span></div>'; return d; }));
@@ -794,10 +799,10 @@
     grid.replaceChildren(...decks.map((v) => {
       const { folder, entries } = store.deckOf(v);
       const b = document.createElement('button'); b.type = 'button'; b.className = 'deckcard';
-      b.innerHTML = `<div class="cover"></div><div class="meta"><strong>${esc(v.title)}</strong><span>${entries.length} slide${entries.length === 1 ? '' : 's'} · ${when(S.fromApple(v.date))}</span></div>`;
+      b.innerHTML = `<div class="cover"></div><div class="meta"><strong>${esc(v.title)}</strong><span>${I.n(entries.length, '{n} slide', '{n} slides')} · ${when(S.fromApple(v.date))}</span></div>`;
       b.onclick = () => openDeck(v.id);
       b.oncontextmenu = (e) => { e.preventDefault(); deckMenu(v, e.clientX, e.clientY); };
-      const more = document.createElement('span'); more.className = 'more'; more.setAttribute('role', 'button'); more.setAttribute('aria-label', 'More'); more.tabIndex = 0;
+      const more = document.createElement('span'); more.className = 'more'; more.setAttribute('role', 'button'); more.setAttribute('aria-label', T('More')); more.tabIndex = 0;
       more.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg>';
       more.onclick = (e) => { e.stopPropagation(); const r = more.getBoundingClientRect(); deckMenu(v, r.left, r.bottom + 4); };
       more.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); more.click(); } };
@@ -808,8 +813,8 @@
   }
   function when(d) {
     const days = Math.round((Date.now() - d) / 864e5);
-    if (days < 1) return 'today'; if (days < 2) return 'yesterday'; if (days < 7) return `${days} days ago`;
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: d.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' });
+    if (days < 1) return T('today'); if (days < 2) return T('yesterday'); if (days < 7) return T('{n} days ago', { n: days });
+    return I.date(d, { month: 'short', day: 'numeric', year: d.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' });
   }
 
   // ── a presentation ──
@@ -861,7 +866,7 @@
       slideInfo(deck.folder, entry).then((info) => draw($('.frame', b), info, { thumb: true })).catch(() => {});
       return b;
     }));
-    const add = document.createElement('button'); add.type = 'button'; add.className = 'thumb add'; add.innerHTML = ICON.plus + '<span>Add</span>';
+    const add = document.createElement('button'); add.type = 'button'; add.className = 'thumb add'; add.innerHTML = ICON.plus + `<span>${T('Add')}</span>`;
     add.onclick = (e) => openAddMenu(e.currentTarget);
     rail.appendChild(add);
     $('#deck').classList.toggle('blank', deck.entries.length === 0);
@@ -901,20 +906,20 @@
     const entries = deck.entries.slice(); const [e] = entries.splice(from, 1); entries.splice(to, 0, e);
     deck.entries = entries; deck.selected = to; renderRail(); renderSelected();
     $$('#rail .thumb')[to].focus();
-    await work('Saving…', () => saveEntries(entries));
+    await work(T('Saving…'), () => saveEntries(entries));
   }
   async function removeSlide(i) {
     const entries = deck.entries.slice(); const [gone] = entries.splice(i, 1);
     deck.entries = entries; deck.selected = Math.min(i, entries.length - 1); renderRail(); renderSelected();
-    await work('Saving…', () => saveEntries(entries));
+    await work(T('Saving…'), () => saveEntries(entries));
     // The file goes a moment later, so Undo can bring the slide back as it was.
     let undone = false;
     const timer = setTimeout(() => { if (!undone) store.deleteFile(`${deck.folder}/${gone}`).catch(() => {}); }, 6500);
-    toast('Slide removed', { label: 'Undo', run: async () => {
+    toast(T('Slide removed'), { label: T('Undo'), run: async () => {
       undone = true; clearTimeout(timer);
       const back = deck.entries.slice(); back.splice(i, 0, gone);
       deck.entries = back; deck.selected = i; renderRail(); renderSelected();
-      await work('Saving…', () => saveEntries(back));
+      await work(T('Saving…'), () => saveEntries(back));
     } });
   }
 
@@ -924,8 +929,8 @@
     if (deck && deck.styling) { const info0 = deck.entries.length && await slideInfo(deck.folder, deck.entries[deck.selected]); if (info0) { const box0 = document.createElement('div'); $('#canvas').replaceChildren(box0); await draw(box0, info0, { live: !!cameraStream }); } return renderStyle(); }
     const canvas = $('#canvas'), panel = $('#inspector');
     if (!deck.entries.length) {
-      canvas.innerHTML = `<div class="blankstate"><strong>Start with your photos, videos or a PDF</strong><span>Or make a Magic slide: a title, a few words and pictures, laid out for you.</span>
-        <div class="row"><button type="button" class="btn primary" data-add="files">${ICON.plus} Add Files</button><button type="button" class="btn" data-add="magic">Magic Slide</button></div></div>`;
+      canvas.innerHTML = `<div class="blankstate"><strong>${T('Start with your photos, videos or a PDF')}</strong><span>${T('Or make a Magic slide: a title, a few words and pictures, laid out for you.')}</span>
+        <div class="row"><button type="button" class="btn primary" data-add="files">${ICON.plus} ${T('Add Files')}</button><button type="button" class="btn" data-add="magic">${T('Magic Slide')}</button></div></div>`;
       $$('[data-add]', canvas).forEach((b) => b.onclick = () => addAction(b.dataset.add));
       panel.replaceChildren(); return;
     }
@@ -941,23 +946,23 @@
     const panel = $('#inspector');
     if (deck.chosen && deck.chosen.size > 1) return severalInspector(panel);
     const i = deck.selected;
-    const head = `<div class="kind">${esc(info.label)}<span>${i + 1} of ${deck.entries.length}</span></div>`;
+    const head = `<div class="kind">${esc(info.label)}<span>${T('{n} of {count}', { n: i + 1, count: deck.entries.length })}</span></div>`;
     const own = (deck.transitions || {})[info.entry] || '';
-    const slideSect = `<section class="sect"><h3>Slide</h3>
-      <label class="field inline"><span>Transition</span><select id="f-trans"><option value="">Default</option>${TRANSITIONS.map(([v, l]) => `<option value="${v}" ${own === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-      <label class="field"><span>Notes</span><textarea id="f-notes" rows="4" placeholder="What you’ll say over this slide">${esc((deck.notes || {})[info.entry] || '')}</textarea></label>
-      <p class="foot">Only you see them: under the camera while you record, and in FreeView while you present.</p></section>`;
-    const tail = slideSect + `<div class="actions"><button type="button" class="btn ghost" data-act="up" ${i === 0 ? 'disabled' : ''}>Move Earlier</button><button type="button" class="btn ghost" data-act="down" ${i === deck.entries.length - 1 ? 'disabled' : ''}>Move Later</button>
-      <button type="button" class="btn ghost danger" data-act="remove">${ICON.trash} Remove Slide</button></div>`;
+    const slideSect = `<section class="sect"><h3>${T('Slide')}</h3>
+      <label class="field inline"><span>${T('Transition')}</span><select id="f-trans"><option value="">${T('Default')}</option>${TRANSITIONS.map(([v, l]) => `<option value="${v}" ${own === v ? 'selected' : ''}>${T(l)}</option>`).join('')}</select></label>
+      <label class="field"><span>${T('Notes')}</span><textarea id="f-notes" rows="4" placeholder="${T('What you’ll say over this slide')}">${esc((deck.notes || {})[info.entry] || '')}</textarea></label>
+      <p class="foot">${T('Only you see them: under the camera while you record, and in FreeView while you present.')}</p></section>`;
+    const tail = slideSect + `<div class="actions"><button type="button" class="btn ghost" data-act="up" ${i === 0 ? 'disabled' : ''}>${T('Move Earlier')}</button><button type="button" class="btn ghost" data-act="down" ${i === deck.entries.length - 1 ? 'disabled' : ''}>${T('Move Later')}</button>
+      <button type="button" class="btn ghost danger" data-act="remove">${ICON.trash} ${T('Remove Slide')}</button></div>`;
     if (info.type === 'custom' && info.slide) {
       customInspector(panel, info, head, tail);
     } else {
-      const note = { image: '', webImage: '', video: '', audio: '', pdf: info.pages ? `${info.pages} page${info.pages === 1 ? '' : 's'}, each one a slide when you present.` : '', link: info.href ? `Shows ${hostOf(info.href)}.` : '' }[info.type];
+      const note = { image: '', webImage: '', video: '', audio: '', pdf: info.pages ? I.n(info.pages, '{n} page, each one a slide when you present.', '{n} pages, each one a slide when you present.') : '', link: info.href ? T('Shows {host}.', { host: hostOf(info.href) }) : '' }[info.type];
       const appOnly = note === undefined;
-      const editBtn = info.type === 'image' ? `<div class="row wrap"><button type="button" class="btn small" id="editphoto">Edit Photo…</button></div>`
-        : info.type === 'video' ? `<div class="row wrap"><button type="button" class="btn small" id="editcover">Choose Cover…</button></div>` : '';
+      const editBtn = info.type === 'image' ? `<div class="row wrap"><button type="button" class="btn small" id="editphoto">${T('Edit Photo…')}</button></div>`
+        : info.type === 'video' ? `<div class="row wrap"><button type="button" class="btn small" id="editcover">${T('Choose Cover…')}</button></div>` : '';
       panel.innerHTML = head + `<div class="filename">${esc(info.type === 'link' && info.href ? info.href : info.name)}</div>` + (note ? `<p class="hint">${esc(note)}</p>` : '') + editBtn +
-        (appOnly ? `<div class="appnote">${ICON.device}<span>Edit this slide in FreeView on your Mac, iPhone or iPad. It stays as it is here and moves with the rest.</span></div>` : '') + tail;
+        (appOnly ? `<div class="appnote">${ICON.device}<span>${T('Edit this slide in FreeView on your Mac, iPhone or iPad. It stays as it is here and moves with the rest.')}</span></div>` : '') + tail;
     }
     $$('[data-act]', panel).forEach((b) => b.onclick = () => ({ up: () => move(i, i - 1), down: () => move(i, i + 1), remove: () => removeSlide(i) }[b.dataset.act]()));
     const ep2 = $('#editphoto', panel); if (ep2) ep2.onclick = () => editPhoto(info);
@@ -966,7 +971,7 @@
     if (tr) tr.onchange = () => {
       const m = Object.assign({}, deck.transitions); if (tr.value) m[info.entry] = tr.value; else delete m[info.entry];
       deck.transitions = m;
-      work('Saving…', () => (Object.keys(m).length ? store.writeJSON(`${deck.folder}/.transitions.json`, m) : store.deleteFile(`${deck.folder}/.transitions.json`)));
+      work(T('Saving…'), () => (Object.keys(m).length ? store.writeJSON(`${deck.folder}/.transitions.json`, m) : store.deleteFile(`${deck.folder}/.transitions.json`)));
     };
     const nt = $('#f-notes', panel);
     if (nt) {
@@ -974,7 +979,7 @@
         // As the app keeps them: only slides still in the presentation, no blank notes, nothing when empty.
         const m = {}; for (const [k, v] of Object.entries(deck.notes || {})) if (v.trim() && deck.entries.includes(k.split('#')[0])) m[k] = v;
         deck.notes = m;
-        work('Saving…', () => (Object.keys(m).length ? store.writeJSON(`${deck.folder}/.notes.json`, m) : store.deleteFile(`${deck.folder}/.notes.json`)));
+        work(T('Saving…'), () => (Object.keys(m).length ? store.writeJSON(`${deck.folder}/.notes.json`, m) : store.deleteFile(`${deck.folder}/.notes.json`)));
       }, 700);
       nt.oninput = () => { deck.notes = Object.assign({}, deck.notes, { [info.entry]: nt.value }); saveNotes(); };
     }
@@ -1000,51 +1005,51 @@
     const images = s.images || [];
     const hasBody = !!(s.body || '').trim();
     const sections = [];
-    sections.push(`<section class="sect"><h3>Text</h3>
-      <label class="field"><span>Title</span><input id="f-title" value="${esc(s.title)}" placeholder="${cover ? 'Your presentation' : 'Title'}" autocomplete="off"></label>
-      ${cover ? `<label class="field"><span>Subtitle</span><input id="f-subtitle" value="${esc(s.subtitle)}" placeholder="A subtitle, a date, a place" autocomplete="off"></label>`
-              : `<label class="field"><span>Text</span><textarea id="f-body" rows="5" placeholder="A few words. **Bold**, lists and links work.">${esc(s.body)}</textarea></label>`}</section>`);
+    sections.push(`<section class="sect"><h3>${T('Text')}</h3>
+      <label class="field"><span>${T('Title')}</span><input id="f-title" value="${esc(s.title)}" placeholder="${T(cover ? 'Your presentation' : 'Title')}" autocomplete="off"></label>
+      ${cover ? `<label class="field"><span>${T('Subtitle')}</span><input id="f-subtitle" value="${esc(s.subtitle)}" placeholder="${T('A subtitle, a date, a place')}" autocomplete="off"></label>`
+              : `<label class="field"><span>${T('Text')}</span><textarea id="f-body" rows="5" placeholder="${T('A few words. **Bold**, lists and links work.')}">${esc(s.body)}</textarea></label>`}</section>`);
     if (!cover) {
       const plays = images.filter((m) => ['video', 'audio'].includes(S.fileType(m)));
       const silent = new Set(s.silent || []);
-      sections.push(`<section class="sect"><h3>Media <em>${images.length} of 4</em></h3>
+      sections.push(`<section class="sect"><h3>${T('Media')} <em>${T('{n} of {count}', { n: images.length, count: 4 })}</em></h3>
         ${images.length ? `<div class="mgrid" role="list">${images.map((m, k) => {
           const t = S.fileType(m), sound = t === 'video' || t === 'audio';
-          return `<div class="mtile" role="listitem" draggable="true" tabindex="0" data-k="${k}" aria-label="${esc(mediaLabel(m))}, ${k + 1} of ${images.length}">
+          return `<div class="mtile" role="listitem" draggable="true" tabindex="0" data-k="${k}" aria-label="${esc(T('{label}, {n} of {count}', { label: mediaLabel(m), n: k + 1, count: images.length }))}">
             <span class="mi-thumb" data-k="${k}"></span><span class="mlabel">${esc(mediaLabel(m))}</span>
-            <button type="button" class="mbtn drop" data-drop="${k}" aria-label="Remove">${ICON.x}</button>
-            ${sound ? `<button type="button" class="mbtn snd${silent.has(m) ? ' muted' : ''}" data-snd="${k}" aria-label="${silent.has(m) ? 'Sound off' : 'Sound on'}" title="${silent.has(m) ? 'Its sound is off. Click to turn it on.' : 'Its sound plays. Click to turn it off.'}">${silent.has(m) ? ICON.mute : ICON.sound}</button>` : ''}
+            <button type="button" class="mbtn drop" data-drop="${k}" aria-label="${T('Remove')}">${ICON.x}</button>
+            ${sound ? `<button type="button" class="mbtn snd${silent.has(m) ? ' muted' : ''}" data-snd="${k}" aria-label="${T(silent.has(m) ? 'Sound off' : 'Sound on')}" title="${T(silent.has(m) ? 'Its sound is off. Click to turn it on.' : 'Its sound plays. Click to turn it off.')}">${silent.has(m) ? ICON.mute : ICON.sound}</button>` : ''}
           </div>`; }).join('')}</div>` : ''}
-        ${plays.length ? `<div class="switches">${sw('syncsMedia', plays.length > 1 ? 'Sync Media' : 'Play on the Slide', s.syncsMedia === true)}</div>` : ''}
+        ${plays.length ? `<div class="switches">${sw('syncsMedia', T(plays.length > 1 ? 'Sync Media' : 'Play on the Slide'), s.syncsMedia === true)}</div>` : ''}
         ${images.length < 4 ? `<div class="addlist">
-          <button type="button" class="addrow" data-media="files">${ICON.folder}<span>Add from Files</span></button>
-          <button type="button" class="addrow" data-media="deck">${ICON.stack}<span>Add from This Presentation</span></button>
-          <button type="button" class="addrow" data-media="site">${ICON.globe}<span>Add a Website</span></button>
-          <button type="button" class="addrow" data-media="front">${ICON.cam}<span>Add a Live Camera</span><em>Front</em></button>
-          <button type="button" class="addrow" data-media="back">${ICON.cam}<span>Add a Live Camera</span><em>Back</em></button></div>` : ''}
-        <p class="foot">Up to four, of any kind. With text they sit beside it; on their own they fill the slide. Drag one onto another to reorder.${plays.length ? ' With Sync Media on, its videos and audio play right on the slide and start and pause together.' : ''}</p></section>`);
+          <button type="button" class="addrow" data-media="files">${ICON.folder}<span>${T('Add from Files')}</span></button>
+          <button type="button" class="addrow" data-media="deck">${ICON.stack}<span>${T('Add from This Presentation')}</span></button>
+          <button type="button" class="addrow" data-media="site">${ICON.globe}<span>${T('Add a Website')}</span></button>
+          <button type="button" class="addrow" data-media="front">${ICON.cam}<span>${T('Add a Live Camera')}</span><em>${T('Front')}</em></button>
+          <button type="button" class="addrow" data-media="back">${ICON.cam}<span>${T('Add a Live Camera')}</span><em>${T('Back')}</em></button></div>` : ''}
+        <p class="foot">${T('Up to four, of any kind. With text they sit beside it; on their own they fill the slide. Drag one onto another to reorder.')}${plays.length ? ' ' + T('With Sync Media on, its videos and audio play right on the slide and start and pause together.') : ''}</p></section>`);
       const align = s.align || '';
-      sections.push(`<section class="sect"><h3>Layout</h3>
-        <div class="seg" role="radiogroup" aria-label="Alignment">${[['', 'Style'], ['center', 'Centre'], ['left', 'Left']].map(([v, l]) => `<button type="button" role="radio" aria-checked="${align === v}" data-align="${v}">${l}</button>`).join('')}</div>
-        ${images.length && hasBody ? `<label class="field inline"><span>Text Column</span><select id="f-split">${[['', 'Auto'], ['0.3', '30%'], ['0.4', '40%'], ['0.5', '50%'], ['0.6', '60%']].map(([v, l]) => `<option value="${v}" ${String(s.split || '') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>` : ''}
-        <p class="foot">The slide arranges itself: a title on its own becomes the hero, pictures on their own fill the slide, and text sits beside pictures.</p></section>`);
+      sections.push(`<section class="sect"><h3>${T('Layout')}</h3>
+        <div class="seg" role="radiogroup" aria-label="${T('Alignment')}">${[['', 'Style'], ['center', 'Centre'], ['left', 'Left']].map(([v, l]) => `<button type="button" role="radio" aria-checked="${align === v}" data-align="${v}">${T(l)}</button>`).join('')}</div>
+        ${images.length && hasBody ? `<label class="field inline"><span>${T('Text Column')}</span><select id="f-split">${[['', T('Auto')], ['0.3', '30%'], ['0.4', '40%'], ['0.5', '50%'], ['0.6', '60%']].map(([v, l]) => `<option value="${v}" ${String(s.split || '') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>` : ''}
+        <p class="foot">${T('The slide arranges itself: a title on its own becomes the hero, pictures on their own fill the slide, and text sits beside pictures.')}</p></section>`);
     } else {
-      sections.push(`<section class="sect"><h3>Background</h3>
-        <div class="bgrow"><span class="mi-thumb big" id="bgthumb"></span><div class="row wrap"><button type="button" class="btn small" id="bgpick">${s.background ? 'Replace…' : 'Choose Picture…'}</button>${s.background ? '<button type="button" class="btn small ghost danger" id="bgdrop">Remove</button>' : ''}</div></div></section>`);
+      sections.push(`<section class="sect"><h3>${T('Background')}</h3>
+        <div class="bgrow"><span class="mi-thumb big" id="bgthumb"></span><div class="row wrap"><button type="button" class="btn small" id="bgpick">${T(s.background ? 'Replace…' : 'Choose Picture…')}</button>${s.background ? `<button type="button" class="btn small ghost danger" id="bgdrop">${T('Remove')}</button>` : ''}</div></div></section>`);
     }
-    const contactRows = CONTACT_ORDER.filter((k) => (P.contacts[k] || '').trim()).map((k) => sw('c:' + k, CONTACT_LABEL[k], (s.contacts || []).includes(k), false, P.contacts[k]));
-    sections.push(`<section class="sect"><h3>Show</h3><div class="switches">
-      ${sw('showLogo', 'Logo', s.showLogo)}
-      ${sw('showName', 'Name', s.showName, !P.name, P.name)}
-      ${sw('showPhoto', 'Photo', s.showPhoto, !P.hasPhoto)}
-      ${sw('showRole', 'Role', s.showRole, !P.role, P.role)}
+    const contactRows = CONTACT_ORDER.filter((k) => (P.contacts[k] || '').trim()).map((k) => sw('c:' + k, T(CONTACT_LABEL[k]), (s.contacts || []).includes(k), false, P.contacts[k]));
+    sections.push(`<section class="sect"><h3>${T('Show')}</h3><div class="switches">
+      ${sw('showLogo', T('Logo'), s.showLogo)}
+      ${sw('showName', T('Name'), s.showName, !P.name, P.name)}
+      ${sw('showPhoto', T('Photo'), s.showPhoto, !P.hasPhoto)}
+      ${sw('showRole', T('Role'), s.showRole, !P.role, P.role)}
       ${contactRows.join('')}</div>
-      <p class="foot">${s.person ? 'This slide shows a presenter of its own. Choose what it shows.' : 'Name, photo, role and contacts come from Settings › Profile, or from the presenter set in this presentation’s Style. Choose what this slide shows.'}</p>
-      ${s.person ? '' : '<button type="button" class="btn small" id="editprofile">Edit Profile and Contacts…</button>'}</section>`);
+      <p class="foot">${s.person ? T('This slide shows a presenter of its own. Choose what it shows.') : T('Name, photo, role and contacts come from Settings › Profile, or from the presenter set in this presentation’s Style. Choose what this slide shows.')}</p>
+      ${s.person ? '' : `<button type="button" class="btn small" id="editprofile">${T('Edit Profile and Contacts…')}</button>`}</section>`);
     const buttons = s.buttons || [];
-    sections.push(`<section class="sect"><h3>Links</h3><div class="switches">${sw('qr', 'QR Codes for Web Addresses', s.qr !== false)}</div>
-      ${buttons.map((b, k) => `<div class="btnrow"><input data-bl="${k}" value="${esc(b.label)}" placeholder="Label" aria-label="Button label"><input data-bu="${k}" value="${esc(b.url)}" placeholder="Web address" aria-label="Button web address" inputmode="url" spellcheck="false"><button type="button" class="icon-btn" data-bdrop="${k}" aria-label="Remove button">${ICON.trash}</button></div>`).join('')}
-      <button type="button" class="btn small" id="addbutton">${ICON.plus} Add Button</button></section>`);
+    sections.push(`<section class="sect"><h3>${T('Links')}</h3><div class="switches">${sw('qr', T('QR Codes for Web Addresses'), s.qr !== false)}</div>
+      ${buttons.map((b, k) => `<div class="btnrow"><input data-bl="${k}" value="${esc(b.label)}" placeholder="${T('Label')}" aria-label="${T('Button label')}"><input data-bu="${k}" value="${esc(b.url)}" placeholder="${T('Web address')}" aria-label="${T('Button web address')}" inputmode="url" spellcheck="false"><button type="button" class="icon-btn" data-bdrop="${k}" aria-label="${T('Remove button')}">${ICON.trash}</button></div>`).join('')}
+      <button type="button" class="btn small" id="addbutton">${ICON.plus} ${T('Add Button')}</button></section>`);
     panel.innerHTML = head + sections.join('') + tail;
 
     const save = debounce(() => saveCustom(info), 600);
@@ -1096,7 +1101,7 @@
     const bg = $('#bgthumb', panel);
     if (bg && s.background) { const u = store.url(`${deck.folder}/${s.background}`); if (u) bg.style.backgroundImage = `url("${u}")`; }
     const pick = $('#bgpick', panel);
-    if (pick) pick.onclick = () => pickFiles('image/*', ([f]) => work('Uploading…', async () => {
+    if (pick) pick.onclick = () => pickFiles('image/*', ([f]) => work(T('Uploading…'), async () => {
       const name = `.picture-${S.shortID()}.${(f.name.split('.').pop() || 'jpg').toLowerCase()}`;
       await store.putFile(`${deck.folder}/${name}`, f); s.background = name;
     }).then(() => saveCustom(info, true)));
@@ -1132,7 +1137,7 @@
   let styleSave;
   async function saveStyle(redrawPanel) {
     clearTimeout(styleSave);
-    styleSave = setTimeout(() => work('Saving…', async () => {
+    styleSave = setTimeout(() => work(T('Saving…'), async () => {
       await store.writeJSON(`${deck.folder}/.style.json`, fullStyle(deck.style));
       await saveEntries(deck.entries);
     }), 500);
@@ -1144,7 +1149,7 @@
   }
   function swatch(name, theme, current, attr) {
     const on = sameTheme(theme, current);
-    return `<button type="button" class="swatch${on ? ' on' : ''}" ${attr} aria-pressed="${on}"><span class="sw" style="background:${theme.background};color:${theme.foreground}"><i style="background:${theme.accent}"></i><b style="font-family:${FONT_CSS[theme.font] || FONT_CSS.system}">Aa</b></span><span class="swn">${esc(name)}</span></button>`;
+    return `<button type="button" class="swatch${on ? ' on' : ''}" ${attr} aria-pressed="${on}"><span class="sw" style="background:${theme.background};color:${theme.foreground}"><i style="background:${theme.accent}"></i><b style="font-family:${FONT_CSS[theme.font] || FONT_CSS.system}">Aa</b></span><span class="swn">${esc(T(name))}</span></button>`;
   }
   async function renderStyle() {
     const panel = $('#inspector');
@@ -1156,31 +1161,31 @@
     const custom = st.presenter === 'custom';
     const person = Object.assign({ firstName: '', lastName: '', role: '', contacts: {} }, st.person || {});
     const photoURL = custom ? await store.src(`${deck.folder}/.presenter.jpg`) : '';
-    panel.innerHTML = `<div class="kind">Style<button type="button" class="btn small" id="styledone">Done</button></div>
-      <p class="foot">Styles apply to covers and Magic slides only. Photos, PDFs and other files stay as they are.</p>
-      <section class="sect"><h3>Presets</h3><div class="swatches">${PRESETS.map(([n, th], i) => swatch(n, th, t, `data-preset="${i}"`)).join('')}</div>
-        <button type="button" class="btn small" id="brandbtn" ${logoURL ? '' : 'disabled'}>Make a Style from the Logo</button><div id="brandout"></div></section>
-      <section class="sect"><h3>Colours</h3><div class="colors">
-        ${[['background', 'Background'], ['foreground', 'Text'], ['accent', 'Accent']].map(([k, l]) => `<label class="colorrow"><span>${l}</span><input type="color" data-color="${k}" value="${esc(String(t[k]).toLowerCase())}"></label>`).join('')}</div></section>
-      <section class="sect"><h3>Type</h3>
-        <label class="field inline"><span>Font</span><select id="st-font">${FONTS.map(([v, l]) => `<option value="${v}" ${t.font === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-        <div class="seg" role="radiogroup" aria-label="Alignment">${[['center', 'Centre'], ['left', 'Left']].map(([v, l]) => `<button type="button" role="radio" aria-checked="${t.align === v}" data-stalign="${v}">${l}</button>`).join('')}</div>
-        ${[['titleScale', 'Titles', 0.75, 1.4, 0.01], ['bodyScale', 'Text', 0.8, 1.3, 0.01], ['radius', 'Picture corners', 0, 6, 0.1]].map(([k, l, a, b, st2]) => `<label class="slider"><span>${l}</span><input type="range" data-range="${k}" min="${a}" max="${b}" step="${st2}" value="${t[k]}"></label>`).join('')}</section>
-      <section class="sect"><h3>Logo</h3>
-        <div class="seg" role="radiogroup" aria-label="Logo">${[['profile', 'From Settings'], ['custom', 'This Presentation’s'], ['none', 'None']].map(([v, l]) => `<button type="button" role="radio" aria-checked="${st.logo === v}" data-logo="${v}">${l}</button>`).join('')}</div>
-        ${st.logo === 'custom' ? `<div class="bgrow"><span class="mi-thumb big contain" id="logothumb"></span><button type="button" class="btn small" id="logopick">${logoURL ? 'Replace Logo…' : 'Choose Logo…'}</button></div>` : ''}
-        <p class="foot">${st.logo === 'profile' && !store.has('.profile/default-logo.png') ? 'Add a default logo in Settings › Profile.' : 'Shown on slides that have Logo turned on.'}</p></section>
-      <section class="sect"><h3>Presenter</h3>
-        <div class="seg" role="radiogroup" aria-label="Presenter">${[['profile', 'From Settings'], ['custom', 'This Presentation’s']].map(([v, l]) => `<button type="button" role="radio" aria-checked="${(st.presenter || 'profile') === v}" data-presenter="${v}">${l}</button>`).join('')}</div>
-        ${custom ? `<div class="bgrow"><span class="mi-thumb big round" id="ppthumb"></span><div class="row wrap"><button type="button" class="btn small" id="pppick">${photoURL ? 'Replace Photo…' : 'Choose Photo…'}</button>${photoURL ? '<button type="button" class="btn small ghost danger" id="ppdrop">Remove Photo</button>' : ''}</div></div>
-          <div class="grid2"><label class="field"><span>First name</span><input data-pp="firstName" value="${esc(person.firstName)}"></label><label class="field"><span>Last name</span><input data-pp="lastName" value="${esc(person.lastName)}"></label></div>
-          <label class="field"><span>Role or company</span><input data-pp="role" value="${esc(person.role)}"></label>
-          <details class="contacts"><summary>Contacts</summary><div class="grid2">${CONTACT_ORDER.map((k) => `<label class="field"><span>${CONTACT_LABEL[k]}</span><input data-ppc="${k}" value="${esc((person.contacts || {})[k] || '')}" spellcheck="false"></label>`).join('')}</div></details>` : ''}
-        <p class="foot">${custom ? 'Covers and Magic slides in this presentation show this person where a slide has Name, Photo, Role or contacts turned on. A slide can still have a presenter of its own.' : 'Covers and Magic slides show you, from Settings › Profile, where a slide has Name, Photo, Role or contacts turned on.'}</p></section>
-      <section class="sect"><h3>Saved Styles</h3>
+    panel.innerHTML = `<div class="kind">${T('Style')}<button type="button" class="btn small" id="styledone">${T('Done')}</button></div>
+      <p class="foot">${T('Styles apply to covers and Magic slides only. Photos, PDFs and other files stay as they are.')}</p>
+      <section class="sect"><h3>${T('Presets')}</h3><div class="swatches">${PRESETS.map(([n, th], i) => swatch(n, th, t, `data-preset="${i}"`)).join('')}</div>
+        <button type="button" class="btn small" id="brandbtn" ${logoURL ? '' : 'disabled'}>${T('Make a Style from the Logo')}</button><div id="brandout"></div></section>
+      <section class="sect"><h3>${T('Colours')}</h3><div class="colors">
+        ${[['background', 'Background'], ['foreground', 'Text'], ['accent', 'Accent']].map(([k, l]) => `<label class="colorrow"><span>${T(l)}</span><input type="color" data-color="${k}" value="${esc(String(t[k]).toLowerCase())}"></label>`).join('')}</div></section>
+      <section class="sect"><h3>${T('Type')}</h3>
+        <label class="field inline"><span>${T('Font')}</span><select id="st-font">${FONTS.map(([v, l]) => `<option value="${v}" ${t.font === v ? 'selected' : ''}>${T(l)}</option>`).join('')}</select></label>
+        <div class="seg" role="radiogroup" aria-label="${T('Alignment')}">${[['center', 'Centre'], ['left', 'Left']].map(([v, l]) => `<button type="button" role="radio" aria-checked="${t.align === v}" data-stalign="${v}">${T(l)}</button>`).join('')}</div>
+        ${[['titleScale', 'Titles', 0.75, 1.4, 0.01], ['bodyScale', 'Text', 0.8, 1.3, 0.01], ['radius', 'Picture corners', 0, 6, 0.1]].map(([k, l, a, b, st2]) => `<label class="slider"><span>${T(l)}</span><input type="range" data-range="${k}" min="${a}" max="${b}" step="${st2}" value="${t[k]}"></label>`).join('')}</section>
+      <section class="sect"><h3>${T('Logo')}</h3>
+        <div class="seg" role="radiogroup" aria-label="${T('Logo')}">${[['profile', 'From Settings'], ['custom', 'This Presentation’s'], ['none', 'None']].map(([v, l]) => `<button type="button" role="radio" aria-checked="${st.logo === v}" data-logo="${v}">${T(l)}</button>`).join('')}</div>
+        ${st.logo === 'custom' ? `<div class="bgrow"><span class="mi-thumb big contain" id="logothumb"></span><button type="button" class="btn small" id="logopick">${T(logoURL ? 'Replace Logo…' : 'Choose Logo…')}</button></div>` : ''}
+        <p class="foot">${T(st.logo === 'profile' && !store.has('.profile/default-logo.png') ? 'Add a default logo in Settings › Profile.' : 'Shown on slides that have Logo turned on.')}</p></section>
+      <section class="sect"><h3>${T('Presenter')}</h3>
+        <div class="seg" role="radiogroup" aria-label="${T('Presenter')}">${[['profile', 'From Settings'], ['custom', 'This Presentation’s']].map(([v, l]) => `<button type="button" role="radio" aria-checked="${(st.presenter || 'profile') === v}" data-presenter="${v}">${T(l)}</button>`).join('')}</div>
+        ${custom ? `<div class="bgrow"><span class="mi-thumb big round" id="ppthumb"></span><div class="row wrap"><button type="button" class="btn small" id="pppick">${T(photoURL ? 'Replace Photo…' : 'Choose Photo…')}</button>${photoURL ? `<button type="button" class="btn small ghost danger" id="ppdrop">${T('Remove Photo')}</button>` : ''}</div></div>
+          <div class="grid2"><label class="field"><span>${T('First name')}</span><input data-pp="firstName" value="${esc(person.firstName)}"></label><label class="field"><span>${T('Last name')}</span><input data-pp="lastName" value="${esc(person.lastName)}"></label></div>
+          <label class="field"><span>${T('Role or company')}</span><input data-pp="role" value="${esc(person.role)}"></label>
+          <details class="contacts"><summary>${T('Contacts')}</summary><div class="grid2">${CONTACT_ORDER.map((k) => `<label class="field"><span>${T(CONTACT_LABEL[k])}</span><input data-ppc="${k}" value="${esc((person.contacts || {})[k] || '')}" spellcheck="false"></label>`).join('')}</div></details>` : ''}
+        <p class="foot">${T(custom ? 'Covers and Magic slides in this presentation show this person where a slide has Name, Photo, Role or contacts turned on. A slide can still have a presenter of its own.' : 'Covers and Magic slides show you, from Settings › Profile, where a slide has Name, Photo, Role or contacts turned on.')}</p></section>
+      <section class="sect"><h3>${T('Saved Styles')}</h3>
         ${saved.length ? `<div class="savedlist">${saved.map((x, i) => `<button type="button" class="savedrow" data-saved="${i}"><span class="dot" style="background:${x.theme.background};box-shadow:inset 0 0 0 4px ${x.theme.accent}"></span><span>${esc(x.name)}</span>${st.themeName === x.name && sameTheme(x.theme, t) ? '<em>✓</em>' : ''}</button>`).join('')}</div>` : ''}
-        <button type="button" class="btn small" id="savestyle">Save Style As…</button>
-        ${others.length ? `<label class="field inline"><span>Copy from</span><select id="copyfrom"><option value="">A presentation…</option>${others.map((v) => `<option value="${v.id}">${esc(v.title)}</option>`).join('')}</select></label>` : ''}</section>`;
+        <button type="button" class="btn small" id="savestyle">${T('Save Style As…')}</button>
+        ${others.length ? `<label class="field inline"><span>${T('Copy from')}</span><select id="copyfrom"><option value="">${T('A presentation…')}</option>${others.map((v) => `<option value="${v.id}">${esc(v.title)}</option>`).join('')}</select></label>` : ''}</section>`;
 
     $('#styledone').onclick = () => { deck.styling = false; $('#stylebtn').setAttribute('aria-pressed', 'false'); renderSelected(); };
     $$('[data-preset]', panel).forEach((b) => (b.onclick = () => { st.theme = Object.assign({}, PRESETS[+b.dataset.preset][1]); delete st.themeName; saveStyle(true); }));
@@ -1190,22 +1195,22 @@
     $$('[data-range]', panel).forEach((i) => (i.oninput = () => { t[i.dataset.range] = Math.round(+i.value * 100) / 100; delete st.themeName; saveStyle(false); }));
     $$('[data-logo]', panel).forEach((b) => (b.onclick = () => { st.logo = b.dataset.logo; saveStyle(true); }));
     const lt = $('#logothumb', panel); if (lt && logoURL) lt.style.backgroundImage = `url("${logoURL}")`;
-    const lp = $('#logopick', panel); if (lp) lp.onclick = () => pickFiles('image/*', ([f]) => work('Saving the logo…', async () => { await store.putFile(`${deck.folder}/.logo.png`, await asImage(f, 'image/png', 1200)); }).then(() => saveStyle(true)));
+    const lp = $('#logopick', panel); if (lp) lp.onclick = () => pickFiles('image/*', ([f]) => work(T('Saving the logo…'), async () => { await store.putFile(`${deck.folder}/.logo.png`, await asImage(f, 'image/png', 1200)); }).then(() => saveStyle(true)));
     $$('[data-presenter]', panel).forEach((b) => (b.onclick = () => {
       if (b.dataset.presenter === 'custom') { st.presenter = 'custom'; if (!st.person) st.person = Object.assign({ firstName: '', lastName: '', role: '', contacts: {} }, profile || {}); }
       else { st.presenter = 'profile'; }
       saveStyle(true);
     }));
     const pt = $('#ppthumb', panel); if (pt && photoURL) pt.style.backgroundImage = `url("${photoURL}")`;
-    const pp = $('#pppick', panel); if (pp) pp.onclick = () => pickFiles('image/*', ([f]) => work('Saving the photo…', async () => { await store.putFile(`${deck.folder}/.presenter.jpg`, await asImage(f, 'image/jpeg', 1200)); }).then(() => saveStyle(true)));
-    const pd = $('#ppdrop', panel); if (pd) pd.onclick = () => work('Removing…', () => store.deleteFile(`${deck.folder}/.presenter.jpg`)).then(() => saveStyle(true));
+    const pp = $('#pppick', panel); if (pp) pp.onclick = () => pickFiles('image/*', ([f]) => work(T('Saving the photo…'), async () => { await store.putFile(`${deck.folder}/.presenter.jpg`, await asImage(f, 'image/jpeg', 1200)); }).then(() => saveStyle(true)));
+    const pd = $('#ppdrop', panel); if (pd) pd.onclick = () => work(T('Removing…'), () => store.deleteFile(`${deck.folder}/.presenter.jpg`)).then(() => saveStyle(true));
     $$('[data-pp]', panel).forEach((i) => (i.oninput = () => { st.person[i.dataset.pp] = i.value; saveStyle(false); }));
     $$('[data-ppc]', panel).forEach((i) => (i.oninput = () => { const c = st.person.contacts = st.person.contacts || {}; const v = i.value.trim(); if (v) c[i.dataset.ppc] = v; else delete c[i.dataset.ppc]; saveStyle(false); }));
     $$('[data-saved]', panel).forEach((b) => (b.onclick = () => { const x = saved[+b.dataset.saved]; st.theme = Object.assign({}, THEME_DEFAULT, x.theme); st.themeName = x.name; saveStyle(true); }));
     $('#savestyle', panel).onclick = () => {
-      askName('Save Style As', st.themeName || '', (name) => {
+      askName(T('Save Style As'), st.themeName || '', (name) => {
       const list = saved.filter((x) => x.name !== name).concat([{ id: S.uuid(), name, theme: Object.assign({}, t) }]);
-      work('Saving the style…', () => store.writeJSON('.profile/styles.json', list)).then(() => { st.themeName = name; saveStyle(true); });
+      work(T('Saving the style…'), () => store.writeJSON('.profile/styles.json', list)).then(() => { st.themeName = name; saveStyle(true); });
       });
     };
     const cf = $('#copyfrom', panel); if (cf) cf.onchange = () => copyStyleFrom(cf.value);
@@ -1223,7 +1228,7 @@
     const v = store.visit(id); if (!v) return;
     const other = store.deckOf(v).folder;
     const theirs = fullStyle(await store.json(`${other}/.style.json`));
-    await work('Copying the style…', async () => {
+    await work(T('Copying the style…'), async () => {
       const copy = async (from, to) => { const u = await store.src(`${other}/${from}`); if (u) await store.putFile(`${deck.folder}/${to}`, await (await fetch(u)).blob()); };
       if (theirs.logo === 'custom') await copy('.logo.png', '.logo.png');
       if (theirs.presenter === 'custom') await copy('.presenter.jpg', '.presenter.jpg');
@@ -1238,14 +1243,14 @@
     try { await img.decode(); } catch { return; }
     const N = 64, c = document.createElement('canvas'); c.width = c.height = N;
     const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(img, 0, 0, N, N);
-    let d; try { d = x.getImageData(0, 0, N, N).data; } catch { return toast('That logo can’t be read here.'); }
+    let d; try { d = x.getImageData(0, 0, N, N).data; } catch { return toast(T('That logo can’t be read here.')); }
     const samples = []; let opaque = 0;
     for (let i = 0; i < d.length; i += 4) {
       if (d[i + 3] <= 200) continue; opaque++;
       const p = [d[i] / 255, d[i + 1] / 255, d[i + 2] / 255], mx = Math.max(...p), mn = Math.min(...p);
       if (mx < 0.08 || mx - mn < 0.12) continue; samples.push(p);
     }
-    if (samples.length < 8 || samples.length * 100 < opaque * 4) { out.innerHTML = '<p class="foot">This logo is black, white or grey, so there are no brand colours to use. Pick a preset or set the colours below.</p>'; return; }
+    if (samples.length < 8 || samples.length * 100 < opaque * 4) { out.innerHTML = `<p class="foot">${T('This logo is black, white or grey, so there are no brand colours to use. Pick a preset or set the colours below.')}</p>`; return; }
     const K = 3, dist = (a, b) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2;
     let centers = [0, 1, 2].map((k) => samples[Math.floor(k * samples.length / K)]);
     const nearest = (p) => centers.reduce((best, cc, k) => (dist(p, cc) < dist(p, centers[best]) ? k : best), 0);
@@ -1267,17 +1272,17 @@
     ];
     deck.style.theme = Object.assign({}, themes[0][1]); delete deck.style.themeName;
     await saveStyle(true);
-    $('#brandout').innerHTML = `<p class="foot">Brand colours</p><div class="swatches">${themes.map(([n, th], i) => swatch(n, th, deck.style.theme, `data-brand="${i}"`)).join('')}</div>`;
+    $('#brandout').innerHTML = `<p class="foot">${T('Brand colours')}</p><div class="swatches">${themes.map(([n, th], i) => swatch(n, th, deck.style.theme, `data-brand="${i}"`)).join('')}</div>`;
     $$('[data-brand]').forEach((b) => (b.onclick = () => { deck.style.theme = Object.assign({}, themes[+b.dataset.brand][1]); delete deck.style.themeName; saveStyle(false).then(() => $$('[data-brand]').forEach((o) => o.classList.toggle('on', o === b))); }));
   }
-  const mediaLabel = (m) => ({ live: 'Live camera', video: 'Video', audio: 'Sound', link: 'Website', pdf: 'PDF' }[S.fileType(m)] || 'Photo');
+  const mediaLabel = (m) => T({ live: 'Live camera', video: 'Video', audio: 'Sound', link: 'Website', pdf: 'PDF' }[S.fileType(m)] || 'Photo');
   function debounce(fn, ms) { let t; return () => { clearTimeout(t); t = setTimeout(fn, ms); }; }
   async function redrawCanvas(info) {
     const box = $('#canvas > div'); if (!box || !info.spec) return;
     await draw(box, info, { live: !!cameraStream });
   }
   async function saveCustom(info, redraw) {
-    await work('Saving…', async () => {
+    await work(T('Saving…'), async () => {
       await store.writeJSON(info.path, info.slide, true);
       infoCache.delete(info.path);
       if (redraw) { await renderSelected(); }
@@ -1293,21 +1298,21 @@
     const picked = chosenList(), n = picked.length;
     const values = new Set(picked.map((e) => (deck.transitions || {})[e] || ''));
     const val = values.size === 1 ? [...values][0] : 'mixed';
-    panel.innerHTML = `<div class="kind">${n} Slides</div>
+    panel.innerHTML = `<div class="kind">${T('{n} Slides', { n })}</div>
       <div class="fan">${picked.slice(0, 3).map(() => '<span class="frame"></span>').join('')}</div>
       <section class="sect">
-        <label class="field inline"><span>Transition</span><select id="m-trans"><option value="">Default</option>${val === 'mixed' ? '<option value="mixed" selected>Mixed</option>' : ''}${TRANSITIONS.map(([v, l]) => `<option value="${v}" ${val === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-        <button type="button" class="btn small" id="m-dup">Duplicate ${n} Slides…</button>
-        <button type="button" class="btn small ghost danger" id="m-del">${ICON.trash} Delete ${n} Slides</button>
-        <p class="foot">Changes here apply to these ${n} slides only.</p></section>`;
+        <label class="field inline"><span>${T('Transition')}</span><select id="m-trans"><option value="">${T('Default')}</option>${val === 'mixed' ? `<option value="mixed" selected>${T('Mixed')}</option>` : ''}${TRANSITIONS.map(([v, l]) => `<option value="${v}" ${val === v ? 'selected' : ''}>${T(l)}</option>`).join('')}</select></label>
+        <button type="button" class="btn small" id="m-dup">${T('Duplicate {n} Slides…', { n })}</button>
+        <button type="button" class="btn small ghost danger" id="m-del">${ICON.trash} ${T('Delete {n} Slides', { n })}</button>
+        <p class="foot">${T('Changes here apply to these {n} slides only.', { n })}</p></section>`;
     $$('.fan .frame', panel).forEach((f, k) => slideInfo(deck.folder, picked[k]).then((x) => draw(f, x, { thumb: true })));
     $('#m-trans').onchange = (e) => {
       if (e.target.value === 'mixed') return;
       const m = Object.assign({}, deck.transitions); for (const p of picked) { if (e.target.value) m[p] = e.target.value; else delete m[p]; }
       deck.transitions = m;
-      work('Saving…', () => (Object.keys(m).length ? store.writeJSON(`${deck.folder}/.transitions.json`, m) : store.deleteFile(`${deck.folder}/.transitions.json`)));
+      work(T('Saving…'), () => (Object.keys(m).length ? store.writeJSON(`${deck.folder}/.transitions.json`, m) : store.deleteFile(`${deck.folder}/.transitions.json`)));
     };
-    $('#m-dup').onclick = () => askChoice(`Duplicate ${n} Slides`, 'Where should the copies go?', [['after', 'After the Selection'], ['end', 'At the End of the Presentation']], (c) => duplicateChosen(c === 'end'));
+    $('#m-dup').onclick = () => askChoice(T('Duplicate {n} Slides', { n }), T('Where should the copies go?'), [['after', T('After the Selection')], ['end', T('At the End of the Presentation')]], (c) => duplicateChosen(c === 'end'));
     $('#m-del').onclick = deleteChosen;
   }
 
@@ -1352,11 +1357,12 @@
     await saveEntries(entries);
     deck.chosen = new Set(copies); deck.selected = entries.indexOf(copies[0]); deck.anchor = deck.selected;
     renderRail(); renderSelected();
-    toast(copies.length > 1 ? `${copies.length} slides ${label}` : `Slide ${label}`);
+    // label: 'duplicated' or 'pasted'
+    toast(copies.length > 1 ? T(`{n} slides ${label}`, { n: copies.length }) : T(`Slide ${label}`));
   }
   async function duplicateChosen(atEnd) {
     const picked = chosenList(); if (!picked.length) return;
-    await work(picked.length > 1 ? `Duplicating ${picked.length} slides…` : 'Duplicating…', async () => {
+    await work(picked.length > 1 ? T('Duplicating {n} slides…', { n: picked.length }) : T('Duplicating…'), async () => {
       const copies = [];
       for (const e of picked) {
         const c = await copyEntry(e, deck.folder, deck.folder); copies.push(c);
@@ -1375,13 +1381,13 @@
     const text = CLIP + JSON.stringify({ folder: deck.folder, entries: picked });
     try { await navigator.clipboard.writeText(text); } catch { window.__fvClip = text; }
     window.__fvClip = text;
-    toast(picked.length > 1 ? `${picked.length} slides copied` : 'Slide copied');
+    toast(picked.length > 1 ? T('{n} slides copied', { n: picked.length }) : T('Slide copied'));
   }
   async function pasteSlides(text) {
     let c; try { c = JSON.parse(text.slice(CLIP.length)); } catch { return; }
     const known = (c.entries || []).filter((e) => store.has(`${c.folder}/${e}`));
-    if (!known.length) return toast('Those slides aren’t in your library any more.');
-    await work('Pasting…', async () => {
+    if (!known.length) return toast(T('Those slides aren’t in your library any more.'));
+    await work(T('Pasting…'), async () => {
       const copies = []; for (const e of known) copies.push(await copyEntry(e, c.folder, deck.folder));
       const sel = chosenList(); const at = sel.length ? Math.max(...sel.map((e) => deck.entries.indexOf(e))) + 1 : deck.entries.length;
       await insertCopies(copies, at, 'pasted');
@@ -1393,20 +1399,20 @@
     const entries = deck.entries.filter((e) => !deck.chosen.has(e));
     deck.entries = entries; deck.selected = Math.min(first, entries.length - 1); deck.chosen = new Set(entries[deck.selected] ? [entries[deck.selected]] : []);
     renderRail(); renderSelected();
-    await work('Saving…', () => saveEntries(entries));
+    await work(T('Saving…'), () => saveEntries(entries));
     // The files go a moment later, so Undo brings the slides back as they were.
     let undone = false;
     const timer = setTimeout(() => { if (!undone) for (const g of picked) if (!deck || !deck.entries.includes(g)) store.deleteFile(`${deck ? deck.folder : ''}/${g}`).catch(() => {}); }, 6500);
-    toast(picked.length > 1 ? `${picked.length} slides deleted` : 'Slide deleted', { label: 'Undo', run: async () => {
+    toast(picked.length > 1 ? T('{n} slides deleted', { n: picked.length }) : T('Slide deleted'), { label: T('Undo'), run: async () => {
       undone = true; clearTimeout(timer);
       deck.entries = before; deck.chosen = new Set(picked); deck.selected = first; renderRail(); renderSelected();
-      await work('Saving…', () => saveEntries(before));
+      await work(T('Saving…'), () => saveEntries(before));
     } });
   }
   async function replaceSlide(i) {
     pickFiles('', async ([f]) => {
       const old = deck.entries[i];
-      await work('Replacing…', async () => {
+      await work(T('Replacing…'), async () => {
         const entry = `${freeSlot()}/${S.cleanName(f.name)}`;
         await store.putFile(`${deck.folder}/${entry}`, f);
         const entries = deck.entries.slice(); entries[i] = entry;
@@ -1439,13 +1445,13 @@
     const n = deck.chosen.size, i = deck.selected, entry = deck.entries[i];
     const t = S.fileType(entry);
     showMenu(x, y, [
-      ...(n === 1 ? [{ label: 'Present from Here', run: () => present({ from: P_indexOf(entry) }) },
-                     { label: (deck.notes || {})[entry] ? 'Edit Notes…' : 'Add Notes…', run: () => { const nt = $('#f-notes'); if (nt) { nt.scrollIntoView({ block: 'center' }); nt.focus(); } } },
-                     ...(t !== 'custom' ? [{ label: 'Replace…', run: () => replaceSlide(i) }] : []), '-'] : []),
-      { label: n > 1 ? `Copy ${n} Slides` : 'Copy', key: '⌘C', run: copyChosen },
-      { label: n > 1 ? `Duplicate ${n} Slides` : 'Duplicate', key: '⌘D', run: () => (n > 1 ? $('#m-dup').click() : duplicateChosen(false)) },
+      ...(n === 1 ? [{ label: T('Present from Here'), run: () => present({ from: P_indexOf(entry) }) },
+                     { label: T((deck.notes || {})[entry] ? 'Edit Notes…' : 'Add Notes…'), run: () => { const nt = $('#f-notes'); if (nt) { nt.scrollIntoView({ block: 'center' }); nt.focus(); } } },
+                     ...(t !== 'custom' ? [{ label: T('Replace…'), run: () => replaceSlide(i) }] : []), '-'] : []),
+      { label: n > 1 ? T('Copy {n} Slides', { n }) : T('Copy'), key: '⌘C', run: copyChosen },
+      { label: n > 1 ? T('Duplicate {n} Slides', { n }) : T('Duplicate'), key: '⌘D', run: () => (n > 1 ? $('#m-dup').click() : duplicateChosen(false)) },
       '-',
-      { label: n > 1 ? `Delete ${n} Slides` : 'Delete', key: '⌫', danger: true, run: deleteChosen },
+      { label: n > 1 ? T('Delete {n} Slides', { n }) : T('Delete'), key: '⌫', danger: true, run: deleteChosen },
     ]);
   }
   /** Where an entry starts when presenting (a PDF before it counts a slide a page). */
@@ -1455,7 +1461,7 @@
   function askChoice(title, text, options, done) {
     const d = $('#choice');
     $('h2', d).textContent = title; $('p', d).textContent = text;
-    $('.row', d).replaceChildren(...[['cancel', 'Cancel']].concat(options).map(([v, l], k) => {
+    $('.row', d).replaceChildren(...[['cancel', T('Cancel')]].concat(options).map(([v, l], k) => {
       const b = document.createElement('button'); b.className = 'btn' + (k === options.length ? ' primary' : '') + (v === 'remove' ? ' danger-fill' : ''); b.value = v; b.textContent = l; return b;
     }));
     d.onclose = () => { if (d.returnValue && d.returnValue !== 'cancel') done(d.returnValue); };
@@ -1464,20 +1470,20 @@
 
   // ── adding: a web page, the camera, the microphone, the screen ──
   function addWebPage() {
-    const d = $('#sitepick'); const input = $('input', d); input.value = ''; $('h2', d).textContent = 'Add a Web Page';
+    const d = $('#sitepick'); const input = $('input', d); input.value = ''; $('h2', d).textContent = T('Add a Web Page');
     d.showModal(); input.focus();
     input.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); d.close('add'); } };
     d.onclose = async () => {
-      $('h2', d).textContent = 'Add a Website';
+      $('h2', d).textContent = T('Add a Website');
       if (d.returnValue !== 'add') return;
       let url = input.value.trim(); if (!url) return; if (!/^[a-z]+:\/\//i.test(url)) url = 'https://' + url;
-      try { new URL(url); } catch { return toast('That doesn’t look like a web address.'); }
+      try { new URL(url); } catch { return toast(T('That doesn’t look like a web address.')); }
       await addLinkSlide(url);
     };
   }
   async function addLinkSlide(url) {
     const name = hostOf(url).replace(/\//g, ' ') + '.url', slot = freeSlot(), entry = `${slot}/${name}`;
-    await work('Adding the page…', async () => {
+    await work(T('Adding the page…'), async () => {
       await store.putFile(`${deck.folder}/${entry}`, new Blob([`[InternetShortcut]\nURL=${url}\n`], { type: 'text/plain' }));
       await store.putFile(`${deck.folder}/${S.posterPath(entry)}`, await siteCard(url));
       const entries = deck.entries.slice(); const at = deck.entries.length ? deck.selected + 1 : 0; entries.splice(at, 0, entry);
@@ -1494,7 +1500,7 @@
   async function capture(kind) {
     const d = $('#capture'), view = $('video', d), status = $('.cap-status', d), btns = $('.cap-buttons', d);
     const type = mp4Type(kind === 'audio');
-    if (kind !== 'photo' && !type) return toast('This browser can’t record in a format FreeView plays. Use Safari, or Chrome 126 or later.');
+    if (kind !== 'photo' && !type) return toast(T('This browser can’t record in a format FreeView plays. Use Safari, or Chrome 126 or later.'));
     let stream;
     try {
       if (kind === 'screen') {
@@ -1506,9 +1512,9 @@
         else tracks.push(...audios);
         stream = new MediaStream(tracks); stream.__parts = [screen, mic];
       } else stream = await navigator.mediaDevices.getUserMedia(kind === 'audio' ? { audio: true } : { video: { width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: true });
-    } catch { return toast(kind === 'screen' ? 'Screen recording was not started.' : 'FreeView needs your camera or microphone for that. Allow it in the address bar and try again.'); }
+    } catch { return toast(T(kind === 'screen' ? 'Screen recording was not started.' : 'FreeView needs your camera or microphone for that. Allow it in the address bar and try again.')); }
     const stopAll = () => { for (const t of stream.getTracks()) t.stop(); for (const s2 of stream.__parts || []) if (s2) s2.getTracks().forEach((t) => t.stop()); };
-    $('h2', d).textContent = { camera: 'Take a Photo or Video', audio: 'Record Audio', screen: 'Record Screen' }[kind];
+    $('h2', d).textContent = T({ camera: 'Take a Photo or Video', audio: 'Record Audio', screen: 'Record Screen' }[kind]);
     view.hidden = kind === 'audio'; view.srcObject = stream; view.muted = true; view.classList.toggle('mirror', kind === 'camera'); view.play().catch(() => {});
     let rec = null, chunks = [], t0 = 0, paused = 0, pausedAt = 0, timer = 0, result = null;
     const clock2 = () => { const sec = Math.floor(((rec && rec.state === 'paused' ? pausedAt : performance.now()) - t0 - paused) / 1000); return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`; };
@@ -1519,7 +1525,7 @@
       rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
       rec.start(1000); t0 = performance.now(); paused = 0;
       timer = setInterval(() => (status.textContent = '● ' + clock2()), 250);
-      buttons([['Pause', '', () => { if (rec.state === 'recording') { rec.pause(); pausedAt = performance.now(); this_.textContent = 'Resume'; } else { rec.resume(); paused += performance.now() - pausedAt; this_.textContent = 'Pause'; } }], ['Stop', 'primary rec', stopRec]]);
+      buttons([[T('Pause'), '', () => { if (rec.state === 'recording') { rec.pause(); pausedAt = performance.now(); this_.textContent = T('Resume'); } else { rec.resume(); paused += performance.now() - pausedAt; this_.textContent = T('Pause'); } }], [T('Stop'), 'primary rec', stopRec]]);
       const this_ = $('button', btns);
     };
     const stopRec = async () => {
@@ -1527,22 +1533,22 @@
       await new Promise((ok) => { rec.onstop = ok; rec.stop(); });
       const blob = new Blob(chunks, { type: type.split(';')[0] });
       const name = { camera: `Video ${stamp()}.mp4`, audio: `Recording ${stamp()}.m4a`, screen: `Screen Recording ${stamp()}.mp4` }[kind];
-      status.textContent = `${clock2()} recorded`;
+      status.textContent = T('{time} recorded', { time: clock2() });
       view.srcObject = null; if (kind !== 'audio') { view.src = URL.createObjectURL(blob); view.muted = false; view.controls = true; view.classList.remove('mirror'); }
       const a = kind === 'audio' ? Object.assign(document.createElement('audio'), { controls: true, src: URL.createObjectURL(blob), className: 'cap-audio' }) : null;
       if (a) status.after(a);
-      buttons([['Record Again', '', () => { if (a) a.remove(); view.controls = false; view.removeAttribute('src'); view.srcObject = stream; view.muted = true; view.classList.toggle('mirror', kind === 'camera'); view.play(); status.textContent = ''; ready(); }],
-               ['Use Recording', 'primary', () => finish(new File([blob], name, { type: blob.type }))]]);
+      buttons([[T('Record Again'), '', () => { if (a) a.remove(); view.controls = false; view.removeAttribute('src'); view.srcObject = stream; view.muted = true; view.classList.toggle('mirror', kind === 'camera'); view.play(); status.textContent = ''; ready(); }],
+               [T('Use Recording'), 'primary', () => finish(new File([blob], name, { type: blob.type }))]]);
     };
     const ready = () => {
-      if (kind === 'camera') buttons([['Take Photo', '', async () => {
+      if (kind === 'camera') buttons([[T('Take Photo'), '', async () => {
         const c = document.createElement('canvas'); c.width = view.videoWidth; c.height = view.videoHeight;
         const x = c.getContext('2d'); x.translate(c.width, 0); x.scale(-1, 1); x.drawImage(view, 0, 0);
         const blob = await new Promise((ok) => c.toBlob(ok, 'image/jpeg', 0.9)); finish(new File([blob], `Photo ${stamp()}.jpg`, { type: 'image/jpeg' }));
-      }], ['Record Video', 'primary rec', startRec]]);
-      else buttons([['Record', 'primary rec', startRec]]);
+      }], [T('Record Video'), 'primary rec', startRec]]);
+      else buttons([[T('Record'), 'primary rec', startRec]]);
     };
-    status.textContent = kind === 'screen' ? 'Sharing your screen. Press Record when you’re ready; the recording becomes a slide.' : '';
+    status.textContent = kind === 'screen' ? T('Sharing your screen. Press Record when you’re ready; the recording becomes a slide.') : '';
     ready();
     d.onclose = () => { clearInterval(timer); if (rec && rec.state !== 'inactive') rec.stop(); stopAll(); view.srcObject = null; view.removeAttribute('src'); view.controls = false; $$('.cap-audio', d).forEach((x) => x.remove()); if (d.returnValue === 'use' && result) addFiles([result]); };
     for (const t of stream.getVideoTracks()) t.onended = () => { if (rec && rec.state !== 'inactive') stopRec(); };
@@ -1552,22 +1558,22 @@
   // ── Home: a presentation's menu (Rename, Edit, Duplicate, Remove) and search ──
   function deckMenu(v, x, y) {
     showMenu(x, y, [
-      { label: 'Edit Presentation', run: () => openDeck(v.id) },
-      { label: 'Rename', run: () => askName('Rename', v.title, (name) => work('Renaming…', async () => { const nv = JSON.parse(JSON.stringify(v)); nv.title = name; nv.renamed = true; await store.putVisit(nv); }).then(renderLibrary)) },
-      { label: 'Duplicate', run: () => duplicateDeck(v) },
+      { label: T('Edit Presentation'), run: () => openDeck(v.id) },
+      { label: T('Rename'), run: () => askName(T('Rename'), v.title, (name) => work(T('Renaming…'), async () => { const nv = JSON.parse(JSON.stringify(v)); nv.title = name; nv.renamed = true; await store.putVisit(nv); }).then(renderLibrary)) },
+      { label: T('Duplicate'), run: () => duplicateDeck(v) },
       '-',
-      { label: 'Remove', danger: true, run: () => askChoice(`Remove “${v.title}”?`, 'It’s removed from FreeView on all your devices, with its slides.', [['remove', 'Remove']], () => work('Removing…', () => store.deleteDeck(v)).then(renderLibrary)) },
+      { label: T('Remove'), danger: true, run: () => askChoice(T('Remove “{title}”?', { title: v.title }), T('It’s removed from FreeView on all your devices, with its slides.'), [['remove', T('Remove')]], () => work(T('Removing…'), () => store.deleteDeck(v)).then(renderLibrary)) },
     ]);
   }
   async function duplicateDeck(v) {
     const { folder, entries } = store.deckOf(v);
     const files = store.pathsIn(folder + '/');
     let made;
-    await work(`Duplicating “${v.title}”…`, async () => {
+    await work(T('Duplicating “{title}”…', { title: v.title }), async () => {
       const copy = S.uuid();
       let k = 0;
-      for (const p of files) { busy(`Duplicating… ${++k} of ${files.length}`); const u = await store.src(p); if (u) await store.putFile(`${copy}/${p.slice(folder.length + 1)}`, await (await fetch(u)).blob()); }
-      made = { id: S.uuid(), title: `${v.title} Copy`, date: S.appleNow(), kind: { deck: { folder: copy, entries } } };
+      for (const p of files) { busy(T('Duplicating… {k} of {n}', { k: ++k, n: files.length })); const u = await store.src(p); if (u) await store.putFile(`${copy}/${p.slice(folder.length + 1)}`, await (await fetch(u)).blob()); }
+      made = { id: S.uuid(), title: T('{title} Copy', { title: v.title }), date: S.appleNow(), kind: { deck: { folder: copy, entries } } };
       await store.putVisit(made);
     });
     if (made) openDeck(made.id);
@@ -1579,7 +1585,7 @@
   async function editPhoto(info) {
     const d = $('#photoedit'), cv = $('canvas', d), x = cv.getContext('2d');
     const img = new Image(); img.crossOrigin = 'anonymous'; img.src = info.url;
-    try { await img.decode(); } catch { return toast('This picture can’t be edited here.'); }
+    try { await img.decode(); } catch { return toast(T('This picture can’t be edited here.')); }
     const st = { rot: 0, bw: false, aspect: 'original', crop: { x: 0, y: 0, w: 1, h: 1 } };   // crop in the rotated picture's 0…1 space
     const hasOriginal = store.has(`${deck.folder}/${originalOf(info.entry)}`);
     $('#pe-revert').hidden = !hasOriginal;
@@ -1655,7 +1661,7 @@
     d.onclose = async () => {
       removeEventListener('resize', paint);
       if (d.returnValue === 'revert') {
-        await work('Reverting…', async () => {
+        await work(T('Reverting…'), async () => {
           const u = await store.src(`${deck.folder}/${originalOf(info.entry)}`);
           await store.putFile(info.path, await (await fetch(u)).blob());
           await store.deleteFile(`${deck.folder}/${originalOf(info.entry)}`);
@@ -1663,7 +1669,7 @@
       } else if (d.returnValue === 'done') {
         const edited = st.rot || st.bw || st.crop.w < 0.999 || st.crop.h < 0.999;
         if (!edited) return;
-        await work('Saving the photo…', async () => {
+        await work(T('Saving the photo…'), async () => {
           // The untouched file stays beside it the first time, for Revert.
           if (!store.has(`${deck.folder}/${originalOf(info.entry)}`)) await store.putFile(`${deck.folder}/${originalOf(info.entry)}`, await (await fetch(info.url)).blob());
           const png = /\.png$/i.test(info.entry);
@@ -1690,7 +1696,7 @@
     range.oninput = () => { v.currentTime = +range.value; };
     d.onclose = async () => {
       if (d.returnValue !== 'set') return;
-      await work('Setting the cover…', async () => {
+      await work(T('Setting the cover…'), async () => {
         const c = document.createElement('canvas'); const k = Math.min(1, 1600 / Math.max(v.videoWidth, v.videoHeight));
         c.width = Math.round(v.videoWidth * k); c.height = Math.round(v.videoHeight * k); c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
         const blob = await new Promise((ok) => c.toBlob(ok, 'image/jpeg', 0.88));
@@ -1718,7 +1724,7 @@
       '-', ...(hasCover ? [] : [['cover', 'Cover Slide', 'The title, with your name and contacts']]),
       ['magic', 'Magic Slide', 'A title, a few words and up to four pictures'],
       ['live', 'Live Camera', 'A Magic slide with your camera, live when you present']];
-    m.replaceChildren(...items.map((it) => { if (it === '-') return document.createElement('hr'); const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'menuitem'); b.dataset.add = it[0]; b.innerHTML = `<strong>${it[1]}</strong><span>${it[2]}</span>`; b.onclick = () => addAction(it[0]); return b; }));
+    m.replaceChildren(...items.map((it) => { if (it === '-') return document.createElement('hr'); const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'menuitem'); b.dataset.add = it[0]; b.innerHTML = `<strong>${T(it[1])}</strong><span>${T(it[2])}</span>`; b.onclick = () => addAction(it[0]); return b; }));
     const r = anchor.getBoundingClientRect();
     m.hidden = false;
     const h = m.offsetHeight, w = m.offsetWidth;
@@ -1746,10 +1752,10 @@
     let at = deck.entries.length ? deck.selected + 1 : 0;
     const entries = deck.entries.slice();
     let done = 0;
-    await work(`Uploading ${files.length === 1 ? files[0].name : files.length + ' files'}…`, async () => {
+    await work(files.length === 1 ? T('Uploading {name}…', { name: files[0].name }) : T('Uploading {n} files…', { n: files.length }), async () => {
       for (const file of files) {
         const entry = `${freeSlot() + done}/${S.cleanName(file.name)}`;
-        busy(`Uploading ${done + 1} of ${files.length}…`);
+        busy(T('Uploading {k} of {n}…', { k: done + 1, n: files.length }));
         await store.putFile(`${deck.folder}/${entry}`, file);
         entries.splice(at++, 0, entry); done++;
       }
@@ -1765,13 +1771,13 @@
   }
   async function addCustom(kind, withCamera) {
     const entry = uniqueName(kind === 'cover' ? 'Cover' : 'Magic Slide');
-    const slide = S.newCustomSlide(kind, kind === 'cover' ? { title: deck.visit.title } : { title: withCamera ? 'Live' : '' });
+    const slide = S.newCustomSlide(kind, kind === 'cover' ? { title: deck.visit.title } : { title: withCamera ? T('Live') : '' });
     if (kind === 'cover') {
       const P = presenterOf(slide);
       slide.showPhoto = P.hasPhoto;
       slide.contacts = CONTACT_ORDER.filter((k) => (P.contacts[k] || '').trim()).slice(0, 2);
     }
-    await work('Adding…', async () => {
+    await work(T('Adding…'), async () => {
       if (withCamera) slide.images.push(await cameraMedia());
       await store.writeJSON(`${deck.folder}/${entry}`, slide, true);
       const entries = deck.entries.slice(); const at = deck.entries.length ? deck.selected + 1 : 0;
@@ -1784,7 +1790,7 @@
   async function cameraMedia(facing) {
     const name = `.live-${S.shortID()}.fvlive`;
     let poster = null;
-    try { await camera(false); poster = await frameOf(cameraStream); } catch { toast('The camera is off, so the slide shows a placeholder until it’s on.'); }
+    try { await camera(false); poster = await frameOf(cameraStream); } catch { toast(T('The camera is off, so the slide shows a placeholder until it’s on.')); }
     const live = S.newCameraMedia(); if (facing === 'back') live.tiles[0].source = 'camera:back';
     await store.writeJSON(`${deck.folder}/${name}`, live, true);
     if (poster) await store.putFile(`${deck.folder}/${S.posterPath(name)}`, poster);
@@ -1808,7 +1814,7 @@
     return new Promise((ok) => c.toBlob(ok, 'image/jpeg', 0.85));
   }
   async function addMediaTo(info, files) {
-    await work('Uploading…', async () => {
+    await work(T('Uploading…'), async () => {
       for (const file of files.slice(0, 4 - info.slide.images.length)) {
         const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
         const name = `.picture-${S.shortID()}.${ext}`;
@@ -1823,7 +1829,7 @@
   /** Picks one of this presentation's photos, videos or PDFs to show on the Magic slide too. */
   function pickFromDeck(info) {
     const ok = deck.entries.filter((e) => ['image', 'webImage', 'video', 'audio', 'pdf'].includes(S.fileType(e)) && !info.slide.images.includes(e));
-    if (!ok.length) return toast('This presentation has no photos, videos or PDFs to add yet.');
+    if (!ok.length) return toast(T('This presentation has no photos, videos or PDFs to add yet.'));
     const d = $('#deckpick');
     $('.dp-grid', d).replaceChildren(...ok.map((e) => {
       const b = document.createElement('button'); b.type = 'button'; b.className = 'dp-item'; b.innerHTML = '<span class="frame"></span><span class="dp-name"></span>';
@@ -1843,9 +1849,9 @@
       if (d.returnValue !== 'add') return;
       let url = input.value.trim(); if (!url) return;
       if (!/^[a-z]+:\/\//i.test(url)) url = 'https://' + url;
-      try { new URL(url); } catch { return toast('That doesn’t look like a web address.'); }
+      try { new URL(url); } catch { return toast(T('That doesn’t look like a web address.')); }
       const name = `.site-${S.shortID()}.url`;
-      await work('Adding the website…', async () => {
+      await work(T('Adding the website…'), async () => {
         await store.putFile(`${deck.folder}/${name}`, new Blob([`[InternetShortcut]\nURL=${url}\n`], { type: 'text/plain' }));
         await store.putFile(`${deck.folder}/${S.posterPath(name)}`, await siteCard(url));
         info.slide.images.push(name);
@@ -1858,11 +1864,11 @@
     const x = c.getContext('2d'); x.fillStyle = '#1c1c1e'; x.fillRect(0, 0, 1600, 1000);
     x.fillStyle = '#fff'; x.textAlign = 'center'; x.textBaseline = 'middle';
     x.font = '700 96px -apple-system, system-ui, sans-serif'; x.fillText(hostOf(url), 800, 470, 1400);
-    x.fillStyle = 'rgba(255,255,255,.55)'; x.font = '500 44px -apple-system, system-ui, sans-serif'; x.fillText('Opens the website', 800, 580);
+    x.fillStyle = 'rgba(255,255,255,.55)'; x.font = '500 44px -apple-system, system-ui, sans-serif'; x.fillText(T('Opens the website'), 800, 580);
     return new Promise((ok) => c.toBlob(ok, 'image/jpeg', 0.9));
   }
   async function addCameraTo(info, facing) {
-    await work('Adding the camera…', async () => { info.slide.images.push(await cameraMedia(facing)); });
+    await work(T('Adding the camera…'), async () => { info.slide.images.push(await cameraMedia(facing)); });
     await saveCustom(info, true);
   }
 
@@ -1940,9 +1946,9 @@
   function openNotesWindow() {
     if (P.notesWin && !P.notesWin.closed) { P.notesWin.focus(); return; }
     const w = window.open('', 'fvnotes', 'width=560,height=680');
-    if (!w) return toast('Allow pop-ups for this site to open the notes window.');
+    if (!w) return toast(T('Allow pop-ups for this site to open the notes window.'));
     P.notesWin = w;
-    w.document.title = 'Notes · FreeView';
+    w.document.title = T('Notes · FreeView'); w.document.documentElement.lang = document.documentElement.lang;
     w.document.body.innerHTML = `<style>
       html,body{margin:0;background:#0b0b0c;color:#f5f5f7;font:17px/1.45 -apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
       main{padding:24px;display:flex;flex-direction:column;gap:18px;height:100vh;box-sizing:border-box}
@@ -1953,9 +1959,9 @@
       footer{color:rgba(245,245,247,.6);font-size:15px} footer b{color:#f5f5f7;font-weight:600}
       nav{display:flex;gap:10px} button{flex:1;min-height:52px;border:0;border-radius:14px;background:#26262a;color:#f5f5f7;font:600 17px -apple-system,system-ui,sans-serif;cursor:pointer}
       button:active{transform:scale(.96)}</style>
-      <main><header><span><span id="n">1</span> of <span id="of">1</span></span><span id="t">0:00</span></header>
-      <div id="notes"></div><footer>Next: <b id="next"></b></footer>
-      <nav><button id="prev">Previous</button><button id="fwd">Next</button></nav></main>`;
+      <main><header><span>${T('{n} of {count}', { n: '<span id="n">1</span>', count: '<span id="of">1</span>' })}</span><span id="t">0:00</span></header>
+      <div id="notes"></div><footer>${T('Next:')} <b id="next"></b></footer>
+      <nav><button id="prev">${T('Previous')}</button><button id="fwd">${T('Next')}</button></nav></main>`;
     w.document.getElementById('prev').onclick = () => go(P.index - 1);
     w.document.getElementById('fwd').onclick = () => go(P.index + 1);
     w.addEventListener('keydown', (e) => { if (['ArrowRight', 'ArrowDown', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); go(P.index + 1); } else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) { e.preventDefault(); go(P.index - 1); } });
@@ -1964,9 +1970,9 @@
     updateNotesWindow();
   }
   function slideTitle(sl) {
-    if (!sl) return 'End of the presentation';
-    const i = sl.info; if (i.type === 'custom' && i.slide) return i.slide.title || (i.slide.kind === 'cover' ? 'Cover' : 'Magic slide');
-    if (i.type === 'pdf') return `${i.name}, page ${sl.page + 1}`;
+    if (!sl) return T('End of the presentation');
+    const i = sl.info; if (i.type === 'custom' && i.slide) return i.slide.title || T(i.slide.kind === 'cover' ? 'Cover' : 'Magic slide');
+    if (i.type === 'pdf') return T('{name}, page {n}', { name: i.name, n: sl.page + 1 });
     return i.type === 'link' ? hostOf(i.href) : i.name;
   }
   function updateNotesWindow() {
@@ -1974,7 +1980,7 @@
     const sl = P.slides[P.index], d = w.document;
     const text = (deck.notes || {})[`${sl.info.entry}#${sl.page}`] || (deck.notes || {})[sl.info.entry] || '';
     d.getElementById('n').textContent = P.index + 1; d.getElementById('of').textContent = P.slides.length;
-    const el = d.getElementById('notes'); el.textContent = text || 'No notes for this slide.'; el.classList.toggle('empty', !text);
+    const el = d.getElementById('notes'); el.textContent = text || T('No notes for this slide.'); el.classList.toggle('empty', !text);
     d.getElementById('next').textContent = slideTitle(P.slides[P.index + 1]);
   }
   // Recording: the camera and microphone as one MP4 take, and the time each slide came on.
@@ -1986,9 +1992,9 @@
   const recTime = () => P.rec ? (P.rec.paused ? P.rec.elapsed : P.rec.elapsed + (performance.now() - P.rec.t0) / 1000) : 0;
   async function startRecording() {
     const type = recordingType();
-    if (!type) { toast('This browser can’t record video FreeView can play. Use Safari, or Chrome 126 or later.'); closePresent(); return; }
+    if (!type) { toast(T('This browser can’t record video FreeView can play. Use Safari, or Chrome 126 or later.')); closePresent(); return; }
     let stream;
-    try { stream = await camera(true); } catch { toast('FreeView needs your camera and microphone to record. Allow them in the address bar and try again.'); $('#present').classList.remove('recording'); return; }
+    try { stream = await camera(true); } catch { toast(T('FreeView needs your camera and microphone to record. Allow them in the address bar and try again.')); $('#present').classList.remove('recording'); return; }
     const bubble = $('#bubble'); bubble.srcObject = stream; bubble.hidden = false; bubble.play().catch(() => {});
     const count = $('#countdown'); count.hidden = false;
     for (const n of [3, 2, 1]) { count.textContent = n; await new Promise((r) => setTimeout(r, 800)); }
@@ -1997,15 +2003,15 @@
     P.rec = { rec, chunks: [], marks: [{ slide: P.index, time: 0 }], t0: performance.now(), elapsed: 0, started: true, type };
     rec.ondataavailable = (e) => { if (e.data.size) P.rec.chunks.push(e.data); };
     rec.start(1000);
-    $('#pill').hidden = false; $('#ppause').hidden = false; $('#ppause').textContent = 'Pause';
-    const tick = () => { if (!P.rec) return; $('#ptime').textContent = (P.rec.paused ? 'Paused · ' : '') + clock(recTime()); P.rec.raf = requestAnimationFrame(tick); };
+    $('#pill').hidden = false; $('#ppause').hidden = false; $('#ppause').textContent = T('Pause');
+    const tick = () => { if (!P.rec) return; $('#ptime').textContent = (P.rec.paused ? T('Paused') + ' · ' : '') + clock(recTime()); P.rec.raf = requestAnimationFrame(tick); };
     tick();
   }
 
   function togglePause() {
     const r = P.rec; if (!r) return;
-    if (r.paused) { r.rec.resume(); r.t0 = performance.now(); r.paused = false; $('#ppause').textContent = 'Pause'; $('#present').classList.remove('paused'); }
-    else { r.rec.pause(); r.elapsed += (performance.now() - r.t0) / 1000; r.paused = true; $('#ppause').textContent = 'Resume'; $('#present').classList.add('paused'); }
+    if (r.paused) { r.rec.resume(); r.t0 = performance.now(); r.paused = false; $('#ppause').textContent = T('Pause'); $('#present').classList.remove('paused'); }
+    else { r.rec.pause(); r.elapsed += (performance.now() - r.t0) / 1000; r.paused = true; $('#ppause').textContent = T('Resume'); $('#present').classList.add('paused'); }
   }
   async function stopRecording() {
     const r = P.rec; if (!r) return;
@@ -2022,12 +2028,12 @@
     const commentary = { version: 1, id, recordedAt: new Date().toISOString().replace(/\.\d+Z$/, 'Z'), duration: +duration.toFixed(3), slideCount: 0,
       entries: deck.entries.slice(), marks: r.marks, recordedLayout: layout, layout, layoutChosen: false, events: [], clips: [] };
     commentary.slideCount = (await expand()).length;
-    await work(`Saving your commentary (${(take.size / 1e6).toFixed(1)} MB)…`, async () => {
+    await work(T('Saving your commentary ({size})…', { size: I.fixed(take.size / 1e6, 1) + ' MB' }), async () => {
       const dir = `${deck.folder}/.commentary-${id}`;
       await store.putFile(`${dir}/take.mov`, take);   // the apps look for take.mov; MP4 inside plays the same
       await store.writeJSON(`${dir}/commentary.json`, commentary, true);
       await saveEntries(deck.entries);
-      toast('Commentary saved. It’s in FreeView on your other devices too.');
+      toast(T('Commentary saved. It’s in FreeView on your other devices too.'));
     });
     renderCommentary();
     const c = await latestCommentary(); if (c) present({ from: c.marks[0].slide, watch: c });
@@ -2050,20 +2056,20 @@
     const c = deck && await latestCommentary();
     const b = $('#watchbtn');
     b.hidden = !c;
-    if (c) $('span', b).textContent = `Watch Commentary · ${clock(c.duration || 0)}`;
+    if (c) $('span', b).textContent = `${T('Watch Commentary')} · ${clock(c.duration || 0)}`;
   }
   // The app's layouts (CommentaryLayout.swift): where the camera and the slides sit, by template id.
   const FULL = { along: [0, 1], across: [0, 1] }, HIDDEN = { along: [0, 1], across: [0, 1], hidden: true };
   const TEMPLATES = {
-    split: { name: 'Split', face: { along: [0.5, 1], across: [0, 1] }, scene: { along: [0, 0.5], across: [0, 1] } },
-    faceWithSlides: { name: 'You, slides inset', face: FULL, scene: { corner: 'nearAlongFarAcross', side: 0.42, margin: 0.04, radius: 0.1 } },
-    faceOnly: { name: 'You only', face: FULL, scene: HIDDEN },
-    slidesOnly: { name: 'Slides only', face: HIDDEN, scene: FULL },
+    split: { name: T('Split'), face: { along: [0.5, 1], across: [0, 1] }, scene: { along: [0, 0.5], across: [0, 1] } },
+    faceWithSlides: { name: T('You, slides inset'), face: FULL, scene: { corner: 'nearAlongFarAcross', side: 0.42, margin: 0.04, radius: 0.1 } },
+    faceOnly: { name: T('You only'), face: FULL, scene: HIDDEN },
+    slidesOnly: { name: T('Slides only'), face: HIDDEN, scene: FULL },
   };
   function template(tid) {
     const [kind, corner] = (tid || '').split(':');
-    if (kind === 'bubble' && corner) return { name: 'Bubble', face: { corner, side: 0.30, margin: 0.04, radius: 0.5 }, scene: FULL };
-    if (kind === 'inset' && corner) return { name: 'Inset', face: { corner, side: 0.34, margin: 0.04, radius: 0.14 }, scene: FULL };
+    if (kind === 'bubble' && corner) return { name: T('Bubble'), face: { corner, side: 0.30, margin: 0.04, radius: 0.5 }, scene: FULL };
+    if (kind === 'inset' && corner) return { name: T('Inset'), face: { corner, side: 0.34, margin: 0.04, radius: 0.14 }, scene: FULL };
     return TEMPLATES[tid] || template('bubble:farAlongFarAcross');
   }
   function layerRect(frame, W, H) {
@@ -2110,7 +2116,7 @@
     scrub.oninput = () => { P.scrubbing = true; v.currentTime = +scrub.value; };
     scrub.onchange = () => { P.scrubbing = false; };
     v.onloadedmetadata = () => { if (!c.duration) { scrub.max = v.duration; } };
-    v.onended = () => toast('That’s the end of the commentary.');
+    v.onended = () => toast(T('That’s the end of the commentary.'));
     renderReview(); applyLayout(layoutAtTime(c, 0)); requestAnimationFrame(() => applyLayout(P.applied));
     v.play().then(tick).catch(() => { v.muted = true; v.play().then(tick); });
     addEventListener('resize', relayoutReview);
@@ -2131,11 +2137,11 @@
     const v = $('#bubble'), L = layoutOf(c), cur = P.applied || layoutAtTime(c, v.currentTime);
     const [kind, corner] = cur.split(':');
     const near = (L.switches || []).find((sw) => Math.abs(sw.time - v.currentTime) < 0.35);
-    $('#rlayouts').innerHTML = LAYOUT_CHOICES.map(([k, l]) => `<button type="button" class="chip${(kind === k) ? ' on' : ''}" data-lay="${k}">${l}</button>`).join('')
-      + (kind === 'bubble' || kind === 'inset' ? `<span class="corners">${CORNERS.map(([k, g]) => `<button type="button" class="chip corner${corner === k ? ' on' : ''}" data-corner="${k}" aria-label="Corner">${g}</button>`).join('')}</span>` : '');
+    $('#rlayouts').innerHTML = LAYOUT_CHOICES.map(([k, l]) => `<button type="button" class="chip${(kind === k) ? ' on' : ''}" data-lay="${k}">${T(l)}</button>`).join('')
+      + (kind === 'bubble' || kind === 'inset' ? `<span class="corners">${CORNERS.map(([k, g]) => `<button type="button" class="chip corner${corner === k ? ' on' : ''}" data-corner="${k}" aria-label="${T('Corner')}">${g}</button>`).join('')}</span>` : '');
     const D = c.duration || v.duration || 1;
-    $('#rdots').innerHTML = (L.switches || []).map((sw, k) => `<button type="button" class="kdot${near === sw ? ' on' : ''}" style="left:${(sw.time / D) * 100}%" data-k="${k}" aria-label="Layout change at ${clock(sw.time)}"></button>`).join('');
-    $('#rnote').textContent = [template(L.baseTemplateID).name].concat((L.switches || []).slice().sort((a, b) => a.time - b.time).map((sw) => template(sw.templateID).name)).join(' → ') + (c.layoutChosen ? '' : ' · as recorded');
+    $('#rdots').innerHTML = (L.switches || []).map((sw, k) => `<button type="button" class="kdot${near === sw ? ' on' : ''}" style="left:${(sw.time / D) * 100}%" data-k="${k}" aria-label="${T('Layout change at {time}', { time: clock(sw.time) })}"></button>`).join('');
+    $('#rnote').textContent = [template(L.baseTemplateID).name].concat((L.switches || []).slice().sort((a, b) => a.time - b.time).map((sw) => template(sw.templateID).name)).join(' → ') + (c.layoutChosen ? '' : ' · ' + T('as recorded'));
     $('#rremove').hidden = !near;
     $$('[data-lay]').forEach((b) => (b.onclick = () => {
       const k = b.dataset.lay; const keepCorner = corner && (k === 'bubble' || k === 'inset') ? corner : 'farAlongFarAcross';
@@ -2168,13 +2174,13 @@
   const saveCommentary = debounce(() => {
     const c = P.watch || P.lastWatch; if (!c) return;
     const out = Object.assign({}, c); delete out.take; delete out._dir; delete out.raf;
-    work('Saving the layout…', () => store.writeJSON(`${c._dir}/commentary.json`, out, true));
+    work(T('Saving the layout…'), () => store.writeJSON(`${c._dir}/commentary.json`, out, true));
   }, 500);
   function deleteCommentary() {
     const c = P.watch; if (!c) return;
-    askChoice('Delete This Commentary?', 'The recording and its layout are deleted from FreeView on all your devices. This can’t be undone.', [['remove', 'Delete']], async () => {
+    askChoice(T('Delete This Commentary?'), T('The recording and its layout are deleted from FreeView on all your devices. This can’t be undone.'), [['remove', T('Delete')]], async () => {
       const dir = c._dir; closePresent();
-      await work('Deleting…', async () => { for (const p2 of store.pathsIn(dir + '/')) await store.deleteFile(p2); });
+      await work(T('Deleting…'), async () => { for (const p2 of store.pathsIn(dir + '/')) await store.deleteFile(p2); });
       renderCommentary();
     });
   }
@@ -2185,14 +2191,14 @@
     $('#sharebtn').onclick = () => openShare(false);
     $('#prolock').onclick = showPaywall; $('#progetbtn').onclick = showPaywall;
     $('#newdeck').onclick = $('#newdeck2').onclick = async () => {
-      const v = await work('Creating…', () => store.newDeck('Untitled Presentation'));
+      const v = await work(T('Creating…'), () => store.newDeck(T('Untitled Presentation')));
       if (v) { await openDeck(v.id); $('#title').focus(); $('#title').select(); }
     };
     $('#home').onclick = (e) => { e.preventDefault(); if (store && document.body.dataset.view !== 'welcome') goTab('library'); };
     $$('#tabs button').forEach((b) => (b.onclick = () => goTab(b.dataset.tab)));
     $('#signout2').onclick = () => $('#signout').click();
     $('#backbtn').onclick = () => showLibrary();
-    $('#title').onchange = () => { const t = $('#title').value.trim() || 'Untitled Presentation'; $('#title').value = t; $('#crumb').textContent = t; work('Saving…', () => saveEntries(deck.entries, t)); };
+    $('#title').onchange = () => { const t = $('#title').value.trim() || T('Untitled Presentation'); $('#title').value = t; $('#crumb').textContent = t; work(T('Saving…'), () => saveEntries(deck.entries, t)); };
     $('#title').onkeydown = (e) => { if (e.key === 'Enter') e.target.blur(); };
     $('#addbtn').onclick = (e) => openAddMenu(e.currentTarget);
     $('#stylebtn').onclick = () => { deck.styling = !deck.styling; $('#stylebtn').setAttribute('aria-pressed', String(!!deck.styling)); renderSelected(); };
@@ -2253,6 +2259,7 @@
   }
 
   async function start() {
+    I.apply(document.body);
     wire();
     const demo = new URLSearchParams(location.search).has('demo');
     if (demo) {
@@ -2271,17 +2278,17 @@
     $('#signin').onclick = () => {
       const apple = $('#apple-sign-in-button .apple-auth-button') || $('#apple-sign-in-button > *');
       if (apple) { apple.click(); return; }
-      $('#signin').setAttribute('aria-busy', 'true'); toast('Connecting to iCloud… try again in a moment.');
+      $('#signin').setAttribute('aria-busy', 'true'); toast(T('Connecting to iCloud… try again in a moment.'));
       setTimeout(() => $('#signin').removeAttribute('aria-busy'), 1500);
     };
     try {
       await store.auth({ signIn: 'apple-sign-in-button', signOut: 'apple-sign-out-button', onSignedOut: () => location.reload() });
       $('#account').hidden = false;
       // The library shows at once and fills in as iCloud sends it (a big one takes a few pages).
-      busy('Loading your library…');
-      const loading = store.sync((n) => busy(n ? `Loading your library… ${n} presentation${n === 1 ? '' : 's'}` : 'Loading your library…'));
+      busy(T('Loading your library…'));
+      const loading = store.sync((n) => busy(n ? I.n(n, 'Loading your library… {n} presentation', 'Loading your library… {n} presentations') : T('Loading your library…')));
       await enter();
-      await loading.catch((e) => { console.error(e); toast('iCloud didn’t send everything. Reload to try again.'); });
+      await loading.catch((e) => { console.error(e); toast(T('iCloud didn’t send everything. Reload to try again.')); });
       busy('');
       refreshPro(true);
       document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshPro(); });
@@ -2294,7 +2301,7 @@
       if (!$('#settings').hidden) renderSettings();
     } catch (e) {
       console.error(e);
-      $('#welcome-error').hidden = false; $('#welcome-error').textContent = 'iCloud couldn’t be reached. Check your connection and reload.';
+      $('#welcome-error').hidden = false; $('#welcome-error').textContent = T('iCloud couldn’t be reached. Check your connection and reload.');
     }
   }
   async function enter() {

@@ -38,6 +38,9 @@
  * (videos and audio play, ← → between pictures, Esc or × closes), and a website opens in a new tab.
  */
 (function () {
+  // The few words this draws itself (labels for assistive tech), in the page's language when the page
+  // has one (window.FVI18N, the web's i18n.js); in English everywhere else, as before (the app).
+  const tr = (s) => (window.FVI18N && window.FVI18N.t ? window.FVI18N.t(s) : s);
   const FONTS = {
     system: '-apple-system, system-ui, "Segoe UI", Roboto, "Helvetica Neue", sans-serif',
     rounded: 'ui-rounded, "SF Pro Rounded", -apple-system, system-ui, sans-serif',
@@ -382,7 +385,7 @@
       const v = document.createElement('video');
       v.fvSilent = !!shown[i].silent; v.muted = v.fvSilent;
       v.className = 'fv-sync'; v.playsInline = true; v.preload = 'auto'; v.poster = img.src; v.src = src;
-      v.setAttribute('aria-label', 'Video, in sync with the others on the slide');
+      v.setAttribute('aria-label', tr('Video, in sync with the others on the slide'));
       const cs = getComputedStyle(img);
       Object.assign(v.style, { position: 'absolute', objectFit: fits[i] === 'contain' ? 'contain' : cs.objectFit || 'cover',
                                background: fits[i] === 'contain' ? '#000' : 'transparent', borderRadius: cs.borderRadius, cursor: 'pointer' });
@@ -500,10 +503,10 @@
       else if (![' ', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', 'Enter'].includes(k)) return;
       e.preventDefault(); e.stopImmediatePropagation();
     };
-    button('close', 'Close').addEventListener('click', (e) => { e.stopPropagation(); close(); });
+    button('close', tr('Close')).addEventListener('click', (e) => { e.stopPropagation(); close(); });
     if (items.length > 1) {
-      button('prev', 'Previous picture').addEventListener('click', (e) => { e.stopPropagation(); step(-1); });
-      button('next', 'Next picture').addEventListener('click', (e) => { e.stopPropagation(); step(1); });
+      button('prev', tr('Previous picture')).addEventListener('click', (e) => { e.stopPropagation(); step(-1); });
+      button('next', tr('Next picture')).addEventListener('click', (e) => { e.stopPropagation(); step(1); });
       box.appendChild(count);
     }
     box.addEventListener('click', (e) => { e.stopPropagation(); close(); });
