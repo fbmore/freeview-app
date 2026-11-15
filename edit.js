@@ -300,13 +300,21 @@
   }
 
   /** Draws one slide into `el`. `live` turns cameras on (presenting); otherwise they show their poster. */
-  async function draw(el, info, { page = 0, live = false, thumb = false } = {}) {
+  async function draw(el, info, { page = 0, live = false, thumb = false, present = false } = {}) {
     const outer = el; el = document.createElement('div'); el.className = 'slidebox' + (thumb ? ' mini' : ''); outer.replaceChildren(el);
     const t = info.type;
     if (t === 'custom') {
       if (!info.spec) return card(el, info, 'This slide couldn’t be read.');
       await slideLibs();
       const host = document.createElement('div'); host.className = 'fvhost'; el.appendChild(host);
+      if (!present) {
+        // In the editor (thumbnails and the large slide) a slide is drawn at one size and shrunk, so it's laid out exactly like the large one
+        // (the renderer's minimum sizes would otherwise move things around in a small box).
+        const W = 1280, H = 800;
+        host.style.cssText = `position:absolute;left:0;top:0;right:auto;bottom:auto;width:${W}px;height:${H}px;transform-origin:0 0`;
+        const fit = () => { const w = el.clientWidth, h = el.clientHeight; if (!w || !h) return; const k = Math.min(w / W, h / H); host.style.transform = `translate(${(w - W * k) / 2}px,${(h - H * k) / 2}px) scale(${k})`; };
+        fit(); new ResizeObserver(fit).observe(el);
+      }
       const spec = Object.assign({}, info.spec); delete spec._live;
       FV.render(host, spec);
       const cams = info.spec._live || [];
@@ -1498,7 +1506,7 @@
     if (n < 0 || n >= P.slides.length) return;
     const prev = P.nodes[P.index];
     P.index = n;
-    [n, n + 1, n - 1].forEach((k) => { const s = P.slides[k], el = P.nodes[k]; if (s && !el.dataset.drawn) { el.dataset.drawn = '1'; const box = document.createElement('div'); el.appendChild(box); draw(box, s.info, { page: s.page, live: true }); } });
+    [n, n + 1, n - 1].forEach((k) => { const s = P.slides[k], el = P.nodes[k]; if (s && !el.dataset.drawn) { el.dataset.drawn = '1'; const box = document.createElement('div'); el.appendChild(box); draw(box, s.info, { page: s.page, live: true, present: true }); } });
     const t = (deck.transitions || {})[P.slides[n].info.entry] || (P.prefs || SHOW_DEFAULT).transition || 'crossfade';
     const stage = $('#pstage'); stage.dataset.t = t === 'magicMove' ? 'crossfade' : t;
     stage.dataset.dir = jump ? '' : (prev && P.nodes.indexOf(prev) > n ? 'back' : 'fwd');
