@@ -23,6 +23,20 @@
   const API_TOKEN = '5e1d560dfe41765d17f2038ce3de8596787149ef30f7132dd5a190c7f9db2f0e';
   const ZONE = { zoneName: 'Library' };
 
+  // iCloud's upload host (…icloud-content.com/…/singleFileUpload) only lets www.icloud.com read its
+  // replies, so CloudKit JS's asset uploads fail anywhere else ("NETWORK_ERROR"). Those requests go
+  // through the FreeView Worker instead, which passes the bytes on to iCloud and keeps nothing.
+  const UPLOAD_PROXY = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && new URLSearchParams(location.search).has('localworker')
+    ? 'http://localhost:8787/ck-upload' : 'https://freeview-views.fbmore.workers.dev/ck-upload';
+  (function routeUploads() {
+    const open = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function (method, url, ...rest) {
+      const u = String(url);
+      if (/^POST$/i.test(method) && /^https:\/\/[^/]*icloud-content\.com(:\d+)?\/.*Upload/i.test(u)) url = `${UPLOAD_PROXY}?u=${encodeURIComponent(u)}`;
+      return open.call(this, method, url, ...rest);
+    };
+  })();
+
   // ── format helpers ──
 
   /** JSON with keys sorted at every level, as the apps' encoders write it. */
@@ -187,6 +201,7 @@
   class Library {
     constructor() {
       this.items = new Map();   // visit id → { visit, tag }
+      this.links = new Map();   // record name → { link, thumb }
       this.files = new Map();   // path → { url, size, modified, tag, blob? }
       this.listeners = new Set();
       this.cache = new Map();   // path → parsed JSON / text
@@ -307,6 +322,13 @@
         const id = r.recordName.slice(2);
         if (r.deleted) return this.items.delete(id);
         try { this.items.set(id, { visit: JSON.parse(fromBase64(f.visit.value)), tag: r.recordChangeTag }); } catch {}
+      } else if (r.recordType === 'Link' || r.recordName.startsWith('l-')) {
+        const name = r.recordName.slice(2);
+        if (r.deleted) return this.links.delete(name);
+        try {
+          const t = f.thumb && f.thumb.value;
+          this.links.set(name, { link: JSON.parse(fromBase64(f.link.value)), thumb: t && t.downloadURL ? t.downloadURL.replace('${f}', 'thumb.jpg') : '' });
+        } catch {}
       } else if (r.recordType === 'File' || r.recordName.startsWith('f-')) {
         if (r.deleted) { for (const [p, v] of this.files) if (v.name === r.recordName) { this.files.delete(p); this.cache.delete(p); } return; }
         const path = f.path && f.path.value; if (!path) return;

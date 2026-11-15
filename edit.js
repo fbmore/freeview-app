@@ -62,8 +62,82 @@
     return (e && (e.reason || e.message)) ? `Couldn't save: ${e.reason || e.message}` : "Couldn't save that. Try again.";
   }
   function show(view) {
-    for (const id of ['welcome', 'library', 'deck']) $('#' + id).hidden = id !== view;
+    for (const id of ['welcome', 'library', 'deck', 'links', 'settings']) $('#' + id).hidden = id !== view;
     document.body.dataset.view = view;
+    $('#tabs').hidden = view === 'welcome';
+    const tab = view === 'deck' ? 'library' : view;
+    $$('#tabs button').forEach((b) => { if (b.dataset.tab === tab) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+  }
+  function goTab(tab) {
+    if (tab === 'links') { deck = null; show('links'); $('#crumb').textContent = ''; renderLinks(); history.replaceState(null, '', '#links'); }
+    else if (tab === 'settings') { deck = null; show('settings'); $('#crumb').textContent = ''; renderSettings(); history.replaceState(null, '', '#settings'); }
+    else { showLibrary(); history.replaceState(null, '', location.pathname + location.search); }
+  }
+
+  // ── shared links (made in the apps; listed here to copy, open and check) ──
+
+  function renderLinks() {
+    const links = [...store.links.values()].map((x) => Object.assign({ thumb: x.thumb }, x.link))
+      .filter((l) => l.recordName && !l.cleaned)
+      .sort((a, b) => (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt));
+    $('#linksempty').hidden = links.length > 0 || !!store.loading;
+    $('#linklist').replaceChildren(...links.map((l) => {
+      const url = 'https://freeview.app/v/' + l.recordName;
+      const ends = S.fromApple(l.expiresAt), ended = ends < new Date();
+      const never = ends - Date.now() > 3650 * 864e5;
+      const day = (d) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      const row = document.createElement('div'); row.className = 'linkrow' + (ended ? ' ended' : '');
+      const when = never ? 'No end date' : ended ? 'Ended ' + day(ends) : 'Until ' + day(ends);
+      const bits = [l.slideCount + ' slide' + (l.slideCount === 1 ? '' : 's'), when];
+      if (l.hasPassword) bits.push('Password');
+      if (l.hasCommentary) bits.push('Commentary');
+      row.innerHTML = '<span class="lt"></span><div class="li"><strong>' + esc(l.title) + '</strong><span class="' + (ended ? 'ended' : '') + '">' + esc(bits.join(' · ')) + '</span></div>'
+        + '<div class="la">' + (ended ? '' : '<button type="button" class="btn small" data-copy>Copy Link</button><a class="btn small ghost" href="' + esc(url) + '" target="_blank" rel="noopener">Open</a>') + '</div>';
+      if (l.thumb) $('.lt', row).style.backgroundImage = 'url("' + l.thumb + '")';
+      const copy = $('[data-copy]', row);
+      if (copy) copy.onclick = async () => { try { await navigator.clipboard.writeText(url); copy.textContent = 'Copied'; setTimeout(() => (copy.textContent = 'Copy Link'), 1600); } catch { toast(url); } };
+      return row;
+    }));
+  }
+
+  // ── settings: the profile the apps use for covers and Magic slides ──
+
+  const CONTACTS = [['website', 'Website', 'example.com', 'url'], ['email', 'Email', 'you@example.com', 'email'], ['phone', 'Phone', '+1 555 0100', 'tel'],
+    ['linkedin', 'LinkedIn', 'handle', 'off'], ['x', 'X', '@handle', 'off'], ['instagram', 'Instagram', '@handle', 'off'], ['github', 'GitHub', 'handle', 'off'],
+    ['threads', 'Threads', '@handle', 'off'], ['bluesky', 'Bluesky', 'you.bsky.social', 'off']];
+  async function renderSettings() {
+    profile = (await store.json('.profile/profile.json')) || profile || {};
+    const p = Object.assign({ firstName: '', lastName: '', role: '', contacts: {} }, profile);
+    $('#contactfields').innerHTML = CONTACTS.map(([k, label, ph, ac]) =>
+      '<label class="field"><span>' + label + '</span><input data-contact="' + k + '" value="' + esc((p.contacts || {})[k] || '') + '" placeholder="' + ph + '" autocomplete="' + ac + '" spellcheck="false"></label>').join('');
+    for (const k of ['firstName', 'lastName', 'role']) $('#p-' + k).value = p[k] || '';
+    const save = debounce(() => work('Saving…', async () => {
+      // Every key, always: the apps' decoder has no defaults.
+      const next = { firstName: $('#p-firstName').value.trim(), lastName: $('#p-lastName').value.trim(), role: $('#p-role').value.trim(), contacts: {} };
+      $$('[data-contact]').forEach((i) => { const v = i.value.trim(); if (v) next.contacts[i.dataset.contact] = v; });
+      await store.writeJSON('.profile/profile.json', next);
+      profile = next; infoCache.clear();
+    }), 700);
+    $$('#settings input').forEach((i) => (i.oninput = save));
+    const pics = async () => {
+      const photo = await store.src('.profile/profile-photo.jpg'), logo = await store.src('.profile/default-logo.png');
+      $('#photoframe').style.backgroundImage = photo ? 'url("' + photo + '")' : '';
+      $('#logoframe').style.backgroundImage = logo ? 'url("' + logo + '")' : '';
+    };
+    pics();
+    $('#photobtn').onclick = () => pickFiles('image/*', ([f]) => work('Saving your photo…', async () => { await store.putFile('.profile/profile-photo.jpg', await asImage(f, 'image/jpeg', 1200)); infoCache.clear(); pics(); }));
+    $('#logobtn').onclick = () => pickFiles('image/*', ([f]) => work('Saving your logo…', async () => { await store.putFile('.profile/default-logo.png', await asImage(f, 'image/png', 1200)); infoCache.clear(); pics(); }));
+    $('#icloudnote').textContent = store.kind === 'demo' ? 'This is a demo: nothing is saved. Sign in with Apple to use your own library.'
+      : 'Everything here is saved to your iCloud and shows up in FreeView on your iPhone, iPad and Mac.';
+    $('#signout2').hidden = store.kind === 'demo';
+  }
+  /** A picture as the file type the apps keep it in (JPEG photo, PNG logo), no larger than max. */
+  async function asImage(file, type, max) {
+    const bmp = await createImageBitmap(file);
+    const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    return new Promise((ok) => c.toBlob(ok, type, 0.88));
   }
 
   // ── slides: what each entry is, and how it's drawn ──
@@ -690,7 +764,9 @@
       const v = await work('Creating…', () => store.newDeck('Untitled Presentation'));
       if (v) { await openDeck(v.id); $('#title').focus(); $('#title').select(); }
     };
-    $('#home').onclick = (e) => { e.preventDefault(); if (store) showLibrary(); };
+    $('#home').onclick = (e) => { e.preventDefault(); if (store && document.body.dataset.view !== 'welcome') goTab('library'); };
+    $$('#tabs button').forEach((b) => (b.onclick = () => goTab(b.dataset.tab)));
+    $('#signout2').onclick = () => $('#signout').click();
     $('#backbtn').onclick = () => showLibrary();
     $('#title').onchange = () => { const t = $('#title').value.trim() || 'Untitled Presentation'; $('#title').value = t; $('#crumb').textContent = t; work('Saving…', () => saveEntries(deck.entries, t)); };
     $('#title').onkeydown = (e) => { if (e.key === 'Enter') e.target.blur(); };
@@ -747,7 +823,9 @@
       await enter();
       await loading.catch((e) => { console.error(e); toast('iCloud didn’t send everything. Reload to try again.'); });
       busy('');
-      if (!deck) { const m = /deck=([0-9A-F-]+)/i.exec(location.hash); if (m && store.visit(m[1])) openDeck(m[1]); else renderLibrary(); }
+      if (!deck && !$('#library').hidden) { const m = /deck=([0-9A-F-]+)/i.exec(location.hash); if (m && store.visit(m[1])) openDeck(m[1]); else renderLibrary(); }
+      if (!$('#links').hidden) renderLinks();
+      if (!$('#settings').hidden) renderSettings();
     } catch (e) {
       console.error(e);
       $('#welcome-error').hidden = false; $('#welcome-error').textContent = 'iCloud couldn’t be reached. Check your connection and reload.';
@@ -755,9 +833,11 @@
   }
   async function enter() {
     profile = await store.json('.profile/profile.json');
-    store.onChange(debounce(() => { if (!deck && $('#library').hidden === false) renderLibrary(); }, 200));
+    store.onChange(debounce(() => { if (!deck && !$('#library').hidden) renderLibrary(); if (!$('#links').hidden) renderLinks(); }, 200));
     const m = /deck=([0-9A-F-]+)/i.exec(location.hash);
-    if (m && store.visit(m[1])) openDeck(m[1]); else showLibrary();
+    if (m && store.visit(m[1])) openDeck(m[1]);
+    else if (location.hash === '#links' || location.hash === '#settings') goTab(location.hash.slice(1));
+    else showLibrary();
   }
   start();
 })();
