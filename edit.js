@@ -32,6 +32,7 @@
     trash: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>',
     cam: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="3" y="6.5" width="13" height="11" rx="2.5"/><path d="M16 10.5l5-3v9l-5-3z"/></svg>',
     watch: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l6-3.5z" fill="currentColor" stroke="none"/></svg>',
+    pause: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><rect x="6.5" y="5" width="4" height="14" rx="1.2"/><rect x="13.5" y="5" width="4" height="14" rx="1.2"/></svg>',
     x: '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
     sound: '<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M4 9h3.5L12 5v14l-4.5-4H4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
     mute: '<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M4 9h3.5L12 5v14l-4.5-4H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
@@ -139,6 +140,14 @@
     $('#icloudnote').textContent = store.kind === 'demo' ? 'This is a demo: nothing is saved. Sign in with Apple to use your own library.'
       : 'Everything here is saved to your iCloud and shows up in FreeView on your iPhone, iPad and Mac.';
     $('#signout2').hidden = store.kind === 'demo';
+    const sp = showPrefs();
+    $('#slideshow').innerHTML = `
+      <label class="field inline"><span>Transition</span><select data-sp="transition">${TRANSITIONS.filter(([v]) => v !== 'magicMove').map(([v, l]) => `<option value="${v}" ${sp.transition === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+      <div class="switches">${sw('numbers', 'Show slide numbers', sp.numbers)}${sw('arrows', 'Show ‹ › buttons', sp.arrows)}${sw('loop', 'Loop videos', sp.loop)}</div>
+      <label class="field inline"><span>Autoplay</span><select data-sp="autoplay">${[[0, 'Off'], [3, 'Each slide 3 seconds'], [5, 'Each slide 5 seconds'], [10, 'Each slide 10 seconds'], [20, 'Each slide 20 seconds'], [30, 'Each slide 30 seconds'], [60, 'Each slide 1 minute']].map(([v, l]) => `<option value="${v}" ${+sp.autoplay === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+      <p class="foot">For presenting in this browser. The transition is for slides without one of their own.</p>`;
+    $$('#slideshow [data-sw]').forEach((c) => (c.onchange = () => setShowPref(c.dataset.sw, c.checked)));
+    $$('#slideshow [data-sp]').forEach((c) => (c.onchange = () => setShowPref(c.dataset.sp, c.dataset.sp === 'autoplay' ? +c.value : c.value)));
   }
   /** A picture as the file type the apps keep it in (JPEG photo, PNG logo), no larger than max. */
   async function asImage(file, type, max) {
@@ -1321,6 +1330,9 @@
   // ── presenting, recording and watching ──
 
   const P = { slides: [], index: 0, nodes: [], rec: null, watch: null };
+  const SHOW_DEFAULT = { transition: 'crossfade', numbers: false, arrows: true, loop: true, autoplay: 0 };
+  function showPrefs() { try { return Object.assign({}, SHOW_DEFAULT, JSON.parse(localStorage.getItem('fv-slideshow') || '{}')); } catch { return Object.assign({}, SHOW_DEFAULT); } }
+  function setShowPref(k, v) { const p2 = showPrefs(); p2[k] = v; try { localStorage.setItem('fv-slideshow', JSON.stringify(p2)); } catch {} }
 
   /** The slides as shown: a PDF is one slide per page (as the apps count them for a commentary's marks). */
   async function expand() {
@@ -1343,6 +1355,8 @@
     const stage = $('#pstage');
     P.nodes = P.slides.map(() => { const d = document.createElement('div'); d.className = 'pslide'; stage.appendChild(d); return d; });
     if (shell.requestFullscreen && !watch) shell.requestFullscreen().catch(() => {});
+    const prefs = showPrefs(); P.prefs = prefs; P.started = performance.now();
+    shell.classList.toggle('numbers', prefs.numbers); shell.classList.toggle('arrows', prefs.arrows && !watch && !record);
     go(Math.min(from, P.slides.length - 1), true);
     if (record) startRecording();
     if (watch) startWatching(watch);
@@ -1353,20 +1367,27 @@
     const prev = P.nodes[P.index];
     P.index = n;
     [n, n + 1, n - 1].forEach((k) => { const s = P.slides[k], el = P.nodes[k]; if (s && !el.dataset.drawn) { el.dataset.drawn = '1'; const box = document.createElement('div'); el.appendChild(box); draw(box, s.info, { page: s.page, live: true }); } });
-    const t = (deck.transitions || {})[P.slides[n].info.entry] || 'crossfade';
+    const t = (deck.transitions || {})[P.slides[n].info.entry] || (P.prefs || SHOW_DEFAULT).transition || 'crossfade';
     const stage = $('#pstage'); stage.dataset.t = t === 'magicMove' ? 'crossfade' : t;
     stage.dataset.dir = jump ? '' : (prev && P.nodes.indexOf(prev) > n ? 'back' : 'fwd');
     P.nodes.forEach((el, k) => el.classList.toggle('on', k === n));
     if (prev && prev !== P.nodes[n]) $$('video, audio', prev).forEach((m) => { if (!m.srcObject) m.pause(); });
-    $$('video:not(.live-cam), audio', P.nodes[n]).forEach((m) => { if (!m.srcObject) { m.muted = false; m.currentTime = 0; m.play().catch(() => { m.muted = true; m.play().catch(() => {}); }); } });
+    $$('video:not(.live-cam), audio', P.nodes[n]).forEach((m) => { if (!m.srcObject) { m.loop = (P.prefs || SHOW_DEFAULT).loop; m.muted = !!P.watch; m.currentTime = 0; m.play().catch(() => { m.muted = true; m.play().catch(() => {}); }); } });
     $('#pcount').textContent = `${n + 1} / ${P.slides.length}`;
+    $('#pnum').textContent = n + 1;
+    clearTimeout(P.auto);
+    const auto = (P.prefs || SHOW_DEFAULT).autoplay;
+    if (auto > 0 && !P.rec && !P.watch && n < P.slides.length - 1) P.auto = setTimeout(() => go(n + 1), auto * 1000);
+    updateNotesWindow();
     const note = (deck.notes || {})[`${P.slides[n].info.entry}#${P.slides[n].page}`] || (deck.notes || {})[P.slides[n].info.entry] || '';
     $('#pnotes').textContent = note; $('#pnotes').hidden = !note || !P.rec;
     if (P.rec && P.rec.started && !jump) P.rec.marks.push({ slide: n, time: +recTime().toFixed(3) });
   }
   function closePresent() {
     if (P.rec) return stopRecording();
+    clearTimeout(P.auto);
     stopWatching();
+    if (P.notesWin && !P.notesWin.closed) P.notesWin.close();
     $('#present').hidden = true; document.body.classList.remove('presenting');
     $('#pstage').replaceChildren(); P.nodes = []; P.slides = [];
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
@@ -1375,6 +1396,48 @@
   }
   const cameraLiveInDeck = () => false;
 
+
+  // ── Notes in a window of their own (for a second screen while presenting) ──
+  function openNotesWindow() {
+    if (P.notesWin && !P.notesWin.closed) { P.notesWin.focus(); return; }
+    const w = window.open('', 'fvnotes', 'width=560,height=680');
+    if (!w) return toast('Allow pop-ups for this site to open the notes window.');
+    P.notesWin = w;
+    w.document.title = 'Notes · FreeView';
+    w.document.body.innerHTML = `<style>
+      html,body{margin:0;background:#0b0b0c;color:#f5f5f7;font:17px/1.45 -apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+      main{padding:24px;display:flex;flex-direction:column;gap:18px;height:100vh;box-sizing:border-box}
+      header{display:flex;justify-content:space-between;color:rgba(245,245,247,.6);font-variant-numeric:tabular-nums}
+      #n{font-size:30px;font-weight:600;color:#f5f5f7} #t{font-size:30px;font-weight:600;color:#f5f5f7}
+      #notes{flex:1;overflow:auto;font-size:26px;line-height:1.4;white-space:pre-wrap;text-wrap:pretty}
+      #notes.empty{color:rgba(245,245,247,.38);font-size:20px}
+      footer{color:rgba(245,245,247,.6);font-size:15px} footer b{color:#f5f5f7;font-weight:600}
+      nav{display:flex;gap:10px} button{flex:1;min-height:52px;border:0;border-radius:14px;background:#26262a;color:#f5f5f7;font:600 17px -apple-system,system-ui,sans-serif;cursor:pointer}
+      button:active{transform:scale(.96)}</style>
+      <main><header><span><span id="n">1</span> of <span id="of">1</span></span><span id="t">0:00</span></header>
+      <div id="notes"></div><footer>Next: <b id="next"></b></footer>
+      <nav><button id="prev">Previous</button><button id="fwd">Next</button></nav></main>`;
+    w.document.getElementById('prev').onclick = () => go(P.index - 1);
+    w.document.getElementById('fwd').onclick = () => go(P.index + 1);
+    w.addEventListener('keydown', (e) => { if (['ArrowRight', 'ArrowDown', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); go(P.index + 1); } else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) { e.preventDefault(); go(P.index - 1); } });
+    clearInterval(P.notesClock);
+    P.notesClock = setInterval(() => { if (w.closed) return clearInterval(P.notesClock); const el = w.document.getElementById('t'); if (el) el.textContent = clock((performance.now() - (P.started || performance.now())) / 1000); }, 500);
+    updateNotesWindow();
+  }
+  function slideTitle(sl) {
+    if (!sl) return 'End of the presentation';
+    const i = sl.info; if (i.type === 'custom' && i.slide) return i.slide.title || (i.slide.kind === 'cover' ? 'Cover' : 'Magic slide');
+    if (i.type === 'pdf') return `${i.name}, page ${sl.page + 1}`;
+    return i.type === 'link' ? hostOf(i.href) : i.name;
+  }
+  function updateNotesWindow() {
+    const w = P.notesWin; if (!w || w.closed || !P.slides.length) return;
+    const sl = P.slides[P.index], d = w.document;
+    const text = (deck.notes || {})[`${sl.info.entry}#${sl.page}`] || (deck.notes || {})[sl.info.entry] || '';
+    d.getElementById('n').textContent = P.index + 1; d.getElementById('of').textContent = P.slides.length;
+    const el = d.getElementById('notes'); el.textContent = text || 'No notes for this slide.'; el.classList.toggle('empty', !text);
+    d.getElementById('next').textContent = slideTitle(P.slides[P.index + 1]);
+  }
   // Recording: the camera and microphone as one MP4 take, and the time each slide came on.
   function recordingType() {
     if (!window.MediaRecorder) return null;
@@ -1395,16 +1458,22 @@
     P.rec = { rec, chunks: [], marks: [{ slide: P.index, time: 0 }], t0: performance.now(), elapsed: 0, started: true, type };
     rec.ondataavailable = (e) => { if (e.data.size) P.rec.chunks.push(e.data); };
     rec.start(1000);
-    $('#pill').hidden = false;
-    const tick = () => { if (!P.rec) return; $('#ptime').textContent = clock(recTime()); P.rec.raf = requestAnimationFrame(tick); };
+    $('#pill').hidden = false; $('#ppause').hidden = false; $('#ppause').textContent = 'Pause';
+    const tick = () => { if (!P.rec) return; $('#ptime').textContent = (P.rec.paused ? 'Paused · ' : '') + clock(recTime()); P.rec.raf = requestAnimationFrame(tick); };
     tick();
+  }
+
+  function togglePause() {
+    const r = P.rec; if (!r) return;
+    if (r.paused) { r.rec.resume(); r.t0 = performance.now(); r.paused = false; $('#ppause').textContent = 'Pause'; $('#present').classList.remove('paused'); }
+    else { r.rec.pause(); r.elapsed += (performance.now() - r.t0) / 1000; r.paused = true; $('#ppause').textContent = 'Resume'; $('#present').classList.add('paused'); }
   }
   async function stopRecording() {
     const r = P.rec; if (!r) return;
     cancelAnimationFrame(r.raf);
     const duration = recTime();
     await new Promise((ok) => { r.rec.onstop = ok; r.rec.stop(); });
-    P.rec = null; $('#pill').hidden = true; $('#bubble').hidden = true; $('#bubble').srcObject = null;
+    P.rec = null; $('#pill').hidden = true; $('#ppause').hidden = true; $('#present').classList.remove('paused'); $('#bubble').hidden = true; $('#bubble').srcObject = null;
     $('#present').classList.remove('recording');
     stopCamera();
     closePresent();
@@ -1422,6 +1491,7 @@
       toast('Commentary saved. It’s in FreeView on your other devices too.');
     });
     renderCommentary();
+    const c = await latestCommentary(); if (c) present({ from: c.marks[0].slide, watch: c });
   }
   const clock = (s) => { s = Math.max(0, Math.floor(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 
@@ -1433,7 +1503,7 @@
       const c = await store.json(p); if (!c || !Array.isArray(c.marks) || !c.marks.length) continue;
       const dir = p.slice(0, -'/commentary.json'.length);
       const take = await store.src(`${dir}/take.mov`); if (!take) continue;
-      if (!best || (c.recordedAt || '') > (best.recordedAt || '')) best = Object.assign(c, { take });
+      if (!best || (c.recordedAt || '') > (best.recordedAt || '')) best = Object.assign(c, { take, _dir: dir });
     }
     return best;
   }
@@ -1443,20 +1513,131 @@
     b.hidden = !c;
     if (c) $('span', b).textContent = `Watch Commentary · ${clock(c.duration || 0)}`;
   }
+  // The app's layouts (CommentaryLayout.swift): where the camera and the slides sit, by template id.
+  const FULL = { along: [0, 1], across: [0, 1] }, HIDDEN = { along: [0, 1], across: [0, 1], hidden: true };
+  const TEMPLATES = {
+    split: { name: 'Split', face: { along: [0.5, 1], across: [0, 1] }, scene: { along: [0, 0.5], across: [0, 1] } },
+    faceWithSlides: { name: 'You, slides inset', face: FULL, scene: { corner: 'nearAlongFarAcross', side: 0.42, margin: 0.04, radius: 0.1 } },
+    faceOnly: { name: 'You only', face: FULL, scene: HIDDEN },
+    slidesOnly: { name: 'Slides only', face: HIDDEN, scene: FULL },
+  };
+  function template(tid) {
+    const [kind, corner] = (tid || '').split(':');
+    if (kind === 'bubble' && corner) return { name: 'Bubble', face: { corner, side: 0.30, margin: 0.04, radius: 0.5 }, scene: FULL };
+    if (kind === 'inset' && corner) return { name: 'Inset', face: { corner, side: 0.34, margin: 0.04, radius: 0.14 }, scene: FULL };
+    return TEMPLATES[tid] || template('bubble:farAlongFarAcross');
+  }
+  function layerRect(frame, W, H) {
+    const portrait = H >= W;
+    if (frame.corner) {
+      const short = Math.min(W, H), side = frame.side * short, m = frame.margin * short;
+      const farAlong = frame.corner.startsWith('farAlong'), farAcross = frame.corner.endsWith('FarAcross');
+      const a = farAlong ? (portrait ? H : W) - m - side : m, c = farAcross ? (portrait ? W : H) - m - side : m;
+      return portrait ? { x: c, y: a, w: side, h: side, r: frame.radius * side } : { x: a, y: c, w: side, h: side, r: frame.radius * side };
+    }
+    const long = portrait ? H : W, short = portrait ? W : H;
+    const a0 = frame.along[0] * long, a1 = frame.along[1] * long, c0 = frame.across[0] * short, c1 = frame.across[1] * short;
+    return Object.assign(portrait ? { x: c0, y: a0, w: c1 - c0, h: a1 - a0, r: 0 } : { x: a0, y: c0, w: a1 - a0, h: c1 - c0, r: 0 }, { hidden: !!frame.hidden });
+  }
+  function applyLayout(tid) {
+    // As in the app's review, the stage sits above the controls (slides re-laid out, not scaled).
+    const shell = $('#present'), rv = $('#review'), W = shell.clientWidth, H = shell.clientHeight - (rv.hidden ? 0 : rv.offsetHeight + 28), t = template(tid);
+    const place = (el, r) => { Object.assign(el.style, { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px', right: 'auto', bottom: 'auto', borderRadius: r.r + 'px', opacity: r.hidden ? '0' : '1' }); };
+    const face = layerRect(t.face, W, H), scene = layerRect(t.scene, W, H);
+    place($('#bubble'), face); place($('#pstage'), scene);
+    shell.classList.toggle('face-behind', !scene.hidden && scene.w * scene.h < face.w * face.h);
+    P.applied = tid;
+  }
+  function resetLayers() { for (const el of [$('#bubble'), $('#pstage')]) el.removeAttribute('style'); $('#present').classList.remove('face-behind'); }
+  const layoutOf = (c) => c.layout || { baseTemplateID: 'bubble:farAlongFarAcross', switches: [] };
+  function layoutAtTime(c, t) { const L = layoutOf(c); let id = L.baseTemplateID || 'bubble:farAlongFarAcross'; for (const sw of (L.switches || []).slice().sort((a, b) => a.time - b.time)) { if (sw.time <= t + 0.001) id = sw.templateID; else break; } return id; }
   function startWatching(c) {
     const v = $('#bubble'); v.srcObject = null; v.src = c.take; v.hidden = false; v.muted = false;
-    P.watch = c;
+    P.watch = c; P.applied = null;
+    $('#pill').hidden = true; $('#review').hidden = false;
     const marks = c.marks.slice().sort((a, b) => a.time - b.time);
     const at = (t) => { let n = marks[0].slide; for (const m of marks) if (m.time <= t + 0.001) n = m.slide; else break; return n; };
-    const tick = () => { if (!P.watch) return; const n = at(v.currentTime); if (n !== P.index) go(n, true); $('#ptime').textContent = clock(v.currentTime); P.watch.raf = requestAnimationFrame(tick); };
+    const scrub = $('#rscrub');
+    const tick = () => {
+      if (!P.watch) return;
+      const n = at(v.currentTime); if (n !== P.index) go(n, true);
+      const tid = layoutAtTime(c, v.currentTime); if (tid !== P.applied) { P.applied = tid; renderReview(); applyLayout(tid); }
+      if (!P.scrubbing) scrub.value = v.currentTime;
+      $('#rtime').textContent = `${clock(v.currentTime)} / ${clock(c.duration || v.duration || 0)}`;
+      $('#rplay').innerHTML = v.paused ? ICON.play : ICON.pause;
+      P.watch.raf = requestAnimationFrame(tick);
+    };
+    scrub.max = c.duration || 1; scrub.step = 0.05;
+    scrub.oninput = () => { P.scrubbing = true; v.currentTime = +scrub.value; };
+    scrub.onchange = () => { P.scrubbing = false; };
+    v.onloadedmetadata = () => { if (!c.duration) { scrub.max = v.duration; } };
     v.onended = () => toast('That’s the end of the commentary.');
+    renderReview(); applyLayout(layoutAtTime(c, 0)); requestAnimationFrame(() => applyLayout(P.applied));
     v.play().then(tick).catch(() => { v.muted = true; v.play().then(tick); });
-    $('#pill').hidden = false;
+    addEventListener('resize', relayoutReview);
   }
+  function relayoutReview() { if (P.watch) applyLayout(P.applied); }
   function stopWatching() {
     if (!P.watch) return;
     cancelAnimationFrame(P.watch.raf); P.watch = null;
-    const v = $('#bubble'); v.pause(); v.removeAttribute('src'); v.load(); v.hidden = true; $('#pill').hidden = true;
+    removeEventListener('resize', relayoutReview);
+    const v = $('#bubble'); v.pause(); v.removeAttribute('src'); v.load(); v.hidden = true; $('#review').hidden = true;
+    resetLayers();
+  }
+  const LAYOUT_CHOICES = [['bubble', 'Bubble'], ['inset', 'Inset'], ['split', 'Split'], ['faceWithSlides', 'You, slides inset'], ['faceOnly', 'You only'], ['slidesOnly', 'Slides only']];
+  const CORNERS = [['nearAlongNearAcross', '↖'], ['farAlongNearAcross', '↗'], ['nearAlongFarAcross', '↙'], ['farAlongFarAcross', '↘']];
+  /** The review bar: the layout from the playhead on, its corner, keyframes on the timeline, As Recorded, Delete. */
+  function renderReview() {
+    const c = P.watch; if (!c) return;
+    const v = $('#bubble'), L = layoutOf(c), cur = P.applied || layoutAtTime(c, v.currentTime);
+    const [kind, corner] = cur.split(':');
+    const near = (L.switches || []).find((sw) => Math.abs(sw.time - v.currentTime) < 0.35);
+    $('#rlayouts').innerHTML = LAYOUT_CHOICES.map(([k, l]) => `<button type="button" class="chip${(kind === k) ? ' on' : ''}" data-lay="${k}">${l}</button>`).join('')
+      + (kind === 'bubble' || kind === 'inset' ? `<span class="corners">${CORNERS.map(([k, g]) => `<button type="button" class="chip corner${corner === k ? ' on' : ''}" data-corner="${k}" aria-label="Corner">${g}</button>`).join('')}</span>` : '');
+    const D = c.duration || v.duration || 1;
+    $('#rdots').innerHTML = (L.switches || []).map((sw, k) => `<button type="button" class="kdot${near === sw ? ' on' : ''}" style="left:${(sw.time / D) * 100}%" data-k="${k}" aria-label="Layout change at ${clock(sw.time)}"></button>`).join('');
+    $('#rnote').textContent = [template(L.baseTemplateID).name].concat((L.switches || []).slice().sort((a, b) => a.time - b.time).map((sw) => template(sw.templateID).name)).join(' → ') + (c.layoutChosen ? '' : ' · as recorded');
+    $('#rremove').hidden = !near;
+    $$('[data-lay]').forEach((b) => (b.onclick = () => {
+      const k = b.dataset.lay; const keepCorner = corner && (k === 'bubble' || k === 'inset') ? corner : 'farAlongFarAcross';
+      setLayoutFromHere(k === 'bubble' || k === 'inset' ? `${k}:${keepCorner}` : k);
+    }));
+    $$('[data-corner]').forEach((b) => (b.onclick = () => setLayoutFromHere(`${kind}:${b.dataset.corner}`)));
+    $$('#rdots .kdot').forEach((d) => (d.onclick = () => { v.currentTime = L.switches[+d.dataset.k].time + 0.01; renderReview(); }));
+  }
+  /** "Layout from here": a keyframe at the playhead (the base layout when at the start), saved at once. */
+  function setLayoutFromHere(tid) {
+    const c = P.watch, v = $('#bubble'), t = v.currentTime;
+    const L = JSON.parse(JSON.stringify(layoutOf(c))); L.switches = L.switches || [];
+    if (t < 0.3) L.baseTemplateID = tid;
+    else {
+      const near = L.switches.find((sw) => Math.abs(sw.time - t) < 0.35);
+      if (near) near.templateID = tid; else L.switches.push({ time: +t.toFixed(3), templateID: tid });
+      L.switches.sort((a, b) => a.time - b.time);
+    }
+    c.layout = L; c.layoutChosen = true; applyLayout(layoutAtTime(c, t)); renderReview(); saveCommentary(c);
+  }
+  function removeKeyframe() {
+    const c = P.watch, v = $('#bubble'), L = layoutOf(c);
+    L.switches = (L.switches || []).filter((sw) => Math.abs(sw.time - v.currentTime) >= 0.35);
+    c.layout = L; c.layoutChosen = true; applyLayout(layoutAtTime(c, v.currentTime)); renderReview(); saveCommentary(c);
+  }
+  function asRecorded() {
+    const c = P.watch; c.layout = JSON.parse(JSON.stringify(c.recordedLayout || { baseTemplateID: 'bubble:farAlongFarAcross', switches: [] })); c.layoutChosen = false;
+    applyLayout(layoutAtTime(c, $('#bubble').currentTime)); renderReview(); saveCommentary(c);
+  }
+  const saveCommentary = debounce(() => {
+    const c = P.watch || P.lastWatch; if (!c) return;
+    const out = Object.assign({}, c); delete out.take; delete out._dir; delete out.raf;
+    work('Saving the layout…', () => store.writeJSON(`${c._dir}/commentary.json`, out, true));
+  }, 500);
+  function deleteCommentary() {
+    const c = P.watch; if (!c) return;
+    askChoice('Delete This Commentary?', 'The recording and its layout are deleted from FreeView on all your devices. This can’t be undone.', [['remove', 'Delete']], async () => {
+      const dir = c._dir; closePresent();
+      await work('Deleting…', async () => { for (const p2 of store.pathsIn(dir + '/')) await store.deleteFile(p2); });
+      renderCommentary();
+    });
   }
 
   // ── wiring ──
@@ -1479,6 +1660,15 @@
     $('#recordbtn').onclick = () => present({ from: 0, record: true });
     $('#watchbtn').onclick = async () => { const c = await latestCommentary(); if (c) present({ from: c.marks[0].slide, watch: c }); };
     $('#pclose').onclick = closePresent;
+    $('#pnotesbtn').onclick = openNotesWindow;
+    $('#ppause').onclick = togglePause;
+    $('#rplay').onclick = () => { const v = $('#bubble'); v.paused ? v.play() : v.pause(); };
+    $('#rdone').onclick = closePresent;
+    $('#rremove').onclick = removeKeyframe;
+    $('#rrecorded').onclick = asRecorded;
+    $('#rdelete').onclick = deleteCommentary;
+    $('#parrowl').onclick = (e) => { e.stopPropagation(); go(P.index - 1); };
+    $('#parrowr').onclick = (e) => { e.stopPropagation(); go(P.index + 1); };
     $('#pstop').onclick = () => (P.rec ? stopRecording() : closePresent());
     $('#pprev').onclick = () => go(P.index - 1);
     $('#pnext').onclick = () => go(P.index + 1);
@@ -1497,7 +1687,7 @@
         return;
       }
       if (P.watch && (e.key === ' ')) { e.preventDefault(); const v = $('#bubble'); v.paused ? v.play() : v.pause(); return; }
-      if (P.watch) { if (e.key === 'Escape') closePresent(); return; }
+      if (P.watch) { if (e.key === 'Escape') closePresent(); else if (e.key === 'ArrowLeft') $('#bubble').currentTime -= 5; else if (e.key === 'ArrowRight') $('#bubble').currentTime += 5; return; }
       if (['ArrowRight', 'ArrowDown', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); go(P.index + 1); }
       else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) { e.preventDefault(); go(P.index - 1); }
       else if (e.key === 'Escape') { e.preventDefault(); closePresent(); }
@@ -1526,6 +1716,8 @@
     const demo = new URLSearchParams(location.search).has('demo');
     if (demo) {
       store = new S.DemoStore(); await store.seed();
+      // Demo only: a handle for trying things out (nothing here reaches iCloud).
+      window.__fvDemo = { store, deck: () => deck, renderCommentary, present: (o) => present(o) };
       $('#modebadge').hidden = false;
       return enter();
     }

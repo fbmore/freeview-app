@@ -363,6 +363,37 @@
   @media (prefers-reduced-motion: reduce) { #pstage .pslide, #pstage .pslide.on { transition: opacity .2s !important; transform: none !important; } }
   #pnotes { position: absolute; left: 50%; top: max(16px, env(safe-area-inset-top)); transform: translateX(-50%); z-index: 7; max-width: min(720px, 80vw); max-height: 22vh; overflow: auto;
     padding: 10px 16px; border-radius: 14px; background: rgba(28,28,30,.82); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); font-size: 17px; line-height: 1.4; white-space: pre-wrap; }
+  #pnum { position: absolute; right: max(18px, env(safe-area-inset-right)); bottom: max(18px, env(safe-area-inset-bottom)); z-index: 4; display: none; padding: 4px 10px; border-radius: 999px;
+    background: rgba(0,0,0,.45); color: rgba(255,255,255,.85); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  #present.numbers #pnum { display: block; }
+  #present.watching #pnum { display: none; }
+  .parrow { position: absolute; top: 50%; z-index: 4; display: none; place-items: center; width: 48px; height: 48px; margin-top: -24px; border: 0; border-radius: 50%;
+    background: rgba(28,28,30,.55); color: #fff; cursor: pointer; -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); opacity: .7; transition: opacity .15s, transform .15s; }
+  .parrow:hover { opacity: 1; } .parrow:active { transform: scale(.96); }
+  #parrowl { left: 18px; } #parrowr { right: 18px; }
+  #present.arrows .parrow { display: grid; }
+  #present.paused #pill .dot { background: #ff9f0a; }
+  #present.watching #pstage, #present.watching #bubble { position: absolute; transition: left .4s var(--ease), top .4s var(--ease), width .4s var(--ease), height .4s var(--ease), border-radius .4s var(--ease), opacity .4s var(--ease); }
+  #present.watching #bubble { transform: none; aspect-ratio: auto; object-fit: cover; z-index: 3; }
+  #present.watching #pstage { z-index: 2; overflow: hidden; }
+  #present.watching.face-behind #bubble { z-index: 1; }
+  #present.watching .pcontrols { display: none; }
+  #review { position: absolute; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 8; width: min(920px, calc(100vw - 32px)); padding: 12px 14px;
+    border-radius: 18px; background: rgba(28,28,30,.86); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 16px 40px rgba(0,0,0,.5);
+    display: flex; flex-direction: column; gap: 10px; }
+  .rrow { display: flex; align-items: center; gap: 10px; } .rrow.wrap { flex-wrap: wrap; }
+  #rplay { color: var(--fg); width: 36px; height: 36px; background: rgba(255,255,255,.1); }
+  .rtrack { position: relative; flex: 1; height: 28px; display: flex; align-items: center; }
+  #rscrub { width: 100%; accent-color: #fff; }
+  #rdots { position: absolute; left: 8px; right: 8px; top: -2px; height: 8px; pointer-events: none; }
+  .kdot { position: absolute; top: 0; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; border: 0; background: #ffd60a; pointer-events: auto; cursor: pointer; box-shadow: 0 0 0 2px rgba(0,0,0,.6); }
+  .kdot.on { background: #fff; transform: scale(1.25); }
+  #rtime { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); min-width: 92px; text-align: right; }
+  .chip { min-height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: rgba(255,255,255,.08); color: var(--fg); font-size: 13px; font-weight: 590; cursor: pointer; transition: background-color .15s; }
+  .chip:hover { background: rgba(255,255,255,.16); } .chip.on { background: #fff; color: #000; }
+  .chip.corner { padding: 0 9px; } .corners { display: inline-flex; gap: 4px; margin-left: 6px; }
+  #rnote { margin: 0; font-size: 12.5px; color: var(--faint); }
+  #slideshow { display: flex; flex-direction: column; gap: 12px; }
   .pcontrols { position: absolute; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; align-items: center; gap: 4px; padding: 4px;
     background: rgba(28,28,30,.72); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border-radius: 999px; opacity: 0; transition: opacity .3s; z-index: 5; }
   #present:hover .pcontrols, #present:focus-within .pcontrols { opacity: 1; }
@@ -456,6 +487,10 @@
       <div class="grid2" id="contactfields"></div>
     </div>
     <div class="group">
+      <h2>Slideshow</h2>
+      <div id="slideshow" class="col"></div>
+    </div>
+    <div class="group">
       <h2>iCloud</h2>
       <p class="lede" id="icloudnote">Everything here is saved to your iCloud and shows up in FreeView on your iPhone, iPad and Mac.</p>
       <div class="row"><button type="button" class="btn" id="signout2">Sign Out</button></div>
@@ -492,11 +527,25 @@
   <video id="bubble" playsinline hidden></video>
   <div id="countdown" hidden></div>
   <div id="pnotes" hidden></div>
-  <div id="pill" hidden><span class="dot"></span><span id="ptime">0:00</span><button type="button" class="btn small" id="pstop">Stop</button></div>
+  <div id="pill" hidden><span class="dot"></span><span id="ptime">0:00</span><button type="button" class="btn small" id="ppause" hidden>Pause</button><button type="button" class="btn small" id="pstop">Stop</button></div>
+  <div id="pnum" aria-hidden="true"></div>
+  <button type="button" class="parrow" id="parrowl" aria-label="Previous slide"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+  <button type="button" class="parrow" id="parrowr" aria-label="Next slide"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+  <div id="review" hidden>
+    <div class="rrow"><button type="button" class="icon-btn" id="rplay" aria-label="Play or pause"></button>
+      <div class="rtrack"><input type="range" id="rscrub" min="0" value="0" aria-label="Position"><div id="rdots"></div></div>
+      <span id="rtime">0:00</span><button type="button" class="btn small primary" id="rdone">Done</button></div>
+    <div class="rrow wrap"><span id="rlayouts" class="row wrap"></span><span class="spacer"></span>
+      <button type="button" class="btn small ghost" id="rremove" hidden>Remove</button>
+      <button type="button" class="btn small ghost" id="rrecorded">As Recorded</button>
+      <button type="button" class="btn small ghost danger" id="rdelete">Delete</button></div>
+    <p id="rnote"></p>
+  </div>
   <div class="pcontrols">
     <button type="button" class="icon-btn" id="pprev" aria-label="Previous slide"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
     <span id="pcount">1 / 1</span>
     <button type="button" class="icon-btn" id="pnext" aria-label="Next slide"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+    <button type="button" class="icon-btn" id="pnotesbtn" aria-label="Notes window" title="Notes in a window of their own"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="M8 8.5h8M8 12h8M8 15.5h5"/></svg></button>
     <button type="button" class="icon-btn" id="pclose" aria-label="Stop presenting"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   </div>
 </div>
@@ -513,7 +562,7 @@
 <div id="toast" role="status" aria-live="polite"></div>
 <input type="file" id="picker" multiple hidden>
 
-<script src="/edit-store.js?v=7"></script>
-<script src="/edit.js?v=7"></script>
+<script src="/edit-store.js?v=8"></script>
+<script src="/edit.js?v=8"></script>
 </body>
 </html>
