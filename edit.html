@@ -242,8 +242,34 @@
   .dp-item:hover .frame { box-shadow: 0 0 0 2px var(--accent); }
   .dp-name { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .sheet .row.end { justify-content: flex-end; margin-top: 16px; }
-  .sheet input[type=url] { width: 100%; border: 0; border-radius: var(--r-md); background: var(--raised); padding: 11px 12px; box-shadow: inset 0 0 0 1px var(--hairline); }
-  .sheet input[type=url]:focus { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
+  .sheet input.nameinput, .sheet input[type=url] { width: 100%; border: 0; border-radius: var(--r-md); background: var(--raised); padding: 11px 12px; box-shadow: inset 0 0 0 1px var(--hairline); }
+  .sheet input.nameinput:focus, .sheet input[type=url]:focus { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
+  #stylebtn[aria-pressed="true"] { background: var(--fg); color: #000; }
+  #inspector .kind .btn { text-transform: none; letter-spacing: 0; }
+  .swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .swatch { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 0; border: 0; background: none; cursor: pointer; }
+  .swatch .sw { position: relative; width: 100%; aspect-ratio: 4 / 3; border-radius: 10px; box-shadow: 0 0 0 1px rgba(255,255,255,.12); display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start; padding: 7px; gap: 3px;
+    transition: box-shadow .15s var(--ease), transform .15s var(--ease); }
+  .swatch .sw i { width: 14px; height: 2px; border-radius: 1px; } .swatch .sw b { font-size: 16px; line-height: 1; }
+  .swatch:hover .sw { box-shadow: 0 0 0 1px rgba(255,255,255,.3); }
+  .swatch:active .sw { transform: scale(.96); }
+  .swatch.on .sw { box-shadow: 0 0 0 2.5px var(--accent); }
+  .swatch .swn { font-size: 11px; color: var(--muted); }
+  .colors { display: flex; flex-direction: column; background: var(--raised); border-radius: var(--r-md); overflow: hidden; }
+  .colorrow { position: relative; display: flex; align-items: center; justify-content: space-between; min-height: 44px; padding: 0 12px; font-size: 14px; cursor: pointer; }
+  .colorrow + .colorrow::before { content: ''; position: absolute; top: 0; left: 12px; right: 0; height: 1px; background: var(--hairline); }
+  .colorrow input { width: 34px; height: 26px; padding: 0; border: 0; border-radius: 7px; background: none; cursor: pointer; }
+  .colorrow input::-webkit-color-swatch-wrapper { padding: 0; } .colorrow input::-webkit-color-swatch { border: 0; border-radius: 7px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.2); }
+  .slider { display: grid; grid-template-columns: 110px 1fr; align-items: center; gap: 10px; font-size: 14px; }
+  .slider input { width: 100%; accent-color: var(--accent); }
+  .mi-thumb.contain { background-size: contain; background-color: #2a2a2e; } .mi-thumb.round { width: 55px; border-radius: 50%; }
+  .savedlist { display: flex; flex-direction: column; background: var(--raised); border-radius: var(--r-md); overflow: hidden; }
+  .savedrow { position: relative; display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 0 12px; border: 0; background: none; text-align: left; font-size: 14px; cursor: pointer; }
+  .savedrow + .savedrow::before { content: ''; position: absolute; top: 0; left: 40px; right: 0; height: 1px; background: var(--hairline); }
+  .savedrow:hover { background: rgba(255,255,255,.04); } .savedrow span:nth-child(2) { flex: 1; } .savedrow em { font-style: normal; color: var(--accent); }
+  .savedrow .dot { width: 18px; height: 18px; border-radius: 50%; flex: none; }
+  details.contacts summary { cursor: pointer; font-size: 14px; color: var(--accent); padding: 4px 0; }
+  details.contacts .grid2 { margin-top: 8px; }
   .bgrow { display: flex; align-items: center; gap: 12px; }
   .mi-thumb.big { width: 88px; height: 55px; border-radius: 8px; }
   .btnrow { display: grid; grid-template-columns: 1fr 1.4fr auto; gap: 6px; align-items: center; }
@@ -404,6 +430,7 @@
       <button type="button" class="icon-btn" id="backbtn" aria-label="All presentations"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
       <input id="title" aria-label="Presentation title" autocomplete="off" spellcheck="false">
       <span class="spacer"></span>
+      <button type="button" class="btn" id="stylebtn" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.8 1.8-1.7 0-1.1-.9-1.4-.9-2.4 0-1 .8-1.6 1.8-1.6H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.2" fill="currentColor"/><circle cx="10" cy="7" r="1.2" fill="currentColor"/><circle cx="15" cy="7.5" r="1.2" fill="currentColor"/></svg><span class="label">Style</span></button>
       <button type="button" class="btn" id="addbtn"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="label">Add</span></button>
       <button type="button" class="btn" id="watchbtn" hidden><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l6-3.5z" fill="currentColor" stroke="none"/></svg><span>Watch Commentary</span></button>
       <button type="button" class="btn" id="recordbtn"><svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="12" r="6.5" fill="#ff453a"/></svg><span class="label">Record Commentary</span></button>
@@ -438,10 +465,12 @@
 <dialog id="deckpick" class="sheet"><h2>Add from This Presentation</h2><div class="dp-grid"></div><form method="dialog" class="row end"><button class="btn" value="cancel">Cancel</button></form></dialog>
 <dialog id="sitepick" class="sheet"><form method="dialog"><h2>Add a Website</h2><input type="url" placeholder="example.com" aria-label="Web address" spellcheck="false" autocomplete="url">
   <div class="row end"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn primary" value="add">Add</button></div></form></dialog>
+<dialog id="namepick" class="sheet"><form method="dialog"><h2>Name</h2><input type="text" class="nameinput" aria-label="Name" autocomplete="off">
+  <div class="row end"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn primary" value="save">Save</button></div></form></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
 <input type="file" id="picker" multiple hidden>
 
-<script src="/edit-store.js?v=4"></script>
-<script src="/edit.js?v=4"></script>
+<script src="/edit-store.js?v=5"></script>
+<script src="/edit.js?v=5"></script>
 </body>
 </html>

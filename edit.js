@@ -396,6 +396,7 @@
     const visit = store.visit(id); if (!visit) return showLibrary();
     const { folder, entries } = store.deckOf(visit);
     deck = { visit, folder, entries, selected: Math.min(selected, Math.max(0, entries.length - 1)), style: await store.json(`${folder}/.style.json`) };
+    $('#stylebtn').setAttribute('aria-pressed', 'false');
     show('deck');
     $('#crumb').textContent = visit.title;
     $('#title').value = visit.title;
@@ -466,6 +467,7 @@
   let selectedToken = 0;
   async function renderSelected() {
     const token = ++selectedToken;
+    if (deck && deck.styling) { const info0 = deck.entries.length && await slideInfo(deck.folder, deck.entries[deck.selected]); if (info0) { const box0 = document.createElement('div'); $('#canvas').replaceChildren(box0); await draw(box0, info0, { live: !!cameraStream }); } return renderStyle(); }
     const canvas = $('#canvas'), panel = $('#inspector');
     if (!deck.entries.length) {
       canvas.innerHTML = `<div class="blankstate"><strong>Start with your photos, videos or a PDF</strong><span>Or make a Magic slide: a title, a few words and pictures, laid out for you.</span>
@@ -624,6 +626,168 @@
     $$('[data-bu]', panel).forEach((i) => (i.oninput = () => { s.buttons[+i.dataset.bu].url = i.value.trim(); bsave(); }));
     $$('[data-bdrop]', panel).forEach((b) => (b.onclick = () => { s.buttons.splice(+b.dataset.bdrop, 1); if (!s.buttons.length) delete s.buttons; saveCustom(info, true); }));
     $('#addbutton', panel).onclick = () => { s.buttons = (s.buttons || []).concat([{ label: '', url: '' }]); renderInspector(info); const l = $$('[data-bl]', panel).pop(); if (l) l.focus(); };
+  }
+
+  // ── the presentation's Style (the app's Style sheet): how its covers and Magic slides look ──
+  const THEME_DEFAULT = { background: '#0B0B0C', foreground: '#FFFFFF', accent: '#FFFFFF', font: 'system', align: 'left', titleScale: 1, bodyScale: 1, radius: 2 };
+  const PRESETS = [
+    ['Minimal', {}],
+    ['Paper', { background: '#FFFFFF', foreground: '#111111', accent: '#111111' }],
+    ['Editorial', { background: '#F6F1E7', foreground: '#1F1B16', accent: '#B4532A', font: 'serif', titleScale: 1.08 }],
+    ['Bold', { background: '#111111', foreground: '#FFFFFF', accent: '#FFD60A', font: 'system', align: 'center', titleScale: 1.2 }],
+    ['Playful', { background: '#5B3DF5', foreground: '#FFFFFF', accent: '#FFB4E1', font: 'rounded', radius: 4 }],
+    ['Mono', { background: '#0E1116', foreground: '#E6EDF3', accent: '#3FB950', font: 'mono', bodyScale: 0.92, radius: 1 }],
+    ['Midnight', { background: '#0B1B3A', foreground: '#F2F5FF', accent: '#7CC4FF', font: 'avenir' }],
+  ].map(([n, t]) => [n, Object.assign({}, THEME_DEFAULT, t)]);
+  const FONTS = [['system', 'System'], ['rounded', 'Rounded'], ['serif', 'Serif'], ['mono', 'Mono'], ['avenir', 'Avenir']];
+  const FONT_CSS = { system: '-apple-system, system-ui, sans-serif', rounded: 'ui-rounded, "SF Pro Rounded", system-ui, sans-serif', serif: 'ui-serif, "New York", Georgia, serif', mono: 'ui-monospace, "SF Mono", Menlo, monospace', avenir: '"Avenir Next", Avenir, system-ui, sans-serif' };
+  const sameTheme = (a, b) => Object.keys(THEME_DEFAULT).every((k) => String(a[k]).toUpperCase() === String(b[k]).toUpperCase());
+  /** The style as the apps decode it: theme (every key) and logo always there. */
+  function fullStyle(st) {
+    const out = Object.assign({ logo: 'profile' }, st || {});
+    out.theme = Object.assign({}, THEME_DEFAULT, (st || {}).theme);
+    return out;
+  }
+  let styleSave;
+  async function saveStyle(redrawPanel) {
+    clearTimeout(styleSave);
+    styleSave = setTimeout(() => work('Saving…', async () => {
+      await store.writeJSON(`${deck.folder}/.style.json`, fullStyle(deck.style));
+      await saveEntries(deck.entries);
+    }), 500);
+    infoCache.clear();
+    const box = $('#canvas > div'); const info = deck.entries.length && await slideInfo(deck.folder, deck.entries[deck.selected]);
+    if (box && info) draw(box, info, { live: !!cameraStream });
+    $$('#rail .thumb:not(.add)').forEach((t, i) => slideInfo(deck.folder, deck.entries[i]).then((x) => { if (x.type === 'custom') draw($('.frame', t), x, { thumb: true }); }));
+    if (redrawPanel) renderStyle();
+  }
+  function swatch(name, theme, current, attr) {
+    const on = sameTheme(theme, current);
+    return `<button type="button" class="swatch${on ? ' on' : ''}" ${attr} aria-pressed="${on}"><span class="sw" style="background:${theme.background};color:${theme.foreground}"><i style="background:${theme.accent}"></i><b style="font-family:${FONT_CSS[theme.font] || FONT_CSS.system}">Aa</b></span><span class="swn">${esc(name)}</span></button>`;
+  }
+  async function renderStyle() {
+    const panel = $('#inspector');
+    deck.style = fullStyle(deck.style);
+    const st = deck.style, t = st.theme;
+    const saved = (await store.json('.profile/styles.json')) || [];
+    const others = store.decks().filter((v) => v.id !== deck.visit.id && v.kind.deck).slice(0, 30);
+    const logoURL = st.logo === 'custom' ? await store.src(`${deck.folder}/.logo.png`) : st.logo === 'profile' ? await store.src('.profile/default-logo.png') : '';
+    const custom = st.presenter === 'custom';
+    const person = Object.assign({ firstName: '', lastName: '', role: '', contacts: {} }, st.person || {});
+    const photoURL = custom ? await store.src(`${deck.folder}/.presenter.jpg`) : '';
+    panel.innerHTML = `<div class="kind">Style<button type="button" class="btn small" id="styledone">Done</button></div>
+      <p class="foot">Styles apply to covers and Magic slides only. Photos, PDFs and other files stay as they are.</p>
+      <section class="sect"><h3>Presets</h3><div class="swatches">${PRESETS.map(([n, th], i) => swatch(n, th, t, `data-preset="${i}"`)).join('')}</div>
+        <button type="button" class="btn small" id="brandbtn" ${logoURL ? '' : 'disabled'}>Make a Style from the Logo</button><div id="brandout"></div></section>
+      <section class="sect"><h3>Colours</h3><div class="colors">
+        ${[['background', 'Background'], ['foreground', 'Text'], ['accent', 'Accent']].map(([k, l]) => `<label class="colorrow"><span>${l}</span><input type="color" data-color="${k}" value="${esc(String(t[k]).toLowerCase())}"></label>`).join('')}</div></section>
+      <section class="sect"><h3>Type</h3>
+        <label class="field inline"><span>Font</span><select id="st-font">${FONTS.map(([v, l]) => `<option value="${v}" ${t.font === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+        <div class="seg" role="radiogroup" aria-label="Alignment">${[['center', 'Centre'], ['left', 'Left']].map(([v, l]) => `<button type="button" role="radio" aria-checked="${t.align === v}" data-stalign="${v}">${l}</button>`).join('')}</div>
+        ${[['titleScale', 'Titles', 0.75, 1.4, 0.01], ['bodyScale', 'Text', 0.8, 1.3, 0.01], ['radius', 'Picture corners', 0, 6, 0.1]].map(([k, l, a, b, st2]) => `<label class="slider"><span>${l}</span><input type="range" data-range="${k}" min="${a}" max="${b}" step="${st2}" value="${t[k]}"></label>`).join('')}</section>
+      <section class="sect"><h3>Logo</h3>
+        <div class="seg" role="radiogroup" aria-label="Logo">${[['profile', 'From Settings'], ['custom', 'This Presentation’s'], ['none', 'None']].map(([v, l]) => `<button type="button" role="radio" aria-checked="${st.logo === v}" data-logo="${v}">${l}</button>`).join('')}</div>
+        ${st.logo === 'custom' ? `<div class="bgrow"><span class="mi-thumb big contain" id="logothumb"></span><button type="button" class="btn small" id="logopick">${logoURL ? 'Replace Logo…' : 'Choose Logo…'}</button></div>` : ''}
+        <p class="foot">${st.logo === 'profile' && !store.has('.profile/default-logo.png') ? 'Add a default logo in Settings › Profile.' : 'Shown on slides that have Logo turned on.'}</p></section>
+      <section class="sect"><h3>Presenter</h3>
+        <div class="seg" role="radiogroup" aria-label="Presenter">${[['profile', 'From Settings'], ['custom', 'This Presentation’s']].map(([v, l]) => `<button type="button" role="radio" aria-checked="${(st.presenter || 'profile') === v}" data-presenter="${v}">${l}</button>`).join('')}</div>
+        ${custom ? `<div class="bgrow"><span class="mi-thumb big round" id="ppthumb"></span><div class="row wrap"><button type="button" class="btn small" id="pppick">${photoURL ? 'Replace Photo…' : 'Choose Photo…'}</button>${photoURL ? '<button type="button" class="btn small ghost danger" id="ppdrop">Remove Photo</button>' : ''}</div></div>
+          <div class="grid2"><label class="field"><span>First name</span><input data-pp="firstName" value="${esc(person.firstName)}"></label><label class="field"><span>Last name</span><input data-pp="lastName" value="${esc(person.lastName)}"></label></div>
+          <label class="field"><span>Role or company</span><input data-pp="role" value="${esc(person.role)}"></label>
+          <details class="contacts"><summary>Contacts</summary><div class="grid2">${CONTACT_ORDER.map((k) => `<label class="field"><span>${CONTACT_LABEL[k]}</span><input data-ppc="${k}" value="${esc((person.contacts || {})[k] || '')}" spellcheck="false"></label>`).join('')}</div></details>` : ''}
+        <p class="foot">${custom ? 'Covers and Magic slides in this presentation show this person where a slide has Name, Photo, Role or contacts turned on. A slide can still have a presenter of its own.' : 'Covers and Magic slides show you, from Settings › Profile, where a slide has Name, Photo, Role or contacts turned on.'}</p></section>
+      <section class="sect"><h3>Saved Styles</h3>
+        ${saved.length ? `<div class="savedlist">${saved.map((x, i) => `<button type="button" class="savedrow" data-saved="${i}"><span class="dot" style="background:${x.theme.background};box-shadow:inset 0 0 0 4px ${x.theme.accent}"></span><span>${esc(x.name)}</span>${st.themeName === x.name && sameTheme(x.theme, t) ? '<em>✓</em>' : ''}</button>`).join('')}</div>` : ''}
+        <button type="button" class="btn small" id="savestyle">Save Style As…</button>
+        ${others.length ? `<label class="field inline"><span>Copy from</span><select id="copyfrom"><option value="">A presentation…</option>${others.map((v) => `<option value="${v.id}">${esc(v.title)}</option>`).join('')}</select></label>` : ''}</section>`;
+
+    $('#styledone').onclick = () => { deck.styling = false; $('#stylebtn').setAttribute('aria-pressed', 'false'); renderSelected(); };
+    $$('[data-preset]', panel).forEach((b) => (b.onclick = () => { st.theme = Object.assign({}, PRESETS[+b.dataset.preset][1]); delete st.themeName; saveStyle(true); }));
+    $$('[data-color]', panel).forEach((i) => (i.oninput = () => { t[i.dataset.color] = i.value.toUpperCase(); delete st.themeName; saveStyle(false); }));
+    $('#st-font').onchange = (e) => { t.font = e.target.value; delete st.themeName; saveStyle(true); };
+    $$('[data-stalign]', panel).forEach((b) => (b.onclick = () => { t.align = b.dataset.stalign; delete st.themeName; saveStyle(true); }));
+    $$('[data-range]', panel).forEach((i) => (i.oninput = () => { t[i.dataset.range] = Math.round(+i.value * 100) / 100; delete st.themeName; saveStyle(false); }));
+    $$('[data-logo]', panel).forEach((b) => (b.onclick = () => { st.logo = b.dataset.logo; saveStyle(true); }));
+    const lt = $('#logothumb', panel); if (lt && logoURL) lt.style.backgroundImage = `url("${logoURL}")`;
+    const lp = $('#logopick', panel); if (lp) lp.onclick = () => pickFiles('image/*', ([f]) => work('Saving the logo…', async () => { await store.putFile(`${deck.folder}/.logo.png`, await asImage(f, 'image/png', 1200)); }).then(() => saveStyle(true)));
+    $$('[data-presenter]', panel).forEach((b) => (b.onclick = () => {
+      if (b.dataset.presenter === 'custom') { st.presenter = 'custom'; if (!st.person) st.person = Object.assign({ firstName: '', lastName: '', role: '', contacts: {} }, profile || {}); }
+      else { st.presenter = 'profile'; }
+      saveStyle(true);
+    }));
+    const pt = $('#ppthumb', panel); if (pt && photoURL) pt.style.backgroundImage = `url("${photoURL}")`;
+    const pp = $('#pppick', panel); if (pp) pp.onclick = () => pickFiles('image/*', ([f]) => work('Saving the photo…', async () => { await store.putFile(`${deck.folder}/.presenter.jpg`, await asImage(f, 'image/jpeg', 1200)); }).then(() => saveStyle(true)));
+    const pd = $('#ppdrop', panel); if (pd) pd.onclick = () => work('Removing…', () => store.deleteFile(`${deck.folder}/.presenter.jpg`)).then(() => saveStyle(true));
+    $$('[data-pp]', panel).forEach((i) => (i.oninput = () => { st.person[i.dataset.pp] = i.value; saveStyle(false); }));
+    $$('[data-ppc]', panel).forEach((i) => (i.oninput = () => { const c = st.person.contacts = st.person.contacts || {}; const v = i.value.trim(); if (v) c[i.dataset.ppc] = v; else delete c[i.dataset.ppc]; saveStyle(false); }));
+    $$('[data-saved]', panel).forEach((b) => (b.onclick = () => { const x = saved[+b.dataset.saved]; st.theme = Object.assign({}, THEME_DEFAULT, x.theme); st.themeName = x.name; saveStyle(true); }));
+    $('#savestyle', panel).onclick = () => {
+      askName('Save Style As', st.themeName || '', (name) => {
+      const list = saved.filter((x) => x.name !== name).concat([{ id: S.uuid(), name, theme: Object.assign({}, t) }]);
+      work('Saving the style…', () => store.writeJSON('.profile/styles.json', list)).then(() => { st.themeName = name; saveStyle(true); });
+      });
+    };
+    const cf = $('#copyfrom', panel); if (cf) cf.onchange = () => copyStyleFrom(cf.value);
+    $('#brandbtn', panel).onclick = () => brandStyles(logoURL);
+  }
+
+  /** A name, asked in a small sheet (Return saves). */
+  function askName(title, value, done) {
+    const d = $('#namepick'), input = $('input', d);
+    $('h2', d).textContent = title; input.value = value; d.showModal(); input.select();
+    input.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); d.close('save'); } };
+    d.onclose = () => { const v = input.value.trim(); if (d.returnValue === 'save' && v) done(v); };
+  }
+  async function copyStyleFrom(id) {
+    const v = store.visit(id); if (!v) return;
+    const other = store.deckOf(v).folder;
+    const theirs = fullStyle(await store.json(`${other}/.style.json`));
+    await work('Copying the style…', async () => {
+      const copy = async (from, to) => { const u = await store.src(`${other}/${from}`); if (u) await store.putFile(`${deck.folder}/${to}`, await (await fetch(u)).blob()); };
+      if (theirs.logo === 'custom') await copy('.logo.png', '.logo.png');
+      if (theirs.presenter === 'custom') await copy('.presenter.jpg', '.presenter.jpg');
+      deck.style = theirs;
+    });
+    saveStyle(true);
+  }
+  /** "Make a Style from the Logo": its main colours (a few rounds of k-means, as the app does), as three styles. */
+  async function brandStyles(url) {
+    const out = $('#brandout');
+    const img = new Image(); img.crossOrigin = 'anonymous'; img.src = url;
+    try { await img.decode(); } catch { return; }
+    const N = 64, c = document.createElement('canvas'); c.width = c.height = N;
+    const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(img, 0, 0, N, N);
+    let d; try { d = x.getImageData(0, 0, N, N).data; } catch { return toast('That logo can’t be read here.'); }
+    const samples = []; let opaque = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] <= 200) continue; opaque++;
+      const p = [d[i] / 255, d[i + 1] / 255, d[i + 2] / 255], mx = Math.max(...p), mn = Math.min(...p);
+      if (mx < 0.08 || mx - mn < 0.12) continue; samples.push(p);
+    }
+    if (samples.length < 8 || samples.length * 100 < opaque * 4) { out.innerHTML = '<p class="foot">This logo is black, white or grey, so there are no brand colours to use. Pick a preset or set the colours below.</p>'; return; }
+    const K = 3, dist = (a, b) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2;
+    let centers = [0, 1, 2].map((k) => samples[Math.floor(k * samples.length / K)]);
+    const nearest = (p) => centers.reduce((best, cc, k) => (dist(p, cc) < dist(p, centers[best]) ? k : best), 0);
+    for (let r = 0; r < 12; r++) {
+      const sums = centers.map(() => [0, 0, 0]), counts = centers.map(() => 0);
+      for (const p of samples) { const k = nearest(p); sums[k][0] += p[0]; sums[k][1] += p[1]; sums[k][2] += p[2]; counts[k]++; }
+      centers = centers.map((cc, k) => (counts[k] ? sums[k].map((v) => v / counts[k]) : cc));
+    }
+    const counts = centers.map(() => 0); for (const p of samples) counts[nearest(p)]++;
+    const colors = centers.map((cc, k) => [cc, counts[k]]).sort((a, b) => b[1] - a[1]).filter(([, n]) => n > samples.length / 20).map(([cc]) => cc);
+    const hex = (cc) => '#' + cc.map((v) => Math.round(v * 255).toString(16).padStart(2, '0')).join('').toUpperCase();
+    const lum = (cc) => { const l = (v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4); return 0.2126 * l(cc[0]) + 0.7152 * l(cc[1]) + 0.0722 * l(cc[2]); };
+    const contrast = (a, b) => { const [l1, l2] = [lum(a), lum(b)]; return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05); };
+    const main = colors[0], second = colors[1] || main, base = deck.style.theme;
+    const themes = [
+      ['Brand', Object.assign({}, base, { background: hex(main), foreground: lum(main) > 0.45 ? '#111111' : '#FFFFFF', accent: contrast(second, main) > 1.6 ? hex(second) : lum(main) > 0.45 ? '#000000' : '#FFFFFF' })],
+      ['Brand Light', Object.assign({}, base, { background: '#FFFFFF', foreground: '#111111', accent: hex(lum(main) > 0.8 ? second : main) })],
+      ['Brand Dark', Object.assign({}, base, { background: '#0B0B0C', foreground: '#FFFFFF', accent: hex(lum(main) < 0.12 ? second : main) })],
+    ];
+    deck.style.theme = Object.assign({}, themes[0][1]); delete deck.style.themeName;
+    await saveStyle(true);
+    $('#brandout').innerHTML = `<p class="foot">Brand colours</p><div class="swatches">${themes.map(([n, th], i) => swatch(n, th, deck.style.theme, `data-brand="${i}"`)).join('')}</div>`;
+    $$('[data-brand]').forEach((b) => (b.onclick = () => { deck.style.theme = Object.assign({}, themes[+b.dataset.brand][1]); delete deck.style.themeName; saveStyle(false).then(() => $$('[data-brand]').forEach((o) => o.classList.toggle('on', o === b))); }));
   }
   const mediaLabel = (m) => ({ live: 'Live camera', video: 'Video', audio: 'Sound', link: 'Website', pdf: 'PDF' }[S.fileType(m)] || 'Photo');
   function debounce(fn, ms) { let t; return () => { clearTimeout(t); t = setTimeout(fn, ms); }; }
@@ -944,6 +1108,7 @@
     $('#title').onchange = () => { const t = $('#title').value.trim() || 'Untitled Presentation'; $('#title').value = t; $('#crumb').textContent = t; work('Saving…', () => saveEntries(deck.entries, t)); };
     $('#title').onkeydown = (e) => { if (e.key === 'Enter') e.target.blur(); };
     $('#addbtn').onclick = (e) => openAddMenu(e.currentTarget);
+    $('#stylebtn').onclick = () => { deck.styling = !deck.styling; $('#stylebtn').setAttribute('aria-pressed', String(!!deck.styling)); renderSelected(); };
     $$('#addmenu [data-add]').forEach((b) => b.onclick = () => addAction(b.dataset.add));
     $('#presentbtn').onclick = () => present({ from: deck.selected });
     $('#recordbtn').onclick = () => present({ from: 0, record: true });
