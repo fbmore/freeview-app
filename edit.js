@@ -281,7 +281,11 @@
   async function renderLibrary() {
     const grid = $('#grid');
     const decks = store.decks();
-    $('#empty').hidden = decks.length > 0;
+    $('#empty').hidden = decks.length > 0 || !!store.loading;
+    if (!decks.length && store.loading) {
+      grid.replaceChildren(...Array.from({ length: 8 }, () => { const d = document.createElement('div'); d.className = 'deckcard ghost'; d.setAttribute('aria-hidden', 'true'); d.innerHTML = '<div class="cover"></div><div class="meta"><span class="bar"></span><span class="bar short"></span></div>'; return d; }));
+      return;
+    }
     grid.replaceChildren(...decks.map((v) => {
       const { folder, entries } = store.deckOf(v);
       const b = document.createElement('button'); b.type = 'button'; b.className = 'deckcard';
@@ -726,11 +730,24 @@
     }
     show('welcome');
     store = new S.CloudStore();
+    $('#signout').onclick = () => { const apple = $('#apple-sign-out-button .apple-auth-button') || $('#apple-sign-out-button > *'); if (apple) apple.click(); };
+    // Our button opens CloudKit's sign-in window through CloudKit's own (hidden) button.
+    $('#signin').onclick = () => {
+      const apple = $('#apple-sign-in-button .apple-auth-button') || $('#apple-sign-in-button > *');
+      if (apple) { apple.click(); return; }
+      $('#signin').setAttribute('aria-busy', 'true'); toast('Connecting to iCloud… try again in a moment.');
+      setTimeout(() => $('#signin').removeAttribute('aria-busy'), 1500);
+    };
     try {
       await store.auth({ signIn: 'apple-sign-in-button', signOut: 'apple-sign-out-button', onSignedOut: () => location.reload() });
       $('#account').hidden = false;
-      await work('Loading your library…', () => store.sync());
-      enter();
+      // The library shows at once and fills in as iCloud sends it (a big one takes a few pages).
+      busy('Loading your library…');
+      const loading = store.sync((n) => busy(n ? `Loading your library… ${n} presentation${n === 1 ? '' : 's'}` : 'Loading your library…'));
+      await enter();
+      await loading.catch((e) => { console.error(e); toast('iCloud didn’t send everything. Reload to try again.'); });
+      busy('');
+      if (!deck) { const m = /deck=([0-9A-F-]+)/i.exec(location.hash); if (m && store.visit(m[1])) openDeck(m[1]); else renderLibrary(); }
     } catch (e) {
       console.error(e);
       $('#welcome-error').hidden = false; $('#welcome-error').textContent = 'iCloud couldn’t be reached. Check your connection and reload.';

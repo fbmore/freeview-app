@@ -281,8 +281,10 @@
     }
 
     /** Everything in the Library zone (then only what changed, on later calls). */
-    async sync() {
+    /** `onPage` hears after each page, so a big library shows as it arrives. */
+    async sync(onPage) {
       let more = true;
+      this.loading = true;
       while (more) {
         const res = await this.db.fetchRecordZoneChanges({ zoneID: ZONE, syncToken: this.token || undefined, resultsLimit: 200 });
         if (res.hasErrors) {
@@ -293,7 +295,10 @@
         const zone = res.zones[0];
         for (const r of zone.records) this.take(r);
         this.token = zone.syncToken; more = zone.moreComing;
+        if (onPage) onPage(this.decks().length);
+        if (more) this.changed();
       }
+      this.loading = false;
       this.changed();
     }
     take(r) {
