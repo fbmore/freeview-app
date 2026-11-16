@@ -17,10 +17,13 @@
   'use strict';
 
   const CONTAINER = 'iCloud.com.fbmore.freeview';
-  // Development until the Library record types are deployed to Production (the apps sync only in
-  // Debug builds today). The Production token is limited to freeview.app.
-  const ENVIRONMENT = 'development';
-  const API_TOKEN = '5e1d560dfe41765d17f2038ce3de8596787149ef30f7132dd5a190c7f9db2f0e';
+  // Production on freeview.app (the App Store apps' iCloud); its token only works there. Development on
+  // localhost, or anywhere with ?ckdev (Xcode builds' iCloud), with the Any Domain development token.
+  const DEV_HOST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || new URLSearchParams(location.search).has('ckdev');
+  const ENVIRONMENT = DEV_HOST ? 'development' : 'production';
+  const API_TOKEN = DEV_HOST
+    ? '5e1d560dfe41765d17f2038ce3de8596787149ef30f7132dd5a190c7f9db2f0e'
+    : 'f6aa01e3c82572c58d3d3d0ddd38040a178cfbc1ab3465604750055303cee1b0';
   const ZONE = { zoneName: 'Library' };
 
   // iCloud's upload host (…icloud-content.com/…/singleFileUpload) only lets www.icloud.com read its
