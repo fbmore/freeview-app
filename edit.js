@@ -558,6 +558,72 @@
       <p class="foot">${T('For presenting in this browser. The transition is for slides without one of their own.')}</p>`;
     $$('#slideshow [data-sw]').forEach((c) => (c.onchange = () => setShowPref(c.dataset.sw, c.checked)));
     $$('#slideshow [data-sp]').forEach((c) => (c.onchange = () => setShowPref(c.dataset.sp, c.dataset.sp === 'autoplay' ? +c.value : c.value)));
+    renderWebAddress();
+  }
+
+  // ── Your Web Address (FreeView Pro): <name>.freeview.pro and the person's own domain, kept by the Worker ──
+  let siteState = null;
+  const SITE_ERRORS = {
+    'taken': 'That name is already someone else’s. Try another.',
+    'bad-name': 'Use 3 to 30 letters, numbers or hyphens. Some names, like www, are kept for FreeView.',
+    'pro-required': 'This comes with FreeView Pro.',
+    'pro-unknown': 'Couldn’t confirm FreeView Pro for this Apple Account yet. Open FreeView on your iPhone, iPad or Mac signed in to it, then try again.',
+    'not-yours': 'Choose one of your own shared links.',
+    'signed-out': 'Sign in with Apple again to keep saving.',
+    'network': 'Couldn’t reach FreeView. Check your connection and try again.',
+  };
+  const siteError = (e) => T(SITE_ERRORS[e] || e || 'Something went wrong. Try again.');
+  async function siteCall(action, extra) {
+    const r = await store.site(action, extra || {});
+    if (r && r.error) { toast(siteError(r.error)); return false; }
+    siteState = r; return true;
+  }
+  async function renderWebAddress() {
+    const body = $('#webaddressbody'); if (!body) return;
+    if (store.kind !== 'demo' && pro !== true) {
+      body.innerHTML = `<p class="hint">${T('With FreeView Pro, the links you share can open at yourname.freeview.pro, or at a domain you own, like present.example.com.')}</p>` +
+        (pro === false ? `<div class="row"><button type="button" class="btn" id="wa-pro">${T('Unlock FreeView Pro')}</button></div>` : '');
+      const b = $('#wa-pro', body); if (b) b.onclick = showPaywall;
+      return;
+    }
+    if (!siteState) { body.innerHTML = `<p class="hint">${T('Checking…')}</p>`; if (!(await siteCall('get'))) { body.innerHTML = ''; return; } }
+    const st = siteState;
+    const live = allLinks().filter((l) => !l.expiresAt || l.expiresAt > S.appleNow());
+    const base = st.name ? `https://${st.name}.freeview.pro` : '';
+    const own = st.domain && st.domain.active ? `https://${st.domain.host}` : '';
+    body.innerHTML = `
+      <div class="addr"><label class="field"><span>${T('Name')}</span><input id="wa-name" value="${esc(st.name || '')}" placeholder="${esc(T('yourname'))}" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="30"></label>
+        <span class="suffix">.freeview.pro</span><button type="button" class="btn small" id="wa-namesave">${st.name ? T('Change') : T('Use This Name')}</button></div>
+      ${base ? `<p class="hint">${T('Your links open at {address}/ followed by the link, and anyone can see this address.', { address: `<a class="addr-link" href="${base}" target="_blank" rel="noopener">${esc(base.replace('https://', ''))}</a>` })}</p>` : ''}
+      ${st.name ? `<label class="field inline"><span>${T('Opens On')}</span><select id="wa-home"><option value="">${T('Nothing: just the address')}</option>${live.map((l) => `<option value="${esc(l.recordName)}" ${st.home === l.recordName ? 'selected' : ''}>${esc(l.title || T('Presentation'))}</option>`).join('')}</select></label>
+      <p class="foot">${T('What people see at the address itself. Choose one of your live shared links.')}</p>` : ''}
+      <h3 class="sub">${T('Your Own Domain')}</h3>
+      ${st.domain ? `
+        <div class="row wrap"><strong>${esc(st.domain.host)}</strong><span class="status ${st.domain.active ? 'on' : 'wait'}">${st.domain.active ? T('Working') : T('Waiting for the record')}</span></div>
+        ${st.domain.active ? `<p class="hint">${T('Your links work at {address} too.', { address: `<a class="addr-link" href="${own}" target="_blank" rel="noopener">${esc(st.domain.host)}</a>` })}</p>` : `
+        <p class="hint">${T('Add this record where your domain’s DNS is managed (your registrar, Cloudflare, Squarespace…). It usually works within a few minutes.')}</p>
+        <dl class="dnsrec"><dt>${T('Record type')}</dt><dd>CNAME</dd><dt>${T('Name')}</dt><dd>${esc(st.domain.host)}</dd><dt>${T('Value')}</dt><dd>${esc(st.target || 'domains.freeview.pro')}</dd></dl>
+        ${st.domain.errors ? `<p class="foot">${esc(st.domain.errors.join(' · '))}</p>` : ''}`}
+        <div class="row wrap">${st.domain.active ? '' : `<button type="button" class="btn small" id="wa-check">${T('Check Now')}</button>`}<button type="button" class="btn small ghost danger" id="wa-remove">${T('Remove Domain')}</button></div>`
+      : `<p class="hint">${T('Use a subdomain you own, like present.example.com. You’ll add one record at your DNS provider.')}</p>
+        <div class="addr"><label class="field"><span>${T('Domain')}</span><input id="wa-domain" placeholder="present.example.com" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="url"></label>
+        <button type="button" class="btn small" id="wa-domainadd">${T('Add Domain')}</button></div>`}`;
+    const nameIn = $('#wa-name', body);
+    nameIn.oninput = () => { const v = nameIn.value.toLowerCase().replace(/[^a-z0-9-]/g, ''); if (v !== nameIn.value) nameIn.value = v; };
+    $('#wa-namesave', body).onclick = () => { const v = nameIn.value.trim(); if (!v || v === st.name) return; work(T('Saving…'), () => siteCall('name', { name: v })).then(renderWebAddress); };
+    nameIn.onkeydown = (e) => { if (e.key === 'Enter') $('#wa-namesave', body).click(); };
+    const home = $('#wa-home', body); if (home) home.onchange = () => work(T('Saving…'), () => siteCall('home', { home: home.value || null })).then(renderWebAddress);
+    const add = $('#wa-domainadd', body);
+    if (add) {
+      const din = $('#wa-domain', body);
+      add.onclick = () => { const v = din.value.trim(); if (!v) return din.focus(); work(T('Adding…'), () => siteCall('domain', { domain: v })).then(renderWebAddress); };
+      din.onkeydown = (e) => { if (e.key === 'Enter') add.click(); };
+    }
+    const chk = $('#wa-check', body);
+    if (chk) chk.onclick = () => work(T('Checking…'), () => siteCall('check')).then(() => { renderWebAddress(); if (siteState && siteState.domain && !siteState.domain.active) toast(T('Not yet. Records can take a few minutes to reach everyone.')); });
+    const rm = $('#wa-remove', body);
+    if (rm) rm.onclick = () => askChoice(T('Remove {domain}?', { domain: st.domain.host }), T('Your links stop working at this domain. They keep working at their other addresses.'),
+      [['remove', T('Remove Domain')]], (v) => { if (v === 'remove') work(T('Removing…'), () => siteCall('domain', { domain: '' })).then(renderWebAddress); });
   }
   /** A picture as the file type the apps keep it in (JPEG photo, PNG logo), no larger than max. */
   async function asImage(file, type, max) {

@@ -32,7 +32,7 @@
     return 'en';
   }
   const lang = pick();
-  if (lang !== 'en' && document.readyState === 'loading') document.write(`<script src="/i18n/${lang}.js?v=5"><\/script>`);
+  if (lang !== 'en' && document.readyState === 'loading') document.write(`<script src="/i18n/${lang}.js?v=6"><\/script>`);
   const dictOf = () => (window.FVI18N_DICTS || {})[lang] || null;
   // English keeps the browser's own date and number formats, as before; the others use their language's.
   const locale = lang === 'en' ? undefined : lang;

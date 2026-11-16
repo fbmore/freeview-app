@@ -334,6 +334,20 @@
       } catch { return null; }
     }
 
+    /** Your Web Address (the Worker's POST /site): a freeview.pro name, the presentation it opens on and the
+     *  person's own domain, kept by the Worker against this iCloud account. {error} when it can't. */
+    async site(action, extra) {
+      const auth = this.container && this.container._auth;
+      const token = auth && auth._ckSession;
+      if (!token) return { error: 'signed-out' };
+      try {
+        const r = await fetch(`${WORKER}/site`, { method: 'POST', body: JSON.stringify(Object.assign({ token, env: ENVIRONMENT, action }, extra)) });
+        const j = await r.json();
+        if (j.token && j.token !== token && typeof auth._setSession === 'function') auth._setSession(j.token);
+        return j;
+      } catch { return { error: 'network' }; }
+    }
+
     /** Everything in the Library zone (then only what changed, on later calls). */
     /** `onPage` hears after each page, so a big library shows as it arrives. */
     async sync(onPage) {
@@ -492,6 +506,15 @@
     async publicDelete() {}
     async deleteDeck(visit) { const { folder } = this.deckOf(visit); for (const p of this.pathsIn(folder + '/')) this.files.delete(p); this.items.delete(visit.id); this.changed(); }
     async sync() {}
+    /** The sample's Your Web Address: kept in memory; a domain turns active on its first check. */
+    async site(action, extra) {
+      const s = this._site || (this._site = { name: null, home: null, domain: null, target: 'domains.freeview.pro' });
+      if (action === 'name') s.name = String(extra.name || '').toLowerCase();
+      if (action === 'home') s.home = extra.home || null;
+      if (action === 'domain') s.domain = extra.domain ? { host: String(extra.domain).toLowerCase(), active: false, record: { type: 'CNAME', name: String(extra.domain).toLowerCase(), value: s.target } } : null;
+      if (action === 'check' && s.domain) s.domain.active = true;
+      return JSON.parse(JSON.stringify(s));
+    }
 
     /** A small sample presentation: a cover, two photos and a Magic slide. */
     async seed() {
