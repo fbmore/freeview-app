@@ -381,7 +381,7 @@ INDEX_BODY = f"""{ICONS}
   </a>
   <p class="storenote">For iPhone, iPad and Mac · Free to start</p>
   <div class="ctarow">
-    <a class="cta" href="#tour">See the tour</a>
+    <a class="cta" href="https://fbmore.freeview.pro/">See the demo</a>
     <a class="cta ghost" href="support.html">Support</a>
   </div>
 </header>
