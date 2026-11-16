@@ -65,7 +65,7 @@ footer a{color:var(--muted)}
   <img src="/logo.png" alt="FreeView" width="52" height="52" style="border-radius:12px;display:block;margin:12px 0 4px;outline:1px solid rgba(255,255,255,.1);outline-offset:-1px">
   <div class="kicker">FreeView</div>
   <h1>Política de privacidad</h1>
-  <p class="muted">Última actualización: 5 de noviembre de 2026</p>
+  <p class="muted">Última actualización: 15 de noviembre de 2026</p>
   <p class="muted">Esta es una traducción. La <a href="/privacy.html" hreflang="en" lang="en">versión en inglés</a> es la oficial y prevalece en caso de diferencias.</p>
 
   <p class="lead">FreeView muestra páginas web y archivos a pantalla completa, y guarda lo que abres en tu dispositivo. No tiene cuentas ni publicidad, y no te rastrea. Lo único que sale de tu dispositivo son las presentaciones que decides compartir como enlace (con recuentos anónimos de cómo se ven, que solo ves tú) y el registro anónimo de una compra de FreeView Pro. En el Mac, una app de IA que conectes puede leer tus presentaciones, pero solo si lo activas.</p>
@@ -83,6 +83,10 @@ footer a{color:var(--muted)}
     <li><strong>Datos web</strong>: cookies, almacenamiento de los sitios y caché, que gestiona WebKit de Apple como en Safari. La navegación privada no conserva nada de esto cuando se cierra una página.</li>
   </ul>
   <p>Nada de esto se nos envía, salvo que compartas una presentación. Puede incluirse en la copia de seguridad de tu dispositivo en iCloud o en tu computadora, según las condiciones de Apple.</p>
+
+  <h2>FreeView en la web</h2>
+  <p>En <a href="/edit">freeview.app/edit</a> puedes editar tus presentaciones en un navegador. Inicias sesión con Apple, a través de CloudKit de Apple, y el editor lee y escribe tus presentaciones en la base de datos privada del contenedor iCloud de FreeView (iCloud.com.fbmore.freeview), en tu propia cuenta de iCloud, directamente en tu navegador; nosotros no podemos verla ni leerla. Los archivos que agregas se suben a tu iCloud a través del servidor de FreeView (un Cloudflare Worker), que los transmite y no guarda nada; esto es necesario porque los servidores de subida de iCloud solo responden al propio sitio web de Apple cuando la petición viene de otro sitio. Para ir más rápido, tu navegador guarda una caché de tus archivos (hasta unos 2 GB) en su propio almacenamiento, en esa computadora. Las presentaciones que compartes desde la web funcionan como las que compartes desde la app, tal como se describe en Presentaciones compartidas.</p>
+  <p>Cuando has iniciado sesión, el editor web comprueba si tienes FreeView Pro: tu navegador envía tu token de inicio de sesión de iCloud al servidor de FreeView, que pregunta a Apple a qué identificador de iCloud pertenece (un ID de aspecto aleatorio para el contenedor de FreeView, no tu nombre, tu correo ni la dirección de tu Cuenta de Apple) y luego pregunta a RevenueCat si ese identificador tiene Pro. No se guarda nada.</p>
 
   <h2>Presentaciones compartidas</h2>
   <p>Cuando usas <strong>Compartir presentación</strong>, FreeView sube una copia de esa presentación para que pueda verse en un navegador en freeview.app:</p>

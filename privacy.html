@@ -64,7 +64,7 @@ footer a{color:var(--muted)}
   <img src="logo.png" alt="FreeView" width="52" height="52" style="border-radius:12px;display:block;margin:12px 0 4px;outline:1px solid rgba(255,255,255,.1);outline-offset:-1px">
   <div class="kicker">FreeView</div>
   <h1>Privacy Policy</h1>
-  <p class="muted">Last updated: 5 November 2026</p>
+  <p class="muted">Last updated: 15 November 2026</p>
 
   <p class="lead">FreeView shows web pages and files full screen, and it keeps what you open on your device. It has no accounts and no advertising, and it doesn't track you. The only things that leave your device are presentations you choose to share as a link (with anonymous counts of how they're watched, which only you see), and the anonymous record of a FreeView Pro purchase. On a Mac, an AI app you connect can read your presentations, but only if you turn that on.</p>
 
@@ -81,6 +81,10 @@ footer a{color:var(--muted)}
     <li><strong>Web data</strong>: cookies, site storage and cache, kept by Apple's WebKit as in Safari. Private browsing keeps none of it once a page closes.</li>
   </ul>
   <p>None of this is sent to us unless you share a presentation. It may be included in your device's own iCloud or computer backup, under Apple's terms.</p>
+
+  <h2>FreeView on the web</h2>
+  <p>At <a href="/edit">freeview.app/edit</a> you can edit your presentations in a browser. You sign in with Apple, through Apple's CloudKit, and the editor reads and writes your presentations in the private database of FreeView's iCloud container (iCloud.com.fbmore.freeview), in your own iCloud account, right in your browser; we can't see or read it. Files you add are uploaded to your iCloud through FreeView's server (a Cloudflare Worker), which passes them on and keeps nothing; this is needed because iCloud's upload servers only answer Apple's own website when asked from another site. To stay quick, your browser keeps a cache of your files (up to about 2 GB) in its own storage on that computer. Presentations you share from the web work like those shared from the app, as described under Shared presentations.</p>
+  <p>When you're signed in, the web editor checks whether you have FreeView Pro: your browser sends your iCloud sign-in token to FreeView's server, which asks Apple which iCloud identifier it belongs to (a random-looking ID for FreeView's container, not your name, email or Apple Account address) and then asks RevenueCat whether that identifier has Pro. Nothing is stored.</p>
 
   <h2>Shared presentations</h2>
   <p>When you use <strong>Share Presentation</strong>, FreeView uploads a copy of that presentation so it can be watched in a browser at freeview.app:</p>
