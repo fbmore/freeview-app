@@ -973,13 +973,15 @@
       const note = { image: '', webImage: '', video: '', audio: '', pdf: info.pages ? I.n(info.pages, '{n} page, each one a slide when you present.', '{n} pages, each one a slide when you present.') : '', link: info.href ? T('Shows {host}.', { host: hostOf(info.href) }) : '' }[info.type];
       const appOnly = note === undefined;
       const editBtn = info.type === 'image' ? `<div class="row wrap"><button type="button" class="btn small" id="editphoto">${T('Edit Photo…')}</button></div>`
-        : info.type === 'video' ? `<div class="row wrap"><button type="button" class="btn small" id="editcover">${T('Choose Cover…')}</button></div>` : '';
+        : info.type === 'video' ? `<div class="row wrap"><button type="button" class="btn small" id="editcover">${T('Choose Cover…')}</button></div>`
+        : info.type === 'pdf' && info.pages ? `<div class="row wrap"><button type="button" class="btn small" id="pdfpics">${T('Make Each Page a Picture')}</button></div>` : '';
       panel.innerHTML = head + `<div class="filename">${esc(info.type === 'link' && info.href ? info.href : info.name)}</div>` + (note ? `<p class="hint">${esc(note)}</p>` : '') + editBtn +
         (appOnly ? `<div class="appnote">${ICON.device}<span>${T('Edit this slide in FreeView on your Mac, iPhone or iPad. It stays as it is here and moves with the rest.')}</span></div>` : '') + tail;
     }
     $$('[data-act]', panel).forEach((b) => b.onclick = () => ({ up: () => move(i, i - 1), down: () => move(i, i + 1), remove: () => removeSlide(i) }[b.dataset.act]()));
     const ep2 = $('#editphoto', panel); if (ep2) ep2.onclick = () => editPhoto(info);
     const ec = $('#editcover', panel); if (ec) ec.onclick = () => chooseCover(info);
+    const pp2 = $('#pdfpics', panel); if (pp2) pp2.onclick = () => pdfToPictures(info, i);
     const tr = $('#f-trans', panel);
     if (tr) tr.onchange = () => {
       const m = Object.assign({}, deck.transitions); if (tr.value) m[info.entry] = tr.value; else delete m[info.entry];
@@ -1730,6 +1732,7 @@
     const m = $('#addmenu');
     const hasCover = deck.entries.some((e) => S.fileType(e) === 'custom' && infoCache.get(`${deck.folder}/${e}`) && (infoCache.get(`${deck.folder}/${e}`).slide || {}).kind === 'cover');
     const items = [['files', 'Files…', 'Photos, videos, PDFs and more; each one a slide. You can also drop or paste them.'],
+      ['pdfpics', 'PDF as Pictures…', 'Each page becomes a photo of its own, to move, edit or remove'],
       ['web', 'Web Page…', 'A website, live when you present'],
       ['camera', 'Take a Photo or Video', 'With this computer’s camera'],
       ['audio', 'Record Audio', 'Your voice or anything near the microphone'],
@@ -1750,6 +1753,7 @@
   function addAction(kind) {
     $('#addmenu').hidden = true;
     if (kind === 'files') pickFiles('', addFiles);
+    else if (kind === 'pdfpics') pickFiles('application/pdf,.pdf', addPDFPictures);
     else if (kind === 'magic') addCustom('text');
     else if (kind === 'cover') addCustom('cover');
     else if (kind === 'live') addCustom('text', true);
@@ -1775,6 +1779,65 @@
       await saveEntries(entries);
     });
     if (done) { deck.selected = at - 1; renderRail(); renderSelected(); }
+  }
+  /** A PDF's pages as JPEGs (2400 px on the long side, as Share makes them), named "<file> - Page N.jpg". */
+  async function pdfPictures(src, name, k, n) {
+    const doc = await pdfjsDoc(src);
+    const base = S.cleanName(name.replace(/\.pdf$/i, '')) || 'PDF';
+    const out = [];
+    for (let p = 0; p < doc.numPages; p++) {
+      busy(n > 1 ? T('Making pictures: {name}, page {k} of {n}…', { name, k: p + 1, n: doc.numPages }) : T('Making pictures: page {k} of {n}…', { k: p + 1, n: doc.numPages }));
+      const blob = await pdfPageJPEG(doc, p, 2400);
+      out.push(new File([blob], `${base} - ${T('Page {n}', { n: p + 1 })}.jpg`, { type: 'image/jpeg' }));
+    }
+    doc.destroy();
+    return out;
+  }
+  async function pdfjsDoc(src) {
+    await loadScript(LIBS.pdf);
+    pdfjsLib.GlobalWorkerOptions.workerSrc = LIBS.pdfWorker;
+    return pdfjsLib.getDocument(src instanceof Blob ? { data: new Uint8Array(await src.arrayBuffer()) } : { url: src }).promise;
+  }
+  /** Add menu › PDF as Pictures: every page of each PDF picked becomes an image slide. */
+  async function addPDFPictures(files) {
+    const pdfFiles = files.filter((f) => /\.pdf$/i.test(f.name) || f.type === 'application/pdf');
+    if (!pdfFiles.length) return toast(T('Choose a PDF.'));
+    let pics = [], failed = [];
+    await work(T('Making pictures…'), async () => {
+      for (const [k, f] of pdfFiles.entries()) {
+        try { pics = pics.concat(await pdfPictures(f, f.name, k + 1, pdfFiles.length)); } catch (e) { console.error(e); failed.push(f.name); }
+      }
+    });
+    if (failed.length) toast(T('{name} couldn’t be opened.', { name: failed.join(', ') }));
+    if (pics.length) await addFiles(pics);
+  }
+  /** A PDF slide's "Make Each Page a Picture": its pages take its place as image slides (Undo brings the PDF back). */
+  async function pdfToPictures(info, i) {
+    const entries = deck.entries.slice();
+    const made = [];
+    await work(T('Making pictures…'), async () => {
+      let pics;
+      try { pics = await pdfPictures(info.url, info.name, 1, 1); } catch (e) { console.error(e); return toast(T('This PDF couldn’t be opened.')); }
+      let slot = freeSlot();
+      for (const [k, f] of pics.entries()) {
+        busy(T('Uploading {k} of {n}…', { k: k + 1, n: pics.length }));
+        const entry = `${slot++}/${S.cleanName(f.name)}`;
+        await store.putFile(`${deck.folder}/${entry}`, f); made.push(entry);
+      }
+      entries.splice(i, 1, ...made);
+      await saveEntries(entries);
+    });
+    if (!made.length) return;
+    deck.selected = i; renderRail(); renderSelected();
+    let undone = false;
+    const timer = setTimeout(() => { if (!undone) store.deleteFile(`${deck.folder}/${info.entry}`).catch(() => {}); }, 6500);
+    toast(I.n(made.length, 'The PDF is now {n} picture', 'The PDF is now {n} pictures'), { label: T('Undo'), run: async () => {
+      undone = true; clearTimeout(timer);
+      const back = deck.entries.filter((e) => !made.includes(e)); back.splice(Math.min(i, back.length), 0, info.entry);
+      deck.entries = back; deck.selected = i; renderRail(); renderSelected();
+      await work(T('Saving…'), () => saveEntries(back));
+      for (const e of made) store.deleteFile(`${deck.folder}/${e}`).catch(() => {});
+    } });
   }
   function uniqueName(base) {
     const taken = new Set(store.pathsIn(deck.folder + '/').map((p) => p.slice(deck.folder.length + 1)).concat(deck.entries));
