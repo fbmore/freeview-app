@@ -488,4 +488,5 @@
     'Loading your library… {n} presentations': 'Carregando sua biblioteca… {n} apresentações',
     'iCloud didn’t send everything. Reload to try again.': 'O iCloud não enviou tudo. Recarregue para tentar de novo.',
     'iCloud couldn’t be reached. Check your connection and reload.': 'Não foi possível acessar o iCloud. Verifique sua conexão e recarregue.',
-  };
+    'The commentary couldn’t go in: its video isn’t in iCloud. Record it again to include it.': 'Não foi possível incluir a narração: o vídeo dela não está no iCloud. Grave de novo para incluí-la.',
+};

@@ -89,6 +89,8 @@
     if (!store || store.kind !== 'cloud' || (!force && Date.now() - proCheckedAt < 10 * 60e3)) return;
     proCheckedAt = Date.now();
     const was = pro; pro = await store.checkPro();
+    // Testing on this computer only (never on freeview.app): ?devpro acts as Pro, to try Pro paths before the check can say so.
+    if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) && new URLSearchParams(location.search).has('devpro')) { pro = true; window.__fvDev = { latestCommentary, makeExport, deck: () => deck }; }
     if (pro !== was) { if (!deck && !$('#library').hidden) renderLibrary(); }
     renderProStatus();
   }
@@ -158,7 +160,8 @@
 
   async function blobOf(path) {
     const u = await store.src(path); if (!u) return null;
-    const r = await fetch(u); return r.ok ? r.blob() : null;
+    // no-store: the editor's <img> and <video> tags cache iCloud files without CORS headers, which a fetch then refuses.
+    const r = await fetch(u, /^https?:/.test(u) ? { cache: 'no-store' } : undefined); return r.ok ? r.blob() : null;
   }
   function canvasBlob(c, type = 'image/jpeg', q = 0.85) {
     return new Promise((ok, fail) => c.toBlob((b) => (b ? ok(b) : fail(new Error(T('Couldn’t make a picture.')))), type, q));
@@ -296,7 +299,9 @@
     // The commentary: the take and its marks, renumbered to the slides that made it to the web (SlideMap.remap).
     const c = withCommentary && deck && deck.visit.id === visit.id ? await latestCommentary() : null;
     if (c && JSON.stringify(c.entries || []) === JSON.stringify(entries)) {
-      const take = await blobOf(`${c._dir}/take.mov`);
+      const take = await blobOf(`${c._dir}/take.mov`).catch(() => null);
+      if (!take) x.commentaryLeftOut = true;
+      else if (take.size > UPLOAD_MAX) x.tooBig.push(T('Commentary'));
       if (take && take.size <= UPLOAD_MAX) {
         const appOrigins = [];
         for (const [i, entry] of entries.entries()) {
@@ -382,7 +387,7 @@
     await store.putLink(link, x.cover);
     // Its viewings are its owner's, before the address is out (the app's LinkVisit.claim).
     fetch(`${S.WORKER}/own/${name}`, { method: 'POST', headers: { 'X-FV-Owner': ownerKey } }).catch(() => {});
-    return { link, tooBig: x.tooBig, skipped: x.skipped };
+    return { link, tooBig: x.tooBig, skipped: x.skipped, commentaryLeftOut: !!x.commentaryLeftOut };
   }
 
   /** Stop Sharing: the copies go from iCloud now, the link stays in the list as ended. */
@@ -422,9 +427,10 @@
       const l = res.link, ends = S.fromApple(l.expiresAt);
       const left = res.skipped.length ? `<p class="foot">${T('Left out, since browsers can’t show them: {list}. They play in FreeView on your iPhone, iPad or Mac.', { list: esc(res.skipped.join(', ')) })}</p>` : '';
       const big = res.tooBig.length ? `<p class="foot">${T('Too large to upload from a browser (over {size} each): {list}. Share from FreeView on your Mac or iPhone to include them.', { size: mb(UPLOAD_MAX), list: esc(res.tooBig.join(', ')) })}</p>` : '';
+      const lost = res.commentaryLeftOut ? `<p class="foot">${T('The commentary couldn’t go in: its video isn’t in iCloud. Record it again to include it.')}</p>` : '';
       $('h2', d).textContent = T('Shared Link');
       body.innerHTML = `<p class="lede">${esc(l.title)} · ${I.n(l.slideCount, '{n} slide', '{n} slides')} · ${T('Works until {date}', { date: esc(I.dateTime(ends, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) })}</p>
-        ${linkURLRow(l)}${left}${big}
+        ${linkURLRow(l)}${left}${big}${lost}
         <div class="row end"><button type="button" class="btn" data-new>${T('New Link…')}</button><button type="button" class="btn primary" data-done>${T('Done')}</button></div>`;
       wireCopy(body, l);
       $('[data-done]', body).onclick = () => d.close();

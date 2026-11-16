@@ -182,7 +182,8 @@
       if (!sha || !url || this.pending.has(sha) || this.urls.has(sha)) return;
       if (size && this.cap && size > this.cap / 4) return;   // too big to be worth keeping
       const p = new Promise((ok) => this.queue.push(async () => {
-        try { const r = await fetch(url); if (r.ok) await this.put(sha, await r.blob()); } catch {}
+        // no-store: an <img> may have cached this file without CORS headers, which a fetch then refuses.
+        try { const r = await fetch(url, { cache: 'no-store' }); if (r.ok) await this.put(sha, await r.blob()); } catch {}
         ok();
       }));
       this.pending.set(sha, p); this.pump();
