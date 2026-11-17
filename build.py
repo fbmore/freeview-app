@@ -365,7 +365,7 @@ FEATURES = "\n".join([
             shot("shot-edit.webp", "Editing a photo in FreeView: crop, rotate and black and white"), flip=True),
     feature("Present anything, anywhere", "On your own screen everything opens full screen with nothing in the way. Hand over an iPad in kiosk mode, let Autoplay run the slides on a loop, or switch to deep red night mode in the dark.",
             [("lock", "Kiosk mode with a PIN, Autoplay on a loop"), ("moon", "Red night mode, pages and videos too"), ("airplay", "AirPlay and external displays")], MOCK_KIOSK),
-    feature("Private by design", "No account, no ads, no tracking. Your files and history never leave your device unless you share them, and shared links end on their own.",
+    feature("Private by design", "No ads, no tracking, no FreeView account to make. Your files stay on your devices and in your own iCloud, and leave only when you share them; shared links end on their own.",
             [("eyeslash", "Private browsing keeps no cookies or history"), ("face", "Lock with Face ID or Touch ID"), ("check", "Stop any link whenever you like")], MOCK_PRIVATE, flip=True),
 ])
 
