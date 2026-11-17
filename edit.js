@@ -585,14 +585,20 @@
   }
   async function renderWebAddress() {
     const body = $('#webaddressbody'); if (!body) return;
-    if (store.kind !== 'demo' && pro !== true) {
+    // What's saved shows at once: reading it needs no Pro check (the Worker asks for Pro only to claim a name or add a
+    // domain, and stops serving the address itself if Pro ends). The Free text is only for someone with nothing saved.
+    if (!siteState) {
+      body.innerHTML = `<p class="hint">${T('Checking…')}</p>`;
+      const r = await store.site('get', {});
+      if (r && !r.error) siteState = r;   // a failed read is tried again on the next visit to Settings
+    }
+    const st = siteState || { name: null, domain: null };
+    if (store.kind !== 'demo' && pro !== true && !st.name && !st.domain) {
       body.innerHTML = `<p class="hint">${T('With FreeView Pro, the links you share can open at yourname.freeview.pro, or at a domain you own, like present.example.com.')}</p>` +
         (pro === false ? `<div class="row"><button type="button" class="btn" id="wa-pro">${T('Unlock FreeView Pro')}</button></div>` : '');
       const b = $('#wa-pro', body); if (b) b.onclick = showPaywall;
       return;
     }
-    if (!siteState) { body.innerHTML = `<p class="hint">${T('Checking…')}</p>`; if (!(await siteCall('get'))) { body.innerHTML = ''; return; } }
-    const st = siteState;
     const live = allLinks().filter((l) => !l.expiresAt || l.expiresAt > S.appleNow());
     const base = st.name ? `https://${st.name}.freeview.pro` : '';
     const own = st.domain && st.domain.active ? `https://${st.domain.host}` : '';
