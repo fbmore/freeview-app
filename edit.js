@@ -2452,6 +2452,11 @@
     const m = /deck=([0-9A-F-]+)/i.exec(location.hash);
     if (m && store.visit(m[1])) openDeck(m[1]);
     else if (location.hash === '#links' || location.hash === '#settings') goTab(location.hash.slice(1));
+    else if (location.hash === '#webaddress') {
+      // From the apps' Settings › Your Web Address: straight to that section.
+      goTab('settings'); history.replaceState(null, '', '#webaddress');
+      requestAnimationFrame(() => $('#webaddress').scrollIntoView({ block: 'start' }));
+    }
     else showLibrary();
   }
   start();
