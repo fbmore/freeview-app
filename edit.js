@@ -91,7 +91,12 @@
     const was = pro; pro = await store.checkPro();
     // Testing on this computer only (never on freeview.app): ?devpro acts as Pro, to try Pro paths before the check can say so.
     if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) && new URLSearchParams(location.search).has('devpro')) { pro = true; window.__fvDev = { latestCommentary, makeExport, deck: () => deck }; }
-    if (pro !== was) { if (!deck && !$('#library').hidden) renderLibrary(); }
+    if (pro !== was) {
+      if (!deck && !$('#library').hidden) renderLibrary();
+      // Settings may have been drawn before the check came back (a reload on #settings): Your Web Address then
+      // showed the Free text even with Pro on.
+      if (!$('#settings').hidden) renderWebAddress();
+    }
     renderProStatus();
   }
   function renderProStatus() {
