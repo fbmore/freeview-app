@@ -211,6 +211,23 @@ footer a{color:var(--muted2);display:inline-block;padding:12px 10px}
 @media (prefers-reduced-motion: reduce){*{animation:none!important}
   .kinds .row{opacity:1!important;transform:none!important}.deckdots{opacity:1}.fingers,.pin{display:none}
   .field .typed{max-width:none}.counter .n b:first-child{opacity:1}}
+
+/* Top bar: the language (a native picker under a small pill) and Sign in / Sign up, both opening the web editor
+   (Sign in with Apple; a first sign-in is the sign-up, no FreeView account to make). */
+.topbar{position:absolute;top:0;left:0;right:0;display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:16px max(16px,env(safe-area-inset-right)) 0 16px;z-index:2}
+.tb{position:relative;display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:12px;font-size:14px;font-weight:600;
+  color:var(--ink);transition-property:scale,background-color;transition-duration:120ms;transition-timing-function:ease-out}
+.tb::after{content:"";position:absolute;inset:-4px}
+.tb:active{scale:.96}
+.tb.plain{color:var(--muted2);font-weight:500}.tb.plain:hover{color:var(--ink)}
+.tb.solid{background:#fff;color:#000}
+.tb.lang{background:var(--surface);box-shadow:inset 0 0 0 1px var(--line);color:var(--muted2);font-weight:500;padding:0 10px 0 11px;font-variant-numeric:tabular-nums}
+.tb.lang:hover,.tb.lang:focus-within{background:var(--surface2);color:var(--ink)}
+.tb.lang:focus-within{outline:2px solid rgba(255,255,255,.6);outline-offset:2px}
+.tb.lang svg{width:16px;height:16px}
+.tb.lang .chev{width:10px;height:10px;opacity:.7}
+.tb.lang select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:16px;border:0;appearance:none;z-index:1}
+@media (max-width:380px){.topbar{gap:4px}.tb{padding:0 10px}.tb.plain{padding:0 8px}}
 </style>
 <!-- Foliàire Studio site analytics (marketing pages only, never view.html). -->
 <script>window.FOLIAIRE_SITE_ID = 'f3be838f340d7da19b511f4a';</script>
@@ -235,6 +252,11 @@ footer a{color:var(--muted2);display:inline-block;padding:12px 10px}
   <g id="i-clock"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2" stroke-linecap="round"/></g>
   <g id="i-folder"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke-linejoin="round"/></g>
 </defs></svg>
+<nav class="topbar" aria-label="FreeView">
+  <label class="tb lang"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><use href="#i-globe"/></svg><span aria-hidden="true">PT</span><svg class="chev" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 3.8l3 3 3-3" stroke-linecap="round" stroke-linejoin="round"/></svg><select id="langpick" aria-label="Idioma"><option value="en" data-href="/" lang="en">English</option><option value="es" data-href="/es/" lang="es">Español</option><option value="fr" data-href="/fr/" lang="fr">Français</option><option value="it" data-href="/it/" lang="it">Italiano</option><option value="pt-BR" data-href="/pt-br/" lang="pt-BR" selected>Português (Brasil)</option></select></label>
+  <a class="tb plain" href="/edit?lang=pt-BR">Entrar</a>
+  <a class="tb solid" href="/edit?lang=pt-BR">Criar conta</a>
+</nav>
 <header class="hero">
   <img class="logo" src="/logo.png" alt="FreeView" width="116" height="116">
   <h1>FreeView</h1>
@@ -283,5 +305,16 @@ footer a{color:var(--muted2);display:inline-block;padding:12px 10px}
   <div style="margin-top:4px"><a href="/pt-br/privacy.html">Privacidade</a>·<a href="/pt-br/terms.html">Termos</a>·<a href="/pt-br/support.html">Suporte</a>·<a href="mailto:hello@freeview.app">hello@freeview.app</a></div>
   <nav aria-label="Idioma"><a href="/" hreflang="en" lang="en">English</a>·<a href="/es/" hreflang="es" lang="es">Español</a>·<a href="/fr/" hreflang="fr" lang="fr">Français</a>·<a href="/it/" hreflang="it" lang="it">Italiano</a>·<a href="/pt-br/" hreflang="pt-BR" lang="pt-BR" aria-current="page">Português (Brasil)</a></nav>
 </footer>
+<script>
+/* The visitor's chosen language, remembered on this device (fv-lang): the editor and the shared-link viewer
+   use it too (i18n.js), and freeview.app/ opens in it next time. */
+(function(){
+  function go(l,href){try{localStorage.setItem('fv-lang',l)}catch(e){}location.href=href}
+  var s=document.getElementById('langpick');
+  if(s)s.addEventListener('change',function(){var o=s.options[s.selectedIndex];go(o.value,o.getAttribute('data-href'))});
+  document.querySelectorAll('footer nav a[hreflang]').forEach(function(a){a.addEventListener('click',function(e){
+    if(e.metaKey||e.ctrlKey||e.shiftKey||e.button)return;e.preventDefault();go(a.getAttribute('hreflang'),a.getAttribute('href'))})});
+})();
+</script>
 </body>
 </html>

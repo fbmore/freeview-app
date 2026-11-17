@@ -10,7 +10,8 @@
  *   FVI18N.apply(root)                                translates static markup: text, aria-label, title,
  *                                                     placeholder and alt that match a source string
  *
- * The language: ?lang=en|es|fr|it|pt-BR when given, else the first of the browser's preferred languages
+ * The language: ?lang=en|es|fr|it|pt-BR when given, else the one picked on freeview.app (localStorage fv-lang),
+ * else the first of the browser's preferred languages
  * that the web speaks (es*, fr*, it*, en*, or any Portuguese → pt-BR), else English. <html lang> follows.
  */
 (function () {
@@ -27,6 +28,11 @@
     let asked = null;
     try { asked = new URLSearchParams(location.search).get('lang'); } catch {}
     if (asked && DICTS[asked]) return asked;
+    if (asked === 'en') return 'en';
+    // The language picked on freeview.app (the home page's picker or footer), remembered on this device.
+    let chosen = null;
+    try { chosen = localStorage.getItem('fv-lang'); } catch {}
+    if (chosen === 'en' || DICTS[chosen]) return chosen;
     const wants = asked ? [asked] : (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || 'en']);
     for (const l of wants) { const base = String(l || '').toLowerCase().split(/[-_]/)[0]; if (SUPPORTED[base]) return SUPPORTED[base]; }
     return 'en';
