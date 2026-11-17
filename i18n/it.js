@@ -513,4 +513,6 @@
       "Not yet. Records can take a few minutes to reach everyone.": "Non ancora. I record possono impiegare qualche minuto a propagarsi.",
       "Remove {domain}?": "Rimuovere {domain}?",
       "Your links stop working at this domain. They keep working at their other addresses.": "I tuoi link smettono di funzionare su questo dominio. Continuano a funzionare agli altri indirizzi.",
+      "Language": "Lingua",
+      "The language of FreeView on the web on this device: this editor, the home page and shared links you open.": "La lingua di FreeView sul web su questo dispositivo: questo editor, la pagina iniziale e i link condivisi che apri.",
 };

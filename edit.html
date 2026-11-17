@@ -222,6 +222,15 @@
   .status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
   .status.on::before { background: #30d158; } .status.wait::before { background: #ffd60a; }
   .sub { font-size: 15px; font-weight: 600; margin: 14px 0 0; }
+  /* Language: a native picker, remembered on this device (fv-lang, read by i18n.js); the page reloads in it. */
+  .langpill { position: relative; display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; height: 36px; padding: 0 12px; border-radius: 12px;
+    font-size: 13px; color: var(--muted); background: var(--raised); box-shadow: inset 0 0 0 1px var(--hairline); transition-property: color, scale; transition-duration: 120ms; transition-timing-function: ease-out; }
+  .langpill:hover, .langpill:focus-within { color: var(--fg); }
+  .langpill:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .langpill:active { scale: .96; }
+  .langpill::after { content: ""; position: absolute; inset: -4px; }
+  .langpill select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 16px; border: 0; appearance: none; z-index: 1; }
+  #language select { min-width: 220px; border: 0; border-radius: var(--r-sm); background: var(--raised); color: var(--fg); padding: 7px 10px; font: inherit; font-size: 14px; box-shadow: inset 0 0 0 1px var(--hairline); }
   #webaddress { scroll-margin-top: 72px; }
   #webaddressbody { display: flex; flex-direction: column; gap: 12px; max-width: 620px; }
   #webaddressbody .foot { margin: -6px 0 0; font-size: 12.5px; line-height: 1.4; color: var(--faint); }
@@ -494,6 +503,7 @@
       <span id="welcome-error" hidden></span>
       <span class="alt">Just looking? <a href="?demo">Try it with a sample</a></span>
       <p class="fine">Your presentations stay in your own iCloud. FreeView doesn't keep a copy.</p>
+      <label class="langpill"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.6 3.9 5.6 3.9 9s-1.3 6.4-3.9 9c-2.6-2.6-3.9-5.6-3.9-9S9.4 5.6 12 3z"/></svg><span class="langcur">English</span><svg viewBox="0 0 10 10" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 3.8l3 3 3-3" stroke-linecap="round" stroke-linejoin="round"/></svg><select class="langpick" aria-label="Language"><option value="en" lang="en">English</option><option value="es" lang="es">Español</option><option value="fr" lang="fr">Français</option><option value="it" lang="it">Italiano</option><option value="pt-BR" lang="pt-BR">Português (Brasil)</option></select></label>
     </div>
   </section>
 
@@ -540,6 +550,11 @@
       <h2>Your Web Address</h2>
       <p class="lede">Your shared links on an address of your own: yourname.freeview.pro, or a domain you own.</p>
       <div id="webaddressbody" class="col"></div>
+    </div>
+    <div class="group" id="language">
+      <h2>Language</h2>
+      <p class="lede">The language of FreeView on the web on this device: this editor, the home page and shared links you open.</p>
+      <div class="row"><select class="langpick" aria-label="Language"><option value="en" lang="en">English</option><option value="es" lang="es">Español</option><option value="fr" lang="fr">Français</option><option value="it" lang="it">Italiano</option><option value="pt-BR" lang="pt-BR">Português (Brasil)</option></select></div>
     </div>
     <div class="group">
       <h2>iCloud</h2>
@@ -621,8 +636,31 @@
 <div id="toast" role="status" aria-live="polite"></div>
 <input type="file" id="picker" multiple hidden>
 
-<script src="/i18n.js?v=9"></script>
+<script src="/i18n.js?v=10"></script>
 <script src="/edit-store.js?v=15"></script>
-<script src="/edit.js?v=21"></script>
+<script>
+/* The language pickers (welcome screen, Settings): remembered on this device, then the page reloads in it
+   (without ?lang=, which would win). If storage is blocked, the choice rides in ?lang= instead. */
+document.querySelectorAll('.langpick').forEach(function (s) {
+  var lang = (window.FVI18N && FVI18N.lang) || 'en';
+  s.value = lang;
+  var cur = s.parentNode.querySelector('.langcur');
+  if (cur && s.selectedIndex >= 0) cur.textContent = s.options[s.selectedIndex].text;
+  s.addEventListener('change', function () {
+    var u = new URL(location.href), saved = false;
+    try { localStorage.setItem('fv-lang', s.value); saved = localStorage.getItem('fv-lang') === s.value; } catch (e) {}
+    if (saved) u.searchParams.delete('lang'); else u.searchParams.set('lang', s.value);
+    // A save still going (a debounced profile field, an upload) finishes first: wait out the debounce, then
+    // for the status line to clear (up to a minute).
+    s.disabled = true;
+    var t0 = Date.now(), st = document.getElementById('status');
+    (function go() {
+      if (Date.now() - t0 < 900 || (st && st.classList.contains('on') && Date.now() - t0 < 60000)) return setTimeout(go, 200);
+      location.assign(u.href);
+    })();
+  });
+});
+</script>
+<script src="/edit.js?v=22"></script>
 </body>
 </html>
